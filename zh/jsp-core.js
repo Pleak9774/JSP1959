@@ -5794,6 +5794,10 @@
     //  表示したいものは全部ここで quality に焼いてから [+ +] で出す。
     MEMBER_FLOOR: 5000,
     refresh: function (Q) {
+      //  過半の線は定数だけで決まる。以前は runElection の中でしか置いていなかったので、
+      //  最初の総選挙が終わるまで文庫の議席図に「過半 0」と出ていた。
+      Q.hr_total = Q.hr_total || 467;
+      Q.majority_line = Math.floor(Q.hr_total / 2) + 1;
       //  党員は下限で止める。負になると organise の √ が NaN を返し、
       //  組織率と傾向値が丸ごと壊れる（党費徴収カードを連打すると起きた）。
       Q.members = Math.max(this.MEMBER_FLOOR,
