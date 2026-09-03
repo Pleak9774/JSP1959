@@ -1379,7 +1379,7 @@
           + (v > 0 ? '<span style="color:#3E6E8C;">' : '<span style="color:#B23A34;">')
           + (v > 0 ? '＋' : '−') + Math.abs(v) + '</span>');
       }
-      if (!n) { return '<span style="opacity:.5">国家政策还一条都没动过。</span>'; }
+      if (!n) { return '<span style="opacity:.5">尚无通过的法令。</span>'; }
       return out.join('<br>');
     },
 
@@ -5933,7 +5933,7 @@
       rows.push(row('右派', d.uha));
       rows.push(row('中间右派', d.chuu));
       rows.push(row('中间左派', d.chusa));
-      rows.push(row('<span style="color:#B23A34">协会调得动的那一份</span>', d.kyokai));
+      rows.push(row('<span style="color:#B23A34">社会主义协会</span>', d.kyokai));
       rows.push(row('无派阀', d.muha));
       return rows.join('<br>');
     }
