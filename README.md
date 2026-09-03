@@ -3,8 +3,8 @@
 DendryNexus 製の、日本社会党を一九五九年から一九九三年まで動かす作品。
 五幕・十二回の総選挙・百四十三手。
 
-**遊ぶ** → https://\<user\>.github.io/JSP1959/ （日本語）
-／ https://\<user\>.github.io/JSP1959/zh/ （中文）
+**遊ぶ** →https://pleak9774.github.io/JSP1959/ （日本語）
+／ https://pleak9774.github.io/JSP1959/zh/（中文）
 
 *このリンクは Pages を有効にしたあと、実際のユーザー名に置き換えてください。*
 
