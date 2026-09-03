@@ -6,7 +6,6 @@ DendryNexus 製の、日本社会党を一九五九年から一九九三年ま�
 **遊ぶ** →https://pleak9774.github.io/JSP1959/ （日本語）
 ／ https://pleak9774.github.io/JSP1959/zh/ （中文）
 
-*このリンクは Pages を有効にしたあと、実際のユーザー名に置き換えてください。*
 
 ## これは何か
 
