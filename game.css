@@ -1,0 +1,725 @@
+body {
+  font-family: "Minion Pro", Georgia, serif;
+  /*font-size: 1.125em;*/
+  background-color: #f3f3e3;
+  padding: 0;
+  line-height: 155%;
+  overflow-y: scroll;
+}
+header, #content, footer {
+  color: #431;
+  max-width: 540px;
+  margin: 0 auto;
+  overflow: auto;
+}
+footer {
+  margin-top: 1em;
+  font-size: 0.8em;
+  position: relative;
+}
+footer a {
+  padding-right: 1em;
+}
+header {
+  text-align: right
+}
+#header-links {
+  text-align: left;
+  float: left;
+  display: inline-block;
+  margin-bottom: 0.5em;
+}
+#header-links a {
+  padding-right: 1em;
+}
+
+/* This is mostly copied from undum. */
+#mid_panel {
+  margin: 0 16rem;
+}
+#page {
+  margin: 0 auto;
+  position: relative;
+}
+#tools_wrapper {
+  position: absolute;
+  width: 100%;
+  max-width: 69em;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+}
+.tools {
+  padding: 0.6em;
+  width: 14rem;
+  color: #431;
+  background-color: #f3f3f3;
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.2);
+}
+.tools.left {
+  float: left;
+  left: 0.4em;
+}
+.tools.right {
+  float: right;
+  right: 0.4em;
+}
+#qualities {
+  text-indent: 0;
+  line-height: 1.3em;
+}
+#qualities p {
+  text-indent: 0;
+}
+#qualities h1 {
+  font-size: 1.1em;
+  font-weight: normal;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: rgba(255, 255, 255, 0.75) 2px 2px 2px,
+               rgba(0, 0, 0, 0.1) -1px -1px 2px;
+}
+#qualities h1 + p:first-line {
+  font-weight: normal;
+}
+/* smaller screens: hide left margin */
+@media screen and (max-width: 1200px) {
+  .tools {
+      margin-right: 0.4em;
+      margin-left: 0.4em;
+  }
+  #mid_panel {
+      margin-right: 0.4em;
+  }
+}
+/* mobile: move the stat box to the top if the screen is too small,
+ * and reduce font size slightly. */
+@media screen and (max-width: 560px) {
+  #page {
+      position: static;
+  }
+  #content {
+      position: static;
+      font-size: 1.05em;
+      line-height: 160%;
+      padding: 1em 1em 1.5em 1em;
+  }
+  #qualities {
+      font-size: 1em;
+  }
+  #tools_wrapper {
+    position: static;
+  }
+  .tools {
+      width: 90%;
+      margin: 2em 0 1em 0;
+      margin: 0.4em;
+  }
+  .tools.left {
+      float: none;
+      left: 0;
+  }
+  .tools.right {
+      float: none;
+      right: 0;
+  }
+  #mid_panel {
+      margin: 0 auto;
+  }
+
+  /* cards are smaller on mobile */
+  .card-img {
+    height: 125px;
+    width: 100px;
+  }
+  a.card {
+    width: 100px;
+    height: 125px;
+    border: 8px solid #ccc;
+    margin-bottom: 0.5em;
+    position: relative;
+  }
+  div.blank-card {
+    width: 100px;
+    height: 125px;
+    border: 8px solid #ccc;
+    margin-bottom: 0.5em;
+  }
+  .card-in-hand, .pinned-card, .deck {
+    max-width: 120px;
+    margin-right: 1em;
+    vertical-align: top;
+  }
+}
+
+}
+
+
+
+header h1, header h2 {
+  display: inline-block;
+  font-weight: normal;
+  margin: 0;
+  font-size: 1em;
+}
+header h1 {
+  font-weight: bold;
+}
+header h2:before {
+  content: "by";
+  font-style: italic;
+  padding: 0 0.3em 0 0;
+}
+#content {
+  position: relative;
+  background-color: #f3f3f3;
+  font-size: 1.1em;
+  padding: 1em 1.5em 1.5em 1.5em;
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.2);
+}
+#content #read-marker {
+  border: none;
+  border-top: 1px solid #000;
+  height: 1px;
+  width: 20%;
+  position: center;
+}
+#content h1:first-child {
+  margin-top: 0.5em;
+}
+#content h1 {
+  margin: 2em 0 1em 0;
+  font-size: 1.35em;
+  font-weight: normal;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: rgba(255, 255, 255, 0.75) 2px 2px 2px,
+               rgba(0, 0, 0, 0.1) -1px -1px 2px;
+}
+a {
+  color: #900;
+  text-decoration: none;
+}
+p {
+  margin: 0;
+  margin-bottom: 1em;
+  text-indent: 1em;
+}
+#content h1 + p {
+  text-indent: 0;
+}
+#content h1 + p:first-line {
+  font-weight: bold;
+}
+#content h1 + p:first-letter {
+  position: relative;
+  padding-top: 0.16em;
+  display: block;
+  float: left;
+  font-weight: normal;
+  font-size: 3.2em;
+  line-height: 0.75em;
+}
+p.game-over {
+  border: 2px solid #bbb;
+  padding: 0.5em;
+  margin: 0.5em 0 0 0;
+  border-radius: 4px;
+  color: #999;
+}
+ul.choices {
+  border: 2px solid #876;
+  padding: 0;
+  margin: 0.25em 0 0 0;
+  list-style-type: none;
+  border-radius: 4px;
+}
+ul.choices li {
+  border-bottom: 1px solid #876;
+  padding: 0.5em;
+}
+ul.choices li div.subtitle {
+  margin-left: 2em;
+  font-style: italic;
+}
+ul.choices li.unavailable {
+  color: #999;
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  cursor: default !important;
+}
+ul.choices li:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+ul.choices li:last-child {
+  border-bottom: none;
+}
+ul.choices a {
+  text-decoration: none;
+}
+blockquote {
+  margin: 1em 2em;
+}
+blockquote.attribution {
+  margin-left: 4em;
+}
+blockquote + blockquote.attribution {
+  margin-top: -1em;
+}
+
+/* tabs */
+.tab_container {
+    background-color: #dedede;
+    margin-top: -0.6em;
+    margin-left: -0.6em;
+    margin-right: -0.6em;
+}
+.tab_button {
+    font-family: "Minion Pro", Georgia, serif;
+    background-color: #ddd;
+    /*float: left;*/
+    border: none;
+    outline: none;
+    padding: 10px;
+}
+.tab_button.active {
+    background-color: #f3f3f3;
+}
+.tab_button:hover {
+    background-color: #ececec;
+}
+
+
+.overlay {
+    background: rgba(0,0,0,0.7);
+    display: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    overflow: scroll;
+}
+.overlay_top {
+    position: relative;
+    max-width: 540px;
+    margin: 100px auto;
+    background: rgba(50,50,50,0.7);
+    border: 2px solid;
+    color: white;
+}
+.save_info {
+    min-width: 10em;
+}
+.background {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: #f3f3e3;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+    overflow: hidden;
+}
+/*
+ * This is used for overlaying transparencies
+ * only transition on fade-in
+ * */
+#bg2 {
+    z-index: -100;
+}
+#bg1 {
+    z-index: -99;
+}
+.b {
+}
+.save_button {
+}
+.delete_button {
+}
+
+/*
+ * Card stuff for dendrynexus
+ * 
+ */
+
+ul.decks, ul.hand, ul.pinned-cards {
+  list-style: none;
+  padding-left: 0;
+}
+
+.hand {
+
+}
+
+.pinned-cards {
+
+}
+
+.deck {
+
+}
+
+a.card {
+  display: inline-block;
+  width: 120px;
+  height: 150px;
+  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
+  border: 10px solid #ccc;
+  margin-bottom: 0.5em;
+  position: relative;
+  /* 写真の寄せ（下の transform）を札の外へ出さない */
+  overflow: hidden;
+}
+a.card:hover {
+  box-shadow: 10px 10px 10px rgba(0, 0, 0, 0.2);
+  left: -5px;
+  top: -5px;
+}
+div.blank-card {
+  display: inline-block;
+  width: 120px;
+  height: 150px;
+  background-color: #ddd;
+  border: 10px solid #ccc;
+  margin-bottom: 0.5em;
+}
+
+.card-in-hand, .pinned-card, .deck {
+  display: inline-block;
+  position: relative;
+  max-width: 150px;
+  margin-right: 1em;
+  vertical-align: top;
+}
+
+/* TODO: unavailable card */
+.unavailable-card {
+  color: #999;
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  cursor: default !important;
+}
+
+.card-caption {
+  text-align: center;
+  display: block;
+  font-size: 1em;
+}
+
+.card-tooltip {
+  position: absolute;
+  visibility: hidden;
+  width: 150px;
+  max-width: 200px;
+  font-size: 0.9em;
+  z-index: 2;
+  padding: 0.2em;
+  border: 1px solid;
+  background-color: #eee;
+  left: 105%;
+}
+
+.card-img {
+  height: 150px;
+  width: 120px;
+  object-fit: cover;
+  /* 札は 4:5。写真は 3:4 のことが多く、真ん中で切ると顔が切れる。
+     少し上寄りに切る。生成した絵は最初から 4:5 なので影響を受けない。 */
+  object-position: center 28%;
+}
+
+a.card:focus .card-tooltip, a.card:hover .card-tooltip {
+  visibility: visible;
+  position: absolute;
+}
+
+/* Unlike cards, face images can have different sizes. */
+.face-figure {
+  display: inline-block;
+  border: 5px solid #ccc;
+  float: right;
+  max-width: 150px;
+  max-height: 180px;
+  margin: 1em;
+}
+.face-image {
+  width: 140px;
+  object-fit: cover;
+}
+/* ui/browser.js が付ける class は face-img であって face-image ではない。
+   雛形の規則が当たっていないので、こちらで当てる。max-width が無いと
+   大きい写真が face-figure をはみ出す。 */
+.face-img {
+  display: block;
+  /* 雛形の末尾に img { max-width:100%; max-height:100% } がある。
+     face-figure は float の縮み幅なので、親の幅が子の幅で決まり、
+     子が親の 100% を見ると両方 0 に潰れる。ここで打ち消す。 */
+  max-width: none;
+  max-height: none;
+  width: 140px;
+  height: 170px;
+  object-fit: cover;
+  object-position: center 28%;
+}
+
+/*
+ * sprite stuff- feel free to comment out/remove if not using
+ */
+img {
+    max-width: 100%;
+    max-height: 100%;
+}
+#contentSpriteContainer {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  max-width: 62em;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  z-index: -97;
+}
+.sprite {
+    position: absolute;
+    width: 180px;
+}
+#topLeftSprite {
+    float: left;
+    top: -1em;
+    left: 0.4em;
+}
+#topRightSprite {
+    float: right;
+    top: -1em;
+    right: 0.4em;
+}
+#bottomLeftSprite {
+    float: left;
+    left: 0.4em;
+    top: 50%;
+}
+#bottomRightSprite {
+    float: right;
+    right: 0.4em;
+    top: 50%;
+}
+
+
+
+/* ══════════════════════════════════════════════════════════
+   日本語向けの上書き。テンプレートの欧文組版を無効化する。
+   このファイルは + 付きなのでビルドで上書きされない。
+   ══════════════════════════════════════════════════════════ */
+body, #content, #qualities, #qualities_right {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho",
+               "Noto Serif JP", "MS PMincho", serif;
+}
+/* 欧文のドロップキャップと先頭行ボールドは日本語では意味を成さない */
+#content h1 + p:first-letter {
+  float: none;
+  display: inline;
+  font-size: inherit;
+  line-height: inherit;
+  padding-top: 0;
+  position: static;
+}
+#content h1 + p:first-line { font-weight: normal; }
+#content p { text-indent: 1em; line-height: 1.9; }
+#content h1 + p { text-indent: 1em; }
+#content h1 { letter-spacing: .12em; }
+
+/* 状態欄は等幅寄りで、詰めて読ませる */
+#qualities, #qualities_right {
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP",
+               "Meiryo", sans-serif;
+  font-size: .88em;
+  line-height: 1.65;
+}
+#qualities p, #qualities_right p { text-indent: 0; margin: .35em 0; }
+#qualities h1, #qualities_right h1 {
+  font-size: 1.05em; letter-spacing: .1em; margin: 1.1em 0 .4em;
+  border-bottom: 1px solid rgba(0,0,0,.15); padding-bottom: .2em;
+}
+.tab_button { font-family: inherit; }
+
+/* ── 主画面の前面（原ゲームの main.scene.dry の作りを移植した） ── */
+.frontpage { margin: 0 0 1.1em 0; }
+.frontpage p { margin: 0 0 .45em 0; line-height: 1.55; }
+.frontpage p:empty { display: none; }
+.frontpage .world { font-size: .96em; opacity: .85; border-left: 2px solid rgba(0,0,0,.18); padding-left: .7em; }
+.frontpage .party { font-size: .94em; }
+.frontpage .line  { font-size: .92em; opacity: .9; }
+
+
+/* ══════════════════════════════════════════════════════════
+   写真の見え方を揃える。
+   絵は三種類ある ── 人物・場所・出来事の写真と、
+   tools/gen-card-art.mjs が作る幾何の面である。
+   後者は山札の色で意味を持たせてあるので、色を落としてはいけない。
+   だから写真だけを src の道で選ぶ。
+   ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   背景（#bg1 / #bg2）
+
+   背景は雰囲気であって絵ではない。本文の面（#content）は不透明なので
+   出るのは左右の余白だけだが、そこで色が主張すると読む邪魔になる。
+   白黒に寄せて、上から地の色の紗を掛ける。
+
+   危機のあいだは jsp-core.js の scenery() が body に .jsp-crisis を付ける。
+   絵そのものを差し替えたうえで、締め方も変える ── 暗く、赤に寄せる。
+   一手の刻みが四半期から一か月に落ちたことが、字を読む前に分かるように。
+   ══════════════════════════════════════════════════════════ */
+.background {
+  filter: grayscale(.92) contrast(.86) brightness(1.05);
+  transition: filter .6s ease;
+}
+#bg1::after,
+#bg2::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(125% 95% at 50% 32%,
+              rgba(243, 243, 227, .58) 0%,
+              rgba(243, 243, 227, .84) 58%,
+              rgba(243, 243, 227, .96) 100%);
+  transition: background .6s ease;
+}
+
+body.jsp-crisis .background {
+  filter: grayscale(1) contrast(1.3) brightness(.72);
+}
+body.jsp-crisis #bg1::after,
+body.jsp-crisis #bg2::after {
+  background: radial-gradient(125% 95% at 50% 32%,
+              rgba(120, 26, 22, .26) 0%,
+              rgba(58, 16, 14, .62) 55%,
+              rgba(26, 9, 8, .88) 100%);
+}
+/* 本文の縁にも危機を出す。余白の暗さだけだと、画面の狭い機械で分からない。 */
+body.jsp-crisis #content {
+  box-shadow: 0 0 0 1px rgba(178, 58, 52, .55),
+              2px 2px 18px rgba(70, 16, 13, .45);
+}
+
+/* 党章は意匠と文字の二段組み。札には意匠だけを出す。
+   透過の png なので、地を敷かないと札に穴が開いて見える。 */
+img[src$="art/motif/toki.png"] {
+  transform-origin: 50% 30%;
+  transform: scale(1.85);
+  background: #ded9c6;
+}
+
+/* 写真は白黒に揃える。集めた写真は撮られた年が三十年ぶんに散っていて、
+   色のあるものと無いものが混ざる。並べたときに一番目立つ差がそこなので、
+   まずこれを消す。幾何の面には掛からない。 */
+img[src*="art/leaders/"],
+img[src*="art/places/"],
+img[src*="art/events/"],
+img[src*="art/motif/"] {
+  filter: grayscale(1) contrast(1.06);
+}
+
+/* 顔の枠も、はみ出しを切る */
+.face-figure { overflow: hidden; }
+
+/* ── 台紙ごと写っているものを寄せて、枠を画面の外へ出す ──
+   結党二十周年記念の写真集から来た五枚は、楕円の窓に嵌めた体裁で、
+   四隅に台紙の白が残る。札は四隅まで見えるので、そこだけが浮く。
+   三宅・岡田は刷り物の白縁が写り込んでいる。
+   倍率は一枚ずつ目で決めた。元が幅 400px、出るのは 120px なので、
+   一・五倍まで寄せても粗くはならない。 */
+img[src$="art/leaders/suzuki.png"],
+img[src$="art/leaders/sasaki.png"],
+img[src$="art/leaders/narita.png"],
+img[src$="art/leaders/kono.png"]    { transform: scale(1.30); }
+img[src$="art/leaders/asanuma.jpg"] { transform: scale(1.24); }
+img[src$="art/leaders/wada.png"]    { transform: scale(1.52); }
+img[src$="art/leaders/miyake.jpg"]  { transform: scale(1.28); }
+img[src$="art/leaders/okada.jpg"]   { transform: scale(1.26); }
+
+/* 向坂逸郎だけは書斎の座像で、他が全部胸から上なのに一枚だけ引きの絵になる。
+   顔の位置を指しておいて、そこへ寄せる。元を幅 1200px で取り直してあるので、
+   三倍近く寄せても粗くならない（tools/art/leaders.json の width）。 */
+/* ── 網点で刷ったものを、少しだけぼかす ──
+   飛鳥田・曽禰・上田の三枚と、中日新聞の切り抜きは、写真ではなく
+   印刷物を写したもので、網点がそのまま残っている。他は連続階調なので、
+   並べるとここだけ質感が違う。札は 120px で出るから元の三分の一に
+   縮むが、そのときに網点が干渉縞になる。縮める前に半画素ぼかして潰す。
+   山花秀雄は網点ではなく粗い新聞紙の走査で、白く飛んでいる。
+   こちらは締めるほうを強くする。 */
+img[src$="art/leaders/asukata.png"],
+img[src$="art/leaders/sone.jpg"],
+img[src$="art/leaders/ueda.png"] {
+  filter: grayscale(1) contrast(1.06) blur(.45px);
+}
+img[src$="art/motif/kyodo67.jpg"] {
+  filter: grayscale(1) contrast(1.02) blur(.5px);
+}
+img[src$="art/leaders/yamahana_h.jpg"] {
+  filter: grayscale(1) contrast(1.2) blur(.35px);
+  transform: scale(1.12);
+}
+
+/* 上原康助だけは二〇一二年の屋外の写真で、アロハに首飾りという
+   出で立ちである。他が全部一九五〇〜六〇年代の正装なので、そこだけ浮く。
+   自由に使える別の写真は無いので、顔まで寄せて服を枠の外へ出す。 */
+img[src$="art/leaders/uehara.jpg"] {
+  transform-origin: 50% 26%;
+  transform: scale(1.7);
+}
+
+/* ── 通用札の面。寄せどころのあるものだけ指す ── */
+
+/* 帝国議会議事堂の議場は刷り物で、白縁と英字の説明が焼き込んである。
+   縁と説明を枠の外へ出す。 */
+img[src$="art/motif/honkaigi.jpg"] {
+  transform-origin: 50% 42%;
+  transform: scale(1.35);
+}
+
+/* 一九五二年の空撮は引きが強い。議事堂は右上寄りにあるので、そこへ寄せる。 */
+img[src$="art/motif/gijido52.jpg"] {
+  transform-origin: 66% 34%;
+  transform: scale(2);
+}
+
+/* 憲法の原本は署名の頁。中央切りだと大臣の名前の列だけになるので、
+   御名と御璽の側を残す。 */
+img[src$="art/motif/kenpou.jpg"] { object-position: 76% center; }
+
+/* 団地は右側に棟が並ぶ。中央切りだと工事中の空き地になる。 */
+img[src$="art/motif/danchi.jpg"] { object-position: 68% center; }
+
+img[src$="art/leaders/sakisaka.jpg"] {
+  /* object-position は cover のはみ出しぶんしか動かせない。この写真は
+     縦のはみ出しが 25px しかないので、縦の寄せは効かない。
+     寄せの中心は transform-origin で指す。 */
+  transform-origin: 67% 26%;
+  transform: scale(2.2);
+}
+
+
+/* ── 携帯での脇柱 ── jsp-mobile-sidebar
+ * 雛形の携帯向けの規則は脇柱を本文の上に積むので、
+ * 番号を数えるだけで一画面半スクロールしてから
+ * 選択肢に到ることになる。高さを切って中を巻かせる。
+ */
+@media screen and (max-width: 560px) {
+  #stats_sidebar {
+    max-height: 38vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 指で押すので、選択肢の当たりを広く取る */
+  #content li a { display: inline-block; padding: 0.25em 0; }
+}

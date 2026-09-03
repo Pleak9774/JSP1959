@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta prefix="ifiction: http://babel.ifarchive.org/protocol/iFiction/"
+        property="ifiction:ifid" content="">
+    <title>日本社会党 1959-1993 - Kuozhong</title>
+    <link rel="stylesheet" type="text/css" href="game.css">
+    <script src="jquery-1.11.1.min.js"></script>
+    <script src="jsp-core.js"></script>
+    <script src="jsp-leaders.js"></script>
+    <script src="jsp-cabinet.js"></script>
+    <script src="core.js"></script>
+    <script src="game.js"></script>
+    <script>window.JSP_AUDIO = "../audio/"; window.JSP_ART = "../art/"; window.JSP_LANG = "zh";</script>
+<!-- jsp:i18n -->
+    <style>
+      #jsp-langbar { position: fixed; top: 6px; right: 10px; z-index: 9999;
+        font: 12px/1.6 system-ui, sans-serif; opacity: .75; }
+      #jsp-langbar:hover { opacity: 1; }
+      .jsp-lang { display: inline-block; padding: 2px 8px; margin-left: 4px;
+        border: 1px solid currentColor; border-radius: 3px;
+        text-decoration: none; color: inherit; }
+      .jsp-lang-on { opacity: .5; border-style: dashed; }
+    </style>
+    <div id="jsp-langbar"><a class="jsp-lang" href="../index.html" data-lang="ja">日本語</a><span class="jsp-lang jsp-lang-on">中文</span></div>
+    <script>
+      // 選んだ言語を覚えておき、次に入口へ来たときはそちらへ送る。
+      // 「いま zh にいるのに ja へ飛ばす」ことが無いよう、
+      // 移動するのは記憶と今いる場所が食い違うときだけにする。
+      (function () {
+        var HERE = "zh";
+        var KEY = 'jsp-lang';
+        try {
+          var saved = localStorage.getItem(KEY);
+          var links = document.querySelectorAll('a.jsp-lang');
+          for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener('click', function () {
+              try { localStorage.setItem(KEY, this.getAttribute('data-lang')); } catch (e) {}
+            });
+          }
+          if (saved && saved !== HERE && !sessionStorage.getItem(KEY + '-moved')) {
+            for (var j = 0; j < links.length; j++) {
+              if (links[j].getAttribute('data-lang') === saved) {
+                sessionStorage.setItem(KEY + '-moved', '1');
+                location.replace(links[j].getAttribute('href'));
+                return;
+              }
+            }
+          }
+          if (!saved) { localStorage.setItem(KEY, HERE); }
+        } catch (e) {}
+      }());
+    </script>
+  </head>
+  <body>
+    <div class="background" id="bg2">
+    </div>
+
+    <div class="background" id="bg1">
+    </div>
+
+    <div id="options" class="overlay" style="display: none;">
+        <div class="overlay_top">
+            <table>
+                <tr>
+                    <td>
+                        <label for="audio_yes">开启音乐</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="audio_yes" name="audio" value="1" onclick="window.JSP.audioOn(true);">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="audio_no">关闭音乐</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="audio_no" name="audio" value="0" onclick="window.JSP.audioOn(false);">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="audio_volume">音量</label>
+                    </td>
+                    <td>
+                        <input type="range" id="audio_volume" min="0" max="100" value="100" style="width:9em"
+                               oninput="window.JSP.audioVol(this.value / 100);">
+                    </td>
+                </tr>
+                <tr>
+                    <td> <hr> </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="backgrounds_yes">开启背景图</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="backgrounds_yes" name="backgrounds" value="1" onclick="window.enableBg();">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="backgrounds_no">关闭背景图</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="backgrounds_no" name="backgrounds" value="0" onclick="window.disableBg();">
+                    </td>
+                </tr>
+                <tr>
+                    <td> <hr> </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="animate_yes">开启动画</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="animate_yes" name="animate" value="1" onclick="window.enableAnimate();">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="animate_no">关闭动画</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="animate_no" name="animate" value="0" onclick="window.disableAnimate();">
+                    </td>
+                </tr>
+                <tr>
+                    <td> <hr> </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="animate_bg_yes">开启背景动画</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="animate_bg_yes" name="animate_bg" value="1" onclick="window.enableAnimateBg();">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="animate_bg_no">关闭背景动画</label>
+                    </td>
+                    <td>
+                        <input type="radio" id="animate_bg_no" name="animate_bg" value="0" onclick="window.disableAnimateBg();">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <button onclick="window.hideOptions();">关掉</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div id="save" class="overlay" style="display: none;">
+        <table id="saves_table" class="overlay_top">
+            <tr>
+                <td>Auto-0</td>
+                <td>
+                    <button class="b save_button" id="save_button_a0">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_a0">删</button>
+                </td>
+                <td class="save_info" id="save_info_a0"></td>
+                <td>
+                    <button class="b export_button" id="export_button_a0">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Auto-1</td>
+                <td>
+                    <button class="b save_button" id="save_button_a1">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_a1">删</button>
+                </td>
+                <td class="save_info" id="save_info_a1"></td>
+                <td>
+                    <button class="b export_button" id="export_button_a1">导出</button>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>0</td>
+                <td>
+                    <button class="b save_button" id="save_button_0">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_0">删</button>
+                </td>
+                <td class="save_info" id="save_info_0"></td>
+                <td>
+                    <button class="b export_button" id="export_button_0">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>
+                    <button class="b save_button" id="save_button_1">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_1">删</button>
+                </td>
+                <td class="save_info" id="save_info_1"></td>
+                <td>
+                    <button class="b export_button" id="export_button_1">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>
+                    <button class="b save_button" id="save_button_2">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_2">删</button>
+                </td>
+                <td class="save_info" id="save_info_2"></td>
+                <td>
+                    <button class="b export_button" id="export_button_2">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>
+                    <button class="b save_button" id="save_button_3">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_3">删</button>
+                </td>
+                <td class="save_info" id="save_info_3"></td>
+                <td>
+                    <button class="b export_button" id="export_button_3">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>
+                    <button class="b save_button" id="save_button_4">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_4">删</button>
+                </td>
+                <td class="save_info" id="save_info_4"></td>
+                <td>
+                    <button class="b export_button" id="export_button_4">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>
+                    <button class="b save_button" id="save_button_5">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_5">删</button>
+                </td>
+                <td class="save_info" id="save_info_5"></td>
+                <td>
+                    <button class="b export_button" id="export_button_5">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>
+                    <button class="b save_button" id="save_button_6">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_6">删</button>
+                </td>
+                <td class="save_info" id="save_info_6"></td>
+                <td>
+                    <button class="b export_button" id="export_button_6">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>
+                    <button class="b save_button" id="save_button_7">存</button>
+                </td>
+                <td>
+                    <button class="b delete_button" id="delete_button_7">删</button>
+                </td>
+                <td class="save_info" id="save_info_7"></td>
+                <td>
+                    <button class="b export_button" id="export_button_7">导出</button>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="5">
+                    <label for="import_save">导入存档文件：</label> <input type="file" id="import_save" onchange="window.JSP.importSave('import_save');"></input>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <button onclick="dendryUI.hideSaveSlots();">关掉</button>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Sprite stuff - feel free to comment out/remove if not using -->
+    <div id="contentSpriteContainer">
+        <div class="sprite" id="topLeftSprite"></div>
+        <div class="sprite" id="topRightSprite"></div>
+
+        <div class="sprite" id="bottomLeftSprite"></div>
+        <div class="sprite" id="bottomRightSprite"></div>
+    </div>
+
+    <div id='page'>
+        <div id="mid_panel">
+            <header>
+                <h1></h1>
+                <h2></h2>
+
+                <div id="header-links">
+                    <!--<a id="stats-link" onclick="window.showStats();" href="#">Status</a>-->
+                    <a onclick="dendryUI.showSaveSlots();" href="#">存档／读档</a>
+                    <a onclick="dendryUI.showOptions();" href="#">设置</a>
+                    <a onclick="return window.JSP.openLibrary();" href="#">文库</a>
+                </div>
+            </header>
+<div id="tools_wrapper">
+                <div id='stats_sidebar' class='tools left'>
+                    <div class="tab_container">
+                        <button class="tab_button active" id="main_tab" onclick="window.changeTab('status', 'main_tab');">盘面</button>
+                        <button class="tab_button" id="politics_tab" onclick="window.changeTab('status.factions', 'politics_tab');">派阀</button>
+                        <button class="tab_button" id="paramilitary_tab" onclick="window.changeTab('status.board', 'paramilitary_tab');">外盘</button>
+                        <button class="tab_button" id="poll_tab" onclick="window.changeTab('status.leaders', 'poll_tab');">指导部</button>
+                    </div>
+                    <div id="qualities">
+                    </div>
+                </div>
+            </div>
+
+            <div id='content'>
+
+            </div>
+
+            <footer>
+      <!--
+      <p>
+        <a onclick="window.showSaveSlots();" href="#">存档／读档</a>
+        <a onclick="window.quickSave();" href="#">Quick Save</a>
+        <a onclick="window.quickLoad();" href="#">Quick Load</a>
+      </p>
+
+      &copy; 2021 Autumn Chen.
+      Made with <a href="https://github.com/aucchen/dendry">Dendry</a>.
+      -->
+            </footer>
+        </div>
+    </div>
+  </body>
+</html>
