@@ -2695,7 +2695,7 @@
       { n: 5007, id: 'a5_uno', name: '宇野内閣', acts: [5], need: { name: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
       // 山が動いた　帯中間右/右・1989年〜・史実
-      { n: 5008, id: 'a5_yama_ga_ugoita', name: '山が動いた', acts: [5], need: { hc: 0.35 }, fixed: true,
+      { n: 5008, id: 'a5_yama_ga_ugoita', name: '山动了', acts: [5], need: { hc: 0.35 }, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.seats_hc >= 80; } },
@@ -2723,7 +2723,7 @@
       { n: 5204, id: 'a5_tochi_kihon', name: '土地基本法', acts: [5], need: { diet: 0.25 }, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
       // 山が動いた　帯左/中間左・1989年〜・史実
-      { n: 7604, id: 'yama_ga_ugoita_sa', name: '山が動いた', acts: [5], need: { hc: 0.35 }, fixed: true,
+      { n: 7604, id: 'yama_ga_ugoita_sa', name: '山动了', acts: [5], need: { hc: 0.35 }, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.seats_hc >= 80; } },
@@ -5094,6 +5094,160 @@
       5: { hr: 70,  hr_total: 511, hc: 71, members: 50000, splits: 2, cabinet: 6, route: -1 }
     },
 
+    // ══════════════════════════════════════════════════════════
+    //  実績
+    //
+    //  名は史実の言葉、説明は一行の平叙文にする。
+    //  盤の比喩は使わない。何をしたか、あるいは何が真になったかだけを書く。
+    //  絵は game/art/ にあるもので、その実績の中身に当たるものを当てる。
+    //
+    //  when を持つものは checkAchievements が毎手見て渡す。
+    //  持たないものは、渡す場所が決まっている（幕末・結末・全局結算）。
+    //  end: true は「その局が終わったとき」にしか成り立たない条件で、
+    //  endings と act_end からしか見ない。
+    // ══════════════════════════════════════════════════════════
+    ACH: [
+      { id: 'tandoku_kahan', art: 'motif/chuo_hiroma.jpg',
+        name: '单独过半', desc: '在众议院取得单独过半数。',
+        when: function (Q) { return !!Q.won_majority_ever; } },
+      { id: 'saikou_koushin', art: 'motif/senkyoka52.jpg',
+        name: '最高纪录', desc: '超过了一九五八年的一百六十六席。',
+        when: function (Q) { return (Q.seats_hr || 0) > 166; } },
+      { id: 'seiken_iri', art: 'motif/sokaku.jpg',
+        name: '入阁', desc: '进入了内阁。',
+        when: function (Q) { return !!Q.ever_in_power || (Q.cabinet_posts_ever || 0) > 0; } },
+      { id: 'shuhan', art: 'motif/honkaigi.jpg',
+        name: '首班', desc: '由社会党推出了内阁总理大臣。',
+        when: function (Q) { return !!Q.has_souri; } },
+      { id: 'nishio_nokotta', art: 'motif/minsha60.jpg',
+        name: '西尾留下了', desc: '民主社会党没有成立。',
+        when: function (Q) { return (Q.act || 1) >= 2 && !Q.minsha_exists; } },
+      { id: 'eda_nokotta', art: 'motif/ryouha50.png',
+        name: '江田留下了', desc: '社会民主连合没有成立。',
+        when: function (Q) { return (Q.act || 1) >= 4 && !Q.shamin_exists; } },
+      { id: 'mada_warete_inai', art: 'motif/touitsu55.jpg',
+        name: '没有分裂', desc: '一次也没有分裂。',
+        when: function (Q) { return (Q.splits || 0) === 0 && (Q.act || 1) >= 2; } },
+      { id: 'hibuso_kanto', art: 'motif/kenpou.jpg',
+        name: '非武装中立', desc: '直到收局也没有降下非武装中立。',
+        end: true, when: function (Q) { return !!Q.hibuso_churitsu; } },
+      { id: 'kokumin_seito', art: 'motif/shotengai.jpg',
+        name: '国民政党', desc: '社会党是国民政党。',
+        end: true, when: function (Q) { return window.JSP.bandOf(Q) === 4; } },
+      { id: 'kozo_kaikaku_sen', art: 'motif/danchi.jpg',
+        name: '構造改革', desc: '把江田三郎的路线变成了党的路线。',
+        when: function (Q) { return !!Q.kozo_kaikaku; } },
+      { id: 'michi_saitaku', art: 'motif/ronoto28.jpg',
+        name: '走向社会主义的道路', desc: '通过了《日本走向社会主义的道路》。',
+        when: function (Q) { return !!Q.michi_adopted; } },
+      { id: 'sutoken', art: 'motif/miyahara.jpg',
+        name: '罢工权', desc: '在罢工权罢工中获胜。',
+        when: function (Q) { return !!Q.sutoken_won; } },
+      { id: 'sayoku_toitsu', art: 'motif/sohyo_taikai.png',
+        name: '左翼统一', desc: '劳动战线在左侧完成了统一。',
+        when: function (Q) { return !!Q.left_unity; } },
+      { id: 'zenrokyo_dachi', art: 'motif/gekkan_sohyo.png',
+        name: '全劳协', desc: '在连合之外另建了一个全国中央组织。',
+        when: function (Q) { return !!Q.zenrokyo; } },
+      { id: 'kakushin_jichitai', art: 'motif/minobe67.png',
+        name: '革新自治体', desc: '在四个以上的自治体取得首长。',
+        when: function (Q) {
+          var n = (Q.local_kyoto || 0) + (Q.local_tokyo || 0) + (Q.local_yokohama || 0) +
+                  (Q.local_osaka || 0) + (Q.local_hiroshima || 0) + (Q.local_nagasaki || 0) +
+                  (Q.local_aichi || 0) + (Q.local_hokkaido || 0);
+          return n >= 4;
+        } },
+      { id: 'yama_ga_ugoita', art: 'motif/sangiin.jpg',
+        name: '山动了', desc: '在参议院的改选议席上压过了自民党。',
+        when: function (Q) { return !!Q.madonna; } },
+      //  幕の目標
+      { id: 'act1_pass', art: 'motif/taikai59.jpg',
+        name: '第Ⅰ幕　分裂与安保', desc: '达成了到一九六〇年为止的目标。',
+        end: true, when: function (Q) { return !!Q.act_pass && (Q.act || 0) === 1; } },
+      { id: 'act2_pass', art: 'motif/kyodo67.jpg',
+        name: '第Ⅱ幕　结构改革论争', desc: '达成了到一九六九年为止的目标。',
+        end: true, when: function (Q) { return !!Q.act_pass && (Q.act || 0) === 2; } },
+      { id: 'act3_pass', art: 'motif/yokkaichi.jpg',
+        name: '第Ⅲ幕　死胡同', desc: '达成了到一九七七年为止的目标。',
+        end: true, when: function (Q) { return !!Q.act_pass && (Q.act || 0) === 3; } },
+      { id: 'act4_pass', art: 'motif/satsu.jpg',
+        name: '第Ⅳ幕　向现实路线漂流', desc: '达成了到一九八五年为止的目标。',
+        end: true, when: function (Q) { return !!Q.act_pass && (Q.act || 0) === 4; } },
+      { id: 'act5_pass', art: 'motif/gijido52.jpg',
+        name: '第Ⅴ幕　土井与崩溃', desc: '达成了到一九九三年为止的目标。',
+        end: true, when: function (Q) { return !!Q.act_pass && (Q.act || 0) === 5; } },
+      //  結末
+      { id: 'kanso_1993', art: 'motif/toki.png',
+        name: '一九九三年', desc: '把三十四年打到了最后。',
+        end: true, when: function (Q) { return !!Q.ran_full; } },
+      { id: 'shori_no_shori', art: 'motif/akushu55.jpg',
+        name: '胜利的胜利', desc: '达成了目标，也超过了史实的数字。' },
+      { id: 'shori_no_shippai', art: 'motif/saitouitsu55.jpg',
+        name: '胜利的失败', desc: '达成了目标，数字却与史实几乎无异。' },
+      { id: 'shippai_no_shori', art: 'motif/mayday49.png',
+        name: '失败的胜利', desc: '没有达成目标，但超过了史实的数字。' },
+      { id: 'shippai_no_shippai', art: 'motif/hahaoya55.png',
+        name: '失败的失败', desc: '输了，只留下了曾经反对的记录。' },
+      { id: 'zenkyoku_shori', art: 'motif/saitouitsu_taikai.png',
+        name: '全局胜利', desc: '在贯穿三十四年的判定中获胜。',
+        end: true, when: function (Q) { return !!Q.global_win; } },
+      { id: 'seiken_wo_tamotta', art: 'motif/sokaku.jpg',
+        name: '保住了政权', desc: '没有让一九九三年的政权垮掉。',
+        end: true, when: function (Q) { return (Q.gv_kind || 0) === 3; } }
+    ],
+
+    //  毎手見て、条件が真になったものを渡す。
+    //  E は場面のコードの中の this（DendryEngine）。無くても盤は止めない。
+    checkAchievements: function (E, Q, atEnd) {
+      var i, a, ok, n = 0;
+      for (i = 0; i < this.ACH.length; i++) {
+        a = this.ACH[i];
+        if (!a.when) { continue; }
+        if (a.end && !atEnd) { continue; }
+        if (Q['achievement_' + a.id]) { continue; }
+        ok = false;
+        try { ok = !!a.when(Q); } catch (err) { ok = false; }
+        if (!ok) { continue; }
+        if (E && typeof E.achieve === 'function') { E.achieve(a.id); }
+        else { this.award(a.id); }
+        Q['achievement_' + a.id] = 1;
+        n += 1;
+      }
+      return n;
+    },
+
+    //  実績の一覧を組む。取っていないものは薄く出す。
+    //  見出しの語は ACH の中にあるので、訳は js の語の差し替えで当たる。
+    achBlock: function (Q) {
+      var base = (typeof window !== 'undefined' && window.JSP_ART) ? window.JSP_ART : 'art/';
+      var i, a, got, s = '', done = 0;
+      for (i = 0; i < this.ACH.length; i++) {
+        if (Q['achievement_' + this.ACH[i].id]) { done += 1; }
+      }
+      s += '<p style="opacity:.6">' + done + ' / ' + this.ACH.length + '</p>';
+      for (i = 0; i < this.ACH.length; i++) {
+        a = this.ACH[i];
+        got = !!Q['achievement_' + a.id];
+        s += '<div style="display:flex;gap:.8em;align-items:center;margin:.55em 0;'
+           + (got ? '' : 'opacity:.38;') + '">'
+           + '<img src="' + base + a.art + '" alt="" '
+           + 'style="width:82px;height:56px;object-fit:cover;flex:none;border-radius:2px;'
+           + (got ? '' : 'filter:grayscale(1);') + '">'
+           + '<div><b>' + a.name + '</b><br>'
+           + '<span style="opacity:.75">' + a.desc + '</span></div>'
+           + '</div>';
+      }
+      return s;
+    },
+
+    openAchievements: function () {
+      try {
+        var U = window.dendryUI;
+        if (U && U.dendryEngine) { U.dendryEngine.goToScene('achievements'); }
+      } catch (e) { /* 開けなくても盤は止めない */ }
+      return false;
+    },
+
     //  実績を渡す。エンジンが無くても進行には影響しない。
     award: function (name) {
       try {
@@ -5527,7 +5681,7 @@
       Q.goal_met = achieved ? 1 : 0;
       Q.above_base = above ? 1 : 0;
       Q.quadrant = achieved ? (above ? 1 : 2) : (above ? 3 : 4);
-      Q.quadrant_name = ['', '勝利の勝利', '勝利の失敗', '失敗の勝利', '失敗の失敗'][Q.quadrant];
+      Q.quadrant_name = ['', '胜利的胜利', '胜利的失败', '失败的胜利', '失败的失败'][Q.quadrant];
       // 内訳（表示用）
       var w = this.SCORE_W;
       Q.sc_hr = Math.round(w.hr * (v.hr / (v.hr_total / 2)) * 10) / 10;
