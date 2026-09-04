@@ -976,10 +976,29 @@
     //  分裂の扉が開いているか。splitCheck と factionPressure の
     //  両方がこれを見る ── 二つが食い違うと、出て行けないのに
     //  分裂待ちになる派閣ができる。
+    //  出口が開く条件は「怒っているか」ではなく「出た先があるか」である。
+    //  怒りだけで扉を開けていたので、監査（三〇〇局）では
+    //    左派が第Ⅰ幕で出て行った局 54、脱党時の route 中央値 −0.4、
+    //    右へ一歩も寄っていない（route <= 0）のに出て行った局 64.5%
+    //  という状態だった。新社会党は一九九六年、村山内閣が自衛隊を合憲と
+    //  認めたあとの話である。協会は一九七七年の協会規制でも出て行かなかった。
+    //  怒りの行き場は factionPressure（大会での抵抗）に回す。
     hasExit: function (Q, f) {
-      if (f === 'uha') { return !Q.minsha_exists; }
-      if (f === 'chuu') { return !Q.shamin_exists; }
-      if (f === 'saha') { return !!Q.saha_independent && !Q.shinsha_exists; }
+      //  民主社会党 一九六〇年一月。西尾は除名を待たずに出た。
+      //  ここだけは早い。ただし西尾自身が退いたあとの幕では起こらない。
+      if (f === 'uha') { return !Q.minsha_exists && (Q.act || 1) <= 3; }
+      //  社会市民連合 一九七七年／社民連 一九七八年。江田が出たのは
+      //  協会に押し切られたからで、党が左へ振り切ったときにだけ扉は開く。
+      if (f === 'chuu') {
+        return !Q.shamin_exists && (Q.act || 1) >= 3 && (Q.route || 0) <= -2;
+      }
+      //  新社会党 一九九六年。窓口の外なので、盤面では
+      //  「党が民主社会主義の帯まで右へ出た」ことを条件に置く。
+      //  独立派閥になっているだけでは出て行かない。
+      if (f === 'saha') {
+        return !!Q.saha_independent && !Q.shinsha_exists &&
+               (Q.route || 0) >= 1.5 && (Q.act || 1) >= 4;
+      }
       //  中間左派（鈴木–佐々木派）に出口はない。この派が党の重心であり、
       //  出て行けば党のほうが残らない。史実でもこの派は最後まで党にいた。
       return false;
@@ -997,7 +1016,11 @@
       //  中央が右へ寄るほど協会は組織として固まっていった ── 史実の順序でもある。
       //  ここを閉じていたせいで、第Ⅲ幕の協会独立事象を踏まない局では
       //  左派が永久に出て行けなかった。
-      if (this.inParty(Q, 'saha') && (Q.mood_saha || 0) >= 100 && !Q.saha_independent) {
+      //  ただし協会が独立した身体を持つのは一九七〇年代である。
+      //  幕の門を掛けていなかったので、監査では独立の 150/174 が第Ⅰ幕に
+      //  起きていた（＝一九五九年の社会主義協会が独立派閥として立っていた）。
+      if (this.inParty(Q, 'saha') && (Q.mood_saha || 0) >= 100 &&
+          !Q.saha_independent && (Q.act || 1) >= 3) {
         Q.saha_independent = 1;
         Q.del_chusa = (Q.del_chusa || 0) - 120;
         Q.del_saha = (Q.del_saha || 0) + 120;
@@ -1036,8 +1059,12 @@
       //  中間左派：両端で怒るが、出口がない。右端のほうが深く怒る
       //  ── 左へ寄るのは党の内輪の話だが、右へ寄るのは党の看板を変える話である。
       Q.mood_chusa += (r > 3) ? 5 : (Math.abs(r) > 3 ? 3 : -1);
-      // 左派：右に行くほど怒る
-      Q.mood_saha += (r > 0) ? (3 + r * 3) : (r > -2 ? 1 : -2);
+      //  左派：右に行くほど怒る。
+      //  中間左（−2 〜 −0.5）は党が四十年いた場所であって、
+      //  そこに座っているだけで協会が怒っていく理由はない。
+      //  以前はこの帯でも毎手 +1 で、一三九手のあいだに何もしなくても
+      //  百三十九たまった（閾値は 100）。据え置きに直す。
+      Q.mood_saha += (r >= 1) ? (3 + r * 3) : (r > 0 ? 2 : (r > -2 ? 0 : -2));
       for (i = 0; i < f.length; i++) {
         k = 'mood_' + f[i];
         //  出て行った派閥は不満を持たない。ここを閉じていなかったせいで、
@@ -2018,7 +2045,7 @@
       // 西尾処分　1959年〜・史実
       { n: 1012, id: 'a1_nishio_shobun', name: '西尾処分', acts: [1], need: { split: 0.2 }, fixed: true,
         when: function (Q) { return Q.year >= 1959 &&
-                 Q.minsha_exists; } },
+                 !Q.minsha_exists; } },
       // 三池の前哨　1959年〜・史実
       { n: 1019, id: 'a1_miike_zensho', name: '三池の前哨', acts: [1], need: { labor: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1959; } },
@@ -2970,7 +2997,7 @@
       { n: 303, id: 'a1_toitsu_joken', name: '統一の条件', acts: [1], need: { koryo: 0.2 },
         when: function (Q) { return Q.year <= 1960 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 Q.minsha_exists; } },
+                 !Q.minsha_exists; } },
       // 国鉄の労使
       { n: 304, id: 'a1_kokutetsu_58', name: '国鉄の労使', acts: [2], need: { labor: 0.2 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.2); } },
@@ -3029,7 +3056,7 @@
       // 西尾除名の前夜
       { n: 401, id: 'a1_nishio_choubatsu', name: '西尾除名の前夜', acts: [1], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
-                 Q.minsha_exists; } },
+                 !Q.minsha_exists; } },
       // 全労会議の拡大
       { n: 402, id: 'a1_zenro_kessei', name: '全労会議の拡大', acts: [2], need: { labor: 0.14 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.14); } },
@@ -3046,7 +3073,8 @@
       // 国民政党論　帯右
       { n: 406, id: 'a1_uha_kokumin', name: '国民政党論', acts: [1], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.minsha_exists; } },
       // 基地の周辺
       { n: 407, id: 'a1_gunji_kichi', name: '基地の周辺', acts: [2], need: { rally: 0.2 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.2); } },
@@ -3256,7 +3284,8 @@
       // 民社党との距離　帯右
       { n: 607, id: 'b4_a2_minsha_kyori', name: '民社党との距離', acts: [2], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.minsha_exists; } },
       // 労働学校の量産　帯左
       { n: 608, id: 'b1_a3_rodo_gakko', name: '労働学校の量産', acts: [3], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
@@ -3299,7 +3328,8 @@
       // 右派の党内基盤　帯中間右/右
       { n: 1017, id: 'a1_uha_chikara', name: '右派の党内基盤', acts: [1], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.minsha_exists; } },
       // 共産党との距離　軸未定/社共
       { n: 1018, id: 'a1_kyosan_kyoto', name: '共産党との距離', acts: [1], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
@@ -4015,8 +4045,13 @@
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
-      { n: 6, id: 'kyokai', name: '協会規制問題', acts: [1, 2, 3, 4, 5], need: { org: 0.17 },
-        when: function (Q) { return Q.kyokai_grip >= 52 && Q.c_org >= window.JSP.needOf(Q, 0.17) && !Q.saha_independent; } }
+      //  協会規制の決議は一九七七年二月。第Ⅲ幕からしか出さない。
+      //  幕を選ばずに置いていたので、監査では協会の独立の 23/117 が第Ⅰ幕、
+      //  56/117 が第Ⅱ幕に起きていた ── 一九五九年に社会主義協会を
+      //  「党内党」として規制する決議が通る盤面になっていた。
+      { n: 6, id: 'kyokai', name: '協会規制問題', acts: [3, 4, 5], need: { org: 0.17 },
+        when: function (Q) { return (Q.act || 1) >= 3 && Q.kyokai_grip >= 52 &&
+                 Q.c_org >= window.JSP.needOf(Q, 0.17) && !Q.saha_independent; } }
     ],
 
     //  事象を一つ選ぶ。
