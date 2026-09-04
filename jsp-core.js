@@ -987,10 +987,15 @@
       //  民主社会党 一九六〇年一月。西尾は除名を待たずに出た。
       //  ここだけは早い。ただし西尾自身が退いたあとの幕では起こらない。
       if (f === 'uha') { return !Q.minsha_exists && (Q.act || 1) <= 3; }
-      //  社会市民連合 一九七七年／社民連 一九七八年。江田が出たのは
-      //  協会に押し切られたからで、党が左へ振り切ったときにだけ扉は開く。
+      //  社会市民連合 一九七七年／社民連 一九七八年。
+      //  江田が出たのは党が左へ振り切ったからというより、協会が党を
+      //  握ったからである。route だけを条件にしていたら第Ⅲ幕の
+      //  route <= -2 は 3/79 局しかなく、史実の道そのものが通らなくなった。
+      //  掌握度を主にして、極左の線でも開くようにする。
+      //  協会規制で掌握度を落とせば、この扉は閉じられる ── それが史実の梃子である。
       if (f === 'chuu') {
-        return !Q.shamin_exists && (Q.act || 1) >= 3 && (Q.route || 0) <= -2;
+        return !Q.shamin_exists && (Q.act || 1) >= 3 &&
+               ((Q.kyokai_grip || 0) >= 60 || (Q.route || 0) <= -2);
       }
       //  新社会党 一九九六年。窓口の外なので、盤面では
       //  「党が民主社会主義の帯まで右へ出た」ことを条件に置く。
@@ -1046,16 +1051,53 @@
       return Q;
     },
 
+    //  出て行った派閥の席を誰が継ぐか。
+    //  一九六〇年一月に西尾が出たあと、党の右の端は中間右派（河上・江田）
+    //  である。協会が出たあとの左の端は中間左派になる。
+    //  事象やカードが「右派が怒る」と書いているとき、右派がもう党に
+    //  居なければ、怒るのはこの派閥である ── refresh がここへ繰り上げる。
+    MOOD_HEIR: { uha: 'chuu', chuu: 'chusa', saha: 'chusa' },
+
+    //  出て行った派閥に積まれた不満を、席を継いだ派閥へ移す。
+    //  以前はここが素の 0 潰しだったので、第Ⅱ幕以降の事象が書いている
+    //  mood_uha は 62 箇所すべて空振りしていた ── 民社脱党は深い局の
+    //  九割七分で起きるので、「右派が怒る」と書いてある選択肢は
+    //  三十年ぶん一度も効かなかった。
+    //  相続先も出ていれば、さらにその先へ送る（中間左派に出口はない）。
+    moodInherit: function (Q) {
+      var fs = ['uha', 'chuu', 'saha'], i, f, to, n, hop;
+      for (i = 0; i < fs.length; i++) {
+        f = fs[i];
+        if (this.inParty(Q, f)) { continue; }
+        n = Q['mood_' + f] || 0;
+        Q['mood_' + f] = 0;
+        //  なだめた側（負）も同じように継がせる。片道だけ継がせると
+        //  「右派に役職を厚く配る」が効かず「放っておく」だけが効く。
+        if (n === 0) { continue; }
+        to = this.MOOD_HEIR[f]; hop = 0;
+        while (to && !this.inParty(Q, to) && hop < 3) { to = this.MOOD_HEIR[to]; hop += 1; }
+        if (to && this.inParty(Q, to)) {
+          Q['mood_' + to] = Math.max(0, (Q['mood_' + to] || 0) + n);
+        }
+      }
+      return Q;
+    },
+
     moodDrift: function (Q) {
       var r = Q.route, i, k, f = ['uha', 'chuu', 'chusa', 'saha'];
+      //  路線ドリフトは党に居る派閥にだけ積む。
+      //  以前は出て行った派閥にも積んでから 0 に潰していたので、
+      //  繰り上げを入れると「居ない右派の怒り」まで中間右派へ流れる。
+      var live = {};
+      for (i = 0; i < f.length; i++) { live[f[i]] = this.inParty(Q, f[i]); }
       // 右派：左にいるほど加速。route 0 で微増、+1 以上で沈静
-      Q.mood_uha += (r < 0) ? (4 + (-r) * 3) : (r === 0 ? 1 : -6);
+      if (live.uha) { Q.mood_uha += (r < 0) ? (4 + (-r) * 3) : (r === 0 ? 1 : -6); }
       //  中間右派（江田の系譜）：極左で怒るのは前からのとおり。
       //  だが民主社会主義の線でも怒る。構造改革は党を新しくする話であって、
       //  党を第二保守党にする話ではなかった。江田は民社の路線を支持していない。
       //  ここを閉じていなかったので、右の線だけ分裂の圧が掛からず、
       //  左より楽な道になっていた。
-      Q.mood_chuu += (r < -3) ? 5 : (r > 2 ? (2 + (r - 2) * 3) : (r < -1 ? 2 : -1));
+      if (live.chuu) { Q.mood_chuu += (r < -3) ? 5 : (r > 2 ? (2 + (r - 2) * 3) : (r < -1 ? 2 : -1)); }
       //  中間左派：両端で怒るが、出口がない。右端のほうが深く怒る
       //  ── 左へ寄るのは党の内輪の話だが、右へ寄るのは党の看板を変える話である。
       Q.mood_chusa += (r > 3) ? 5 : (Math.abs(r) > 3 ? 3 : -1);
@@ -1064,12 +1106,11 @@
       //  そこに座っているだけで協会が怒っていく理由はない。
       //  以前はこの帯でも毎手 +1 で、一三九手のあいだに何もしなくても
       //  百三十九たまった（閾値は 100）。据え置きに直す。
-      Q.mood_saha += (r >= 1) ? (3 + r * 3) : (r > 0 ? 2 : (r > -2 ? 0 : -2));
+      if (live.saha) { Q.mood_saha += (r >= 1) ? (3 + r * 3) : (r > 0 ? 2 : (r > -2 ? 0 : -2)); }
+      //  出て行った派閥に積まれたぶんは、席を継いだ派閥へ繰り上げる。
+      this.moodInherit(Q);
       for (i = 0; i < f.length; i++) {
         k = 'mood_' + f[i];
-        //  出て行った派閥は不満を持たない。ここを閉じていなかったせいで、
-        //  民社脱党のあとも mood_uha が毎手上がり続け、なだめる人物も
-        //  分裂する先も無いのに「党の統一」目標が永久に塞がっていた。
         if (!this.inParty(Q, f[i])) { Q[k] = 0; continue; }
         Q[k] = clamp(r1(Q[k]), 0, 160);
       }
@@ -2037,8 +2078,7 @@
         when: function (Q) { return Q.year >= 1959; } },
       // 「日中共同の敵」　1959年〜・史実
       { n: 1003, id: 'a1_asanuma_hokyo', name: '「日中共同の敵」', acts: [1], need: { rel: 0.2 }, fixed: true,
-        when: function (Q) { return Q.year >= 1959 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1959; } },
       // 原水協の席次　1959年〜・史実
       { n: 1005, id: 'a1_gensuikyo', name: '原水協の席次', acts: [1], need: { rally: 0.2 }, fixed: true,
         when: function (Q) { return Q.year >= 1959; } },
@@ -5755,7 +5795,8 @@
         Q.members = Math.round(Q.members * 0.93);
         Q.split_faction = '中間右派（江田派）';
         Q.split_party = '社会民主連合';
-        Q.mood_chuu = 25;
+        //  出て行った側の不満は残さない（moodInherit が繰り上げてしまう）
+        Q.mood_chuu = 0;
         Q.mood_saha += 8;
         if (this.factionOf(Q.post_chair) === 'chuu') { Q.post_chair = 'sasaki'; }
         if (this.factionOf(Q.post_policy) === 'chuu') { Q.post_policy = 'katsumata'; }
@@ -5782,7 +5823,7 @@
         Q.members = Math.round(Q.members * 0.88);
         Q.split_faction = '左派（協会派）';
         Q.split_party = '新社会党';
-        Q.mood_saha = 25;
+        Q.mood_saha = 0;
         if (this.factionOf(Q.post_youth) === 'saha') { Q.post_youth = 'eda'; }
         if (this.factionOf(Q.post_org) === 'saha') { Q.post_org = 'narita'; }
       }
@@ -5876,12 +5917,12 @@
       Q.band_name = this.ROUTE_BANDS[Q.route_band - 1].name;
       Q.bloc = this.blocOf(Q);
       Q.bloc_name = ['まだどちらでもない', '社共（共産党と）', '社公民（公明・民社と）'][Q.bloc];
-      //  脱党した派閥の不満は常に 0 に潰す。moodDrift だけで潰していたので、
-      //  カードや指導部の行動が加算したぶんが手番の途中で見えていた。
+      //  脱党した派閥に積まれた不満は、席を継いだ派閥へ繰り上げてから
+      //  0 に潰す。カードや指導部や事象が加算したぶんは、ここで拾われる。
+      this.moodInherit(Q);
       var gf = ['uha', 'chuu', 'saha'], gi;
       for (gi = 0; gi < gf.length; gi++) {
         Q['gone_' + gf[gi]] = this.inParty(Q, gf[gi]) ? 0 : 1;
-        if (Q['gone_' + gf[gi]]) { Q['mood_' + gf[gi]] = 0; }
       }
       Q.disp_tally    = this.tallyLine(Q);
       Q.disp_layers   = this.layerBlock(Q);
