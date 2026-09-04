@@ -1137,6 +1137,68 @@
     UPKEEP_PER_CITY: 0.5,
     CAPITAL_DECAY: 0.96,
     // ══════════════════════════════════════════════════════════
+    //  新左翼
+    //
+    //    nl_activity   街頭に出ている量
+    //    nl_distance   党との距離（高いほど遠い。開幕 60）
+    //    nl_revulsion  世間の忌避（開幕 5）
+    //    nl_intake     党へ活動家を流し込んだ回数
+    //    nl_intake_del そのぶんの代議員
+    //
+    //  この三つは脇柱に出るだけで、どの条件も読んでいなかった。
+    //  一九七二年二月のあさま山荘までは、近づけば人が取れる ──
+    //  社青同解放派も反戦青年委員会も、実際に党の若い活動家の供給源だった。
+    //  そのあとは、近かったぶんだけ払う。窓は事件の日付で閉じる。
+    NL_WINDOW: 1971,
+    nlNear: function (Q) {
+      return 100 - ((Q.nl_distance === undefined) ? 60 : Q.nl_distance);
+    },
+    //  活動家を党へ入れる。協会が独立していれば左派へ、していなければ
+    //  中間左派へ入る ── 社青同は協会の学習会でもあったからである。
+    //  受け入れられる回数の上限。無いと安保から七一年までの四十手を
+    //  冷却二手で割った分だけ入れられ、党大会が新左翼の出身者で埋まる。
+    NL_INTAKE_MAX: 6,
+
+    //  街頭の活動家を県連へ入れる。
+    //  県連は中間左派の代議員の出どころであり、協会はそこから自分の分を
+    //  切り出す（delegates を見よ）。だから受け入れは中間左派の票を増やし、
+    //  協会の掌握度も押し上げる ── 左の派閥の力が実際に増える。
+    nlIntake: function (Q, n) {
+      Q.del_chusa = (Q.del_chusa || 0) + n;
+      if (Q.saha_independent) { Q.del_saha = (Q.del_saha || 0) + Math.round(n / 2); }
+      Q.kyokai_grip = Math.min(100, (Q.kyokai_grip || 0) + 3);
+      Q.mood_chusa = Math.max(0, (Q.mood_chusa || 0) - 3);
+      Q.nl_intake = (Q.nl_intake || 0) + 1;
+      Q.nl_intake_del = (Q.nl_intake_del || 0) + n;
+      return n;
+    },
+    //  あさま山荘の請求書。近さと、入れた人数で決まる。
+    //  近づかず、入れてもいなければ、決別の声明はそのまま得になる。
+    //  あさま山荘の請求書。あさまは「幕の区切り（@rengo_sekigun）」と
+    //  「札の事象（a3_asama）」の二か所から来る。両方から払わせると
+    //  二重取りになるので、先に来たほうだけが払い、あとから来たほうは
+    //  nl_hit を読んで文面を変えるだけにする。
+    nlFallout: function (Q) {
+      if (Q.nl_fallout_done) { return Q; }
+      Q.nl_fallout_done = 1;
+      var near = Math.max(0, Math.min(100, this.nlNear(Q))) / 100;
+      var cap = this.NL_INTAKE_MAX;
+      var taken = Math.min(cap, Q.nl_intake || 0);
+      var w = near * 0.6 + (taken / cap) * 0.4;
+      Q.nl_hit = Math.round(w * 100);
+      Q.nl_revulsion = Math.min(100, (Q.nl_revulsion || 0) + Math.round(30 + 45 * w));
+      this.push(Q, ['shinchukan'], -Math.round(2 + 10 * w));
+      this.push(Q, ['mishoshiki'], -Math.round(1 + 7 * w));
+      this.push(Q, ['jieigyo'], -Math.round(1 + 4 * w));
+      Q.mood_chuu += Math.round(3 + 12 * w);
+      Q.nl_distance = Math.min(100, (Q.nl_distance === undefined ? 60 : Q.nl_distance) + Math.round(20 + 20 * w));
+      Q.nl_activity = Math.max(0, (Q.nl_activity || 0) - 40);
+      //  入れた活動家は党に残る。残るが、党の重心を左へ引く。
+      if (taken >= 3) { Q.route = Math.max(-5, (Q.route || 0) - 0.5); }
+      return Q;
+    },
+
+    // ══════════════════════════════════════════════════════════
     //  難度
     //
     //  見送り（@discard）は回を消費しない。山は尽きず、引くたびに
@@ -4310,7 +4372,7 @@
       'kyokai_grip', 'saha_independent',
       'mood_uha', 'mood_chuu', 'mood_chusa', 'mood_saha',
       'rel_kyosan', 'rel_minsha', 'rel_komei', 'rel_jimin', 'rel_sohyo',
-      'nl_activity', 'nl_revulsion', 'nl_distance',
+      'nl_activity', 'nl_revulsion', 'nl_distance', 'nl_intake', 'nl_intake_del', 'nl_hit', 'nl_fallout_done',
       'splits', 'minsha_exists', 'shamin_exists', 'shinsha_exists',
       'komei_exists', 'domei_exists', 'cabinet_posts',
       'local_kyoto', 'local_yokohama', 'local_tokyo', 'local_pop_share',
@@ -5205,6 +5267,13 @@
       { id: 'kokumin_seito', art: 'motif/shotengai.jpg',
         name: '国民政党', desc: '社会党是国民政党。',
         end: true, when: function (Q) { return window.JSP.bandOf(Q) === 4; } },
+      { id: 'shinsayoku_orgu', art: 'events/kaihoha.jpg',
+        name: '组织员', desc: '把街头的活动家接进县联，接满了名额。',
+        when: function (Q) { return (Q.nl_intake || 0) >= window.JSP.NL_INTAKE_MAX; } },
+      { id: 'asama_no_ato', art: 'motif/yokkaichi.jpg',
+        name: '山庄之后', desc: '跟新左翼合过手，浅间山庄之后仍旧没有丢掉城里的受雇者。',
+        when: function (Q) { return !!Q.nl_fallout_done && (Q.nl_hit || 0) >= 60 &&
+                 (Q.lean_shinchukan_shakai || 0) >= 30; } },
       { id: 'kozo_kaikaku_sen', art: 'motif/danchi.jpg',
         name: '構造改革', desc: '把江田三郎的路线变成了党的路线。',
         when: function (Q) { return !!Q.kozo_kaikaku; } },
@@ -6152,6 +6221,12 @@
       Q.discard_used = Q.discard_used || 0;
       Q.discard_left = Math.max(0, D.discard - Q.discard_used);
       Q.discard_over = (Q.discard_used > D.discard) ? 1 : 0;
+      //  新左翼。窓は一九七二年二月で閉じる。
+      Q.nl_near = this.nlNear(Q);
+      Q.nl_open = ((Q.act || 1) >= 2 && (Q.year || 0) <= this.NL_WINDOW) ? 1 : 0;
+      Q.nl_left = Math.max(0, this.NL_INTAKE_MAX - (Q.nl_intake || 0));
+      Q.nl_intake = Q.nl_intake || 0;
+      Q.nl_intake_del = Q.nl_intake_del || 0;
       this.applySaveLock(Q);
       var gf = ['uha', 'chuu', 'saha'], gi;
       for (gi = 0; gi < gf.length; gi++) {
