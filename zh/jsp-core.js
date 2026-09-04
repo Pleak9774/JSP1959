@@ -1451,6 +1451,23 @@
       return out.join('<br>');
     },
 
+    //  ── 協会の掌握度の天井 ────────────────────────────────
+    //  組織局長が誰か、党がどの帯を走っているかで、協会が握れる高さは決まる。
+    //  以前は毎手の増減だけで上限が 100 だったので、組織局長が左派なら
+    //  帯4（民主社会主義）を走っていても +1/手 で、何もしない局でも
+    //  三十八 → 一〇〇 に張り付いた（二十一手で上限。実測）。
+    //  掌握度は 27 の事象の門であり、congressRoute の引きでもあり、
+    //  中間右派の出口の条件でもあるので、張り付くと盤の半分が固定される。
+    KYOKAI_CAP: { saha: 92, chusa: 66, muha: 55, chuu: 40, uha: 26 },
+    kyokaiCap: function (Q) {
+      var org = this.factionOf(Q.post_org);
+      var cap = (this.KYOKAI_CAP[org] === undefined) ? 60 : this.KYOKAI_CAP[org];
+      cap += ({ 1: 8, 2: 0, 3: -12, 4: -20 })[this.bandOf(Q)];
+      //  独立した派閥になれば、同じ人事でももう少し高く握れる。
+      if (Q.saha_independent) { cap += 8; }
+      return clamp(cap, 0, 100);
+    },
+
     postEffects: function (Q) {
       var org = this.factionOf(Q.post_org);
       if (org === 'saha') { Q.kyokai_grip += 3; }
@@ -1458,14 +1475,23 @@
       else if (org === 'chuu') { Q.kyokai_grip -= 2; }
       else if (org === 'uha') { Q.kyokai_grip -= 3; }
       //  路線そのものも協会の掌握度を動かす。左に寄れば協会の言葉が党の言葉に
-      //  なり、右に寄れば居場所が狭くなる。これが無かったので、どの線を走っても
-      //  掌握度が 94〜100 に張り付いていた（四線の実測で発覚）。
+      //  なり、右に寄れば居場所が狭くなる。
       Q.kyokai_grip += ({ 1: 1.5, 2: 0, 3: -1, 4: -2 })[this.bandOf(Q)];
+      //  天井を超えた分は毎手そこへ戻す。協会規制で下げたぶんは、
+      //  天井までは自然に戻ってくるが、天井そのものは人事と路線でしか動かない。
+      var cap = this.kyokaiCap(Q);
+      Q.kyokai_cap = cap;
+      if (Q.kyokai_grip > cap) { Q.kyokai_grip = Math.max(cap, Q.kyokai_grip - 3); }
       Q.kyokai_grip = clamp(r1(Q.kyokai_grip), 0, 100);
 
+      //  新左派の活動度も同じ形。青年部長が協会系なら +2/手 で 100 に
+      //  張り付いていた（脇柱に出るだけの値だが、出る以上は動くべきである）。
       var youth = this.factionOf(Q.post_youth);
       if (youth === 'saha') { Q.nl_activity += 2; }
       else if (youth === 'chuu') { Q.nl_activity -= 1; }
+      var nlCap = ({ saha: 78, chusa: 55, muha: 45, chuu: 30, uha: 22 })[youth];
+      if (nlCap === undefined) { nlCap = 50; }
+      if (Q.nl_activity > nlCap) { Q.nl_activity = Math.max(nlCap, Q.nl_activity - 2); }
       Q.nl_activity = clamp(Q.nl_activity, 0, 100);
 
       // 委員長の派閥は、その派閥の不満をなだめる

@@ -375,11 +375,52 @@
     return true;
   }
 
+  // ── 没した人・党を出た人を役職から外す ──────────────────────
+  //  gone() は名簿と行動と表示では見ていたが、役職に就いたままの人物は
+  //  誰も外していなかった。実測（一五〇局・一二二七四手番）で、
+  //  手番の 28.5% に「党にいない人物がどこかの役職に就いている」状態があり、
+  //  鈴木茂三郎（一九七〇年没）が一九九三年まで委員長で毎手 mood を下げ、
+  //  佐々木更三（〜一九八〇）が組織局長のまま代議員を毎手 +3 していた。
+  //
+  //  空席のままにすると盤が動かなくなるので、同じ派閥の中から
+  //  その役職に向く人へ引き継ぐ。誰も居なければ空席にする。
+  function heldBy(Q, id) {
+    for (var i = 0; i < POSTS.length; i++) { if (Q['post_' + POSTS[i]] === id) { return true; } }
+    return false;
+  }
+  function successor(Q, post) {
+    var cur = Q['post_' + post], f = cur ? FIG[cur] : null;
+    var pool = roster(Q).filter(function (id) { return !heldBy(Q, id); });
+    if (!pool.length) { return ''; }
+    pool.sort(function (a, b) {
+      var A = FIG[a], B = FIG[b];
+      var sa = (A.fit[post] || 0) + (f && A.faction === f.faction ? 3 : 0);
+      var sb = (B.fit[post] || 0) + (f && B.faction === f.faction ? 3 : 0);
+      return sb - sa;
+    });
+    return pool[0];
+  }
+  function sweepPosts(Q) {
+    var moved = 0;
+    POSTS.forEach(function (post) {
+      var id = Q['post_' + post];
+      if (!id || !gone(Q, id)) { return; }
+      Q['post_' + post] = successor(Q, post) || null;
+      moved += 1;
+    });
+    if (moved) { Q.post_swept = (Q.post_swept || 0) + moved; syncIds(Q); }
+    return Q;
+  }
+
   // ── 受動効果。endturn ごとに呼ぶ ────────────────────────────
   function passives(Q) {
+    sweepPosts(Q);
     var seen = {};
     POSTS.forEach(function (post) {
       var id = Q['post_' + post];
+      //  引き継ぎに失敗して空席のまま残ったときのための止め。
+      //  没した人物の受動効果を配り続けないこと。
+      if (id && gone(Q, id)) { return; }
       if (!id || seen[id]) { return; }
       seen[id] = 1;
       switch (id) {
