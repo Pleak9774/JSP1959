@@ -257,6 +257,7 @@
     REORG_TEKKO_MAX: 34,
     REORG_ROSOKON_MAX: 26,
     DUES_RATE: 0.0016,   // 動員力 1 につき一手あたりの分担金
+    MEMBER_DUES_PER_100K: 0.45,   // 党員十万人あたりの党費（一手）
 
     //  各団体の中の左右の比を動かす。
     //  路線が左にあるほど、協会が強いほど、オルグを積むほど左が厚くなる。
@@ -727,7 +728,11 @@
     //  同盟が来ても総評ほどの大きさは無い。
     unionDues: function (Q) {
       var p = this.unionPower(Q);
-      Q.dues_acc = (Q.dues_acc || 0) + p.total * this.DUES_RATE;
+      //  党費。組合の分担金とは別に、党員から直接入る。
+      //  一九五九年の五万人でおよそ 0.35/手。組合が離れても残る金である。
+      var fee = (Q.members || 0) / 100000 * this.MEMBER_DUES_PER_100K;
+      var mul = this.diff(Q).income;
+      Q.dues_acc = (Q.dues_acc || 0) + (p.total * this.DUES_RATE + fee) * mul;
       var pay = Math.floor(Q.dues_acc);
       if (pay > 0) { Q.dues_acc = Math.round((Q.dues_acc - pay) * 100) / 100; Q.budget += pay; }
       //  組合以外の金。都市の個人後援会と、連立に入っている枠から来る。
@@ -745,7 +750,7 @@
       Q.dues_acc += urban;
       var pay2 = Math.floor(Q.dues_acc);
       if (pay2 > 0) { Q.dues_acc = Math.round((Q.dues_acc - pay2) * 100) / 100; Q.budget += pay2; }
-      Q.dues_now = Math.round((p.total * this.DUES_RATE + urban) * 100) / 100;
+      Q.dues_now = Math.round(((p.total * this.DUES_RATE + fee) * mul + urban) * 100) / 100;
       Q.union_power = p.total;
       Q.union_kokorou = p.kokorou;
       Q.union_minrou = p.minrou;
@@ -1134,8 +1139,9 @@
     //                     金に気を配る打ち手 hr103 / 資金峰45 / 未払0回
     //  金を見ない打ち手と見る打ち手で 42議席の差が付く。それまでは差が無かった。
     UPKEEP_PER_100K: 0.35,
-    UPKEEP_PER_CITY: 0.5,
-    CAPITAL_DECAY: 0.96,
+    UPKEEP_PER_CITY: 0.34,
+    CAPITAL_DECAY: 0.90,
+    CAPITAL_SOFT: 12,   // ここまでは減らない。上だけ削る
     // ══════════════════════════════════════════════════════════
     //  新左翼
     //
@@ -1210,11 +1216,13 @@
     //  回を食う ── 「札を探すのに一手使った」ということである。
     //
     //    0 簡単　1 普通　2 難しい　3 史実（控えを取れない）
+    //  income は金と政治資源の入りに掛かる。upkeep は出に掛かる。
+    //  以前は出だけを難度で振っていたので、簡単でも入りは同じだった。
     DIFF: [
-      { id: 0, name: '簡単',   discard: 3, budget:  6, capital:  4, upkeep: 0.7, bar: 1.00, save: 1 },
-      { id: 1, name: '普通',   discard: 2, budget:  0, capital:  0, upkeep: 1.0, bar: 1.05, save: 1 },
-      { id: 2, name: '難しい', discard: 1, budget: -3, capital: -2, upkeep: 1.3, bar: 1.12, save: 1 },
-      { id: 3, name: '史実',   discard: 0, budget: -3, capital: -2, upkeep: 1.3, bar: 1.12, save: 0 }
+      { id: 0, name: '簡単',   discard: 3, budget:  6, capital:  4, upkeep: 0.7, income: 1.35, bar: 1.00, save: 1 },
+      { id: 1, name: '普通',   discard: 2, budget:  0, capital:  0, upkeep: 1.0, income: 1.00, bar: 1.05, save: 1 },
+      { id: 2, name: '難しい', discard: 1, budget: -3, capital: -2, upkeep: 1.3, income: 0.80, bar: 1.12, save: 1 },
+      { id: 3, name: '史実',   discard: 0, budget: -3, capital: -2, upkeep: 1.3, income: 0.80, bar: 1.12, save: 0 }
     ],
     diff: function (Q) {
       var i = (Q && Q.difficulty !== undefined && Q.difficulty !== null) ? Q.difficulty : 1;
@@ -1242,6 +1250,46 @@
       } catch (e) { return; }
     },
 
+    // ══════════════════════════════════════════════════════════
+    //  政治資源の入り
+    //
+    //  政治資源は「執行部が党を動かせる幅」である。ところが毎手の
+    //  入りが一つも無く、事象で拾うしかなかった。実測すると開幕の
+    //  役職で一手あたり ちょうど 0、減衰のぶんだけ −0.06 である。
+    //  出るほうは事象の選択肢 487 か所が −2〜−5 を取っていく。
+    //  第Ⅱ幕で何も打てなくなるという報告は、これが原因である。
+    //
+    //  入りは二つで決まる。
+    //   ・六つの役職に、その職に向いた人を置けているか（適性の合計）
+    //   ・党内が落ち着いているか（いちばん怒っている派閥を見る）
+    //  開幕は適性合計 30（六人とも適任）で、一手あたり 1.2 前後になる。
+    //  減衰 0.96 と釣り合う天井は 30 ほど。貯め込みは効かない。
+    CAPITAL_PER_FIT: 20,
+    capitalIncome: function (Q) {
+      var L = this.LEADERS;
+      if (!L) { return 0; }
+      var fit = 0, i, post, id, f;
+      for (i = 0; i < L.POSTS.length; i++) {
+        post = L.POSTS[i];
+        id = Q['post_' + post];
+        f = id ? L.FIG[id] : null;
+        if (f && !L.gone(Q, id)) { fit += (f.fit && f.fit[post]) || 0; }
+      }
+      var anger = Math.max(Q.mood_uha || 0, Q.mood_chuu || 0,
+                           Q.mood_chusa || 0, Q.mood_saha || 0);
+      //  怒りが 85（開幕の右派）で約六割、100 を超えると五割五分で底を打つ
+      var unity = 1 - Math.min(0.45, anger / 220);
+      var inc = (fit / this.CAPITAL_PER_FIT) * unity * this.diff(Q).income;
+      Q.capital_in = Math.round(inc * 100) / 100;
+      Q.capital_acc = (Q.capital_acc || 0) + inc;
+      var pay = Math.floor(Q.capital_acc);
+      if (pay > 0) {
+        Q.capital_acc = Math.round((Q.capital_acc - pay) * 100) / 100;
+        Q.capital += pay;
+      }
+      return Q;
+    },
+
     upkeep: function (Q) {
       var cost = ((Q.members || 50000) / 100000 * this.UPKEEP_PER_100K +
                   this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep;
@@ -1255,8 +1303,25 @@
         Q.members = Math.max(10000, Math.round(Q.members * 0.98));
         Q.mood_chusa += 2;
         Q.arrears = (Q.arrears || 0) + 1;
+      } else if ((Q.arrears || 0) > 0 && Q.budget >= 5) {
+        //  未払いは、払える状態が続けば減っていく。以前は増える一方で、
+        //  第Ⅰ幕で一度詰まると、その後どれだけ金があっても
+        //  「専従の給料が二か月遅れている」という事象が出続けた。
+        Q.arrears -= 1;
       }
-      Q.capital = Math.max(0, Math.round(Q.capital * this.CAPITAL_DECAY));
+      //  政治資源の減衰。以前は全額に 0.96 を掛けて丸めていたので、
+      //  12 を超えると毎手 1 減り、入りがそのまま消えて 12 に張り付いた。
+      //  貯め込みを止めるのが目的なので、床より上の分だけ削る。
+      var soft = this.CAPITAL_SOFT;
+      if (Q.capital > soft) {
+        Q.capital_dec = (Q.capital_dec || 0) +
+          (Q.capital - soft) * (1 - this.CAPITAL_DECAY);
+        var lose = Math.floor(Q.capital_dec);
+        if (lose > 0) {
+          Q.capital_dec = Math.round((Q.capital_dec - lose) * 100) / 100;
+          Q.capital = Math.max(soft, Q.capital - lose);
+        }
+      }
       return Q;
     },
 
@@ -2208,9 +2273,10 @@
       // 砂川・伊達判決　1959年〜・史実
       { n: 1002, id: 'a1_sunagawa', name: '砂川・伊達判決', acts: [1], need: { rally: 0.15 }, fixed: true,
         when: function (Q) { return Q.year >= 1959; } },
-      // 「日中共同の敵」　1959年〜・史実
+      // 「日中共同の敵」　1959年〜・asanumaが在席・史実
       { n: 1003, id: 'a1_asanuma_hokyo', name: '「日中共同の敵」', acts: [1], need: { rel: 0.2 }, fixed: true,
-        when: function (Q) { return Q.year >= 1959; } },
+        when: function (Q) { return Q.year >= 1959 &&
+                 window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 原水協の席次　1959年〜・史実
       { n: 1005, id: 'a1_gensuikyo', name: '原水協の席次', acts: [1], need: { rally: 0.2 }, fixed: true,
         when: function (Q) { return Q.year >= 1959; } },
@@ -2233,22 +2299,27 @@
       // 所得倍増　1960年〜・史実
       { n: 1009, id: 'a1_ike_baizo', name: '所得倍増', acts: [1], need: { name: 0.2 }, fixed: true,
         when: function (Q) { return Q.year >= 1960; } },
-      // 日比谷の壇上　1960年〜・史実
+      // 日比谷の壇上　1960年〜・asanumaが退場後・史実
       { n: 1010, id: 'a1_asanuma_shi', name: '日比谷の壇上', acts: [1], need: { name: 0.35 }, fixed: true,
-        when: function (Q) { return Q.year >= 1960; } },
+        when: function (Q) { return Q.year >= 1960 &&
+                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 民社党結成　1960年〜・史実
       { n: 1013, id: 'a1_minsha_kessei', name: '民社党結成', acts: [1], need: { split: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1960 &&
                  Q.minsha_exists; } },
-      // 十一月の総選挙　1960年〜・史実
+      // 十一月の総選挙　1960年〜・asanumaが退場後・史実
       { n: 1020, id: 'a1_senkyo60', name: '十一月の総選挙', acts: [1], need: { hr: 0.35 }, fixed: true,
-        when: function (Q) { return Q.year >= 1960; } },
-      // 政暴法　1961年〜・史実
+        when: function (Q) { return Q.year >= 1960 &&
+                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+      // 政暴法　1961年〜・asanumaが退場後・史実
       { n: 2001, id: 'a2_seiboho', name: '政暴法', acts: [2], need: { diet: 0.15 }, fixed: true,
-        when: function (Q) { return Q.year >= 1961; } },
-      // 河上委員長　1961年〜・史実
+        when: function (Q) { return Q.year >= 1961 &&
+                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+      // 河上委員長　1961年〜・kawakamiが在席・asanumaが退場後・史実
       { n: 2002, id: 'a2_kawakami', name: '河上委員長', acts: [2], need: { chair: 0.15 }, fixed: true,
-        when: function (Q) { return Q.year >= 1961; } },
+        when: function (Q) { return Q.year >= 1961 &&
+                 window.JSP.LEADERS.here(Q, 'kawakami') &&
+                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 国民皆保険　1961年〜・史実
       { n: 2165, id: 'a2_kokumin_kenko', name: '国民皆保険', acts: [2], need: { diet: 0.2 }, fixed: true,
         when: function (Q) { return Q.year >= 1961; } },
@@ -2543,7 +2614,7 @@
       { n: 3017, id: 'a3_hakuchu', name: '保革伯仲', acts: [3], need: { hr: 0.4 }, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 Q.seats_hr >= 110; } },
+                 Q.minsha_exists && Q.seats_hr >= 110; } },
       // 一九七六年十二月　1976年〜・史実
       { n: 3170, id: 'a3_1976_senkyo', name: '一九七六年十二月', acts: [3], need: { hr: 0.4 }, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -3016,9 +3087,10 @@
       // 沖縄と小笠原
       { n: 106, id: 'okinawa_59', name: '沖縄と小笠原', acts: [2], need: { rel: 0.12 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.12); } },
-      // 浅沼訪中
+      // 浅沼訪中　asanumaが在席
       { n: 107, id: 'asanuma_china', name: '浅沼訪中', acts: [1], need: { rel: 0.22 },
-        when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.22); } },
+        when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.22) &&
+                 window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 松川事件の判決
       { n: 108, id: 'matsukawa', name: '松川事件の判決', acts: [2], need: { diet: 0.2 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.2); } },
@@ -3026,14 +3098,16 @@
       { n: 109, id: 'zengakuren_59', name: '全学連の突出', acts: [2], need: { rally: 0.28 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.28) &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 政暴法
+      // 政暴法　asanumaが退場後
       { n: 111, id: 'seiboho', name: '政暴法', acts: [2], need: { diet: 0.14 },
         when: function (Q) { return Q.year <= 1963 &&
-                 Q.c_diet >= window.JSP.needOf(Q, 0.14); } },
-      // 江田ビジョン　帯中間左/中間右
+                 Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
+                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+      // 江田ビジョン　帯中間左/中間右・edaが在席
       { n: 112, id: 'eda_vision', name: '江田ビジョン', acts: [2], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
-                 [2, 3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [2, 3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, 'eda'); } },
       // LT貿易
       { n: 113, id: 'lt_boeki', name: 'LT貿易', acts: [2], need: { rel: 0.14 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.14); } },
@@ -3067,7 +3141,7 @@
       { n: 136, id: 'kakushin_shicho', name: '革新自治体の財政', acts: [3], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 window.JSP.localCount(Q) >= 1; } },
+                 Q.local_n >= 1; } },
       // 市民運動との距離　帯中間右
       { n: 137, id: 'shimin_undo', name: '市民運動との距離', acts: [3], need: { rally: 0.2 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.2) &&
@@ -3147,10 +3221,11 @@
       { n: 231, id: 'a4_saha_kaku', name: '協会の締め直し', acts: [4], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 現実路線の党内基盤　帯中間右/右
+      // 現実路線の党内基盤　帯中間右/右・edaが退場後
       { n: 232, id: 'a4_uha_kaikaku', name: '現実路線の党内基盤', acts: [4], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !window.JSP.LEADERS.here(Q, 'eda'); } },
       // 社公民の政権協議　軸社公民・1980年〜
       { n: 233, id: 'a4_shakomin_seiken', name: '社公民の政権協議', acts: [4], need: { rel: 0.2 },
         when: function (Q) { return Q.year >= 1980 &&
@@ -3169,10 +3244,11 @@
       { n: 243, id: 'a5_sakyo_saigo', name: '社共共闘の最後', acts: [5], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
-      // 一六六議席のあと
+      // 一六六議席のあと　asanumaが在席
       { n: 301, id: 'a1_1958_senkyo', name: '一六六議席のあと', acts: [1], need: { koryo: 0.12 },
         when: function (Q) { return Q.year <= 1959 &&
-                 Q.c_koryo >= window.JSP.needOf(Q, 0.12); } },
+                 Q.c_koryo >= window.JSP.needOf(Q, 0.12) &&
+                 window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 勤評闘争
       { n: 302, id: 'a1_gyakkoro', name: '勤評闘争', acts: [1], need: { labor: 0.12 },
         when: function (Q) { return Q.year <= 1960 &&
@@ -3215,10 +3291,11 @@
       // 党の宣伝機構
       { n: 326, id: 'a3_shakai_shinbun', name: '党の宣伝機構', acts: [3], need: { fund: 0.2 },
         when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.2); } },
-      // 成田の引退
+      // 成田の引退　naritaが在席
       { n: 331, id: 'a4_narita_intai', name: '成田の引退', acts: [4], need: { org: 0.14 },
         when: function (Q) { return Q.year <= 1980 &&
                  Q.c_org >= window.JSP.needOf(Q, 0.14) &&
+                 window.JSP.LEADERS.here(Q, 'narita') &&
                  Q.local_n >= 1; } },
       // 年金と医療の改革
       { n: 333, id: 'a4_shakai_hoken', name: '年金と医療の改革', acts: [4], need: { diet: 0.14 },
@@ -3279,7 +3356,8 @@
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 党財政の底
       { n: 413, id: 'a2_zaisei_kiki', name: '党財政の底', acts: [2], need: { fund: 0.2 },
-        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.2); } },
+        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.2) &&
+                 (Q.budget || 0) <= 8 || (Q.arrears || 0) >= 2; } },
       // 国会の運営
       { n: 414, id: 'a2_kokkai_unei', name: '国会の運営', acts: [2], need: { diet: 0.2 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.2) &&
@@ -3313,7 +3391,7 @@
       // 党の資金源
       { n: 435, id: 'a3_seiji_shikin', name: '党の資金源', acts: [3], need: { fund: 0.14 },
         when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.14) &&
-                 Q.local_n >= 1; } },
+                 Q.local_n >= 1 && ((Q.budget || 0) <= 12 || (Q.arrears || 0) >= 1); } },
       // 公明党からの照会　軸未定/社公民
       { n: 436, id: 'a3_shakomin_shokai', name: '公明党からの照会', acts: [3], need: { rel: 0.14 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.14) &&
@@ -3457,10 +3535,11 @@
       { n: 604, id: 'b2_a5_saigo_kinkou', name: '最後の均衡', acts: [5], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 構造改革論の輸入　帯中間右
+      // 構造改革論の輸入　帯中間右・edaが在席
       { n: 605, id: 'b3_a1_kozo_yunyu', name: '構造改革論の輸入', acts: [1], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
-                 [3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, 'eda'); } },
       // ニューウェーブ　帯中間右
       { n: 606, id: 'b3_a5_newwave', name: 'ニューウェーブ', acts: [5], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
@@ -3505,10 +3584,11 @@
       { n: 1015, id: 'a1_kyokai_soshiki', name: '協会の組織化', acts: [1], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 構造改革論　帯中間左/中間右
+      // 構造改革論　帯中間左/中間右・edaが在席
       { n: 1016, id: 'a1_kozo_kaikaku', name: '構造改革論', acts: [1], need: { koryo: 0.25 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25) &&
-                 [2, 3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [2, 3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, 'eda'); } },
       // 右派の党内基盤　帯中間右/右
       { n: 1017, id: 'a1_uha_chikara', name: '右派の党内基盤', acts: [1], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
@@ -3526,11 +3606,12 @@
       { n: 1022, id: 'a1_seinen_bu', name: '社青同', acts: [1], need: { youth: 0.25 },
         when: function (Q) { return Q.c_youth >= window.JSP.needOf(Q, 0.25) &&
                  Q.kyokai_grip >= 35; } },
-      // 江田ビジョン　帯中間左/中間右/右・1962年〜
+      // 江田ビジョン　帯中間左/中間右/右・1962年〜・edaが在席
       { n: 2003, id: 'a2_eda_vision', name: '江田ビジョン', acts: [2], need: { koryo: 0.2 },
         when: function (Q) { return Q.year >= 1962 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 [2, 3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [2, 3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, 'eda'); } },
       // 原水禁の分裂　1963年〜
       { n: 2005, id: 'a2_gensuikin_split', name: '原水禁の分裂', acts: [2], need: { rally: 0.25 },
         when: function (Q) { return Q.year >= 1963 &&
@@ -3565,7 +3646,7 @@
       // 保革伯仲の予感
       { n: 2028, id: 'a2_hokakuhaku', name: '保革伯仲の予感', acts: [2], need: { hr: 0.4 },
         when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.4) &&
-                 Q.seats_hr >= 130; } },
+                 Q.minsha_exists && Q.seats_hr >= 130; } },
       // 「道」第二次草案　帯左・1966年〜
       { n: 2029, id: 'a2_michi_2', name: '「道」第二次草案', acts: [2], need: { koryo: 0.4 },
         when: function (Q) { return Q.year >= 1966 &&
@@ -3605,7 +3686,8 @@
       // 右派の窓口　帯右
       { n: 2043, id: 'a2_taigai_uha', name: '右派の窓口', acts: [2], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.minsha_exists; } },
       // 協会の全国化　帯左
       { n: 2044, id: 'a2_kyokai_seiryoku', name: '協会の全国化', acts: [2], need: { org: 0.4 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.4) &&
@@ -3630,12 +3712,13 @@
       // 自治体の赤字
       { n: 3014, id: 'a3_jichitai_akaji', name: '自治体の赤字', acts: [3], need: { org: 0.35 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35) &&
-                 Q.local_debt >= 6; } },
-      // 江田三郎の離党　帯中間右/右・1977年〜
+                 Q.local_n >= 1 && Q.local_debt >= 6; } },
+      // 江田三郎の離党　帯中間右/右・1977年〜・edaが在席
       { n: 3018, id: 'a3_eda_ridatsu', name: '江田三郎の離党', acts: [3], need: { split: 0.3 },
         when: function (Q) { return Q.year >= 1977 &&
                  Q.c_split >= window.JSP.needOf(Q, 0.3) &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, 'eda') &&
                  Q.kyokai_grip >= 35; } },
       // 成田三原則　帯左/中間左・1977年〜
       { n: 3019, id: 'a3_narita_sangensoku', name: '成田三原則', acts: [3], need: { org: 0.4 },
@@ -3751,7 +3834,8 @@
       // 民社党という壁　軸社公民
       { n: 3153, id: 'a3_c2_minsha_kabe', name: '民社党という壁', acts: [3], need: { rel: 0.3 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.3) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 Q.minsha_exists; } },
       // 無党派という層
       { n: 3169, id: 'a3_kakusan_hyo', name: '無党派という層', acts: [3], need: { org: 0.35 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35); } },
@@ -3816,7 +3900,8 @@
       // 同盟との和解　帯右
       { n: 4132, id: 'a4_b4_doumei_wakai', name: '同盟との和解', acts: [4], need: { labor: 0.3 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.3) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.minsha_exists; } },
       // 京都を守る　軸社共
       { n: 4141, id: 'a4_c1_kyoto_mamoru', name: '京都を守る', acts: [4], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
@@ -3932,7 +4017,7 @@
       // 党内の分岐
       { n: 5175, id: 'a5_toubun', name: '党内の分岐', acts: [5], need: { split: 0.35 },
         when: function (Q) { return Q.c_split >= window.JSP.needOf(Q, 0.35) &&
-                 Q.mood_saha >= 55 || Q.mood_uha >= 55; } },
+                 Q.cab_kind > 0 && (Q.mood_saha >= 55 || Q.mood_uha >= 55); } },
       // 職場の細胞　帯左
       { n: 2101, id: 'a2_b1_kojo_ho', name: '職場の細胞', acts: [2], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
@@ -3972,7 +4057,8 @@
       // 民社党との対話　帯右
       { n: 2131, id: 'a2_b4_minsha_taiwa', name: '民社党との対話', acts: [2], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.minsha_exists; } },
       // 現代資本主義論　帯右
       { n: 2132, id: 'a2_b4_gendai_shihon', name: '現代資本主義論', acts: [2], need: { koryo: 0.25 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25) &&
@@ -4001,7 +4087,8 @@
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25); } },
       // 党の台所
       { n: 2169, id: 'a2_zaisei_nan', name: '党の台所', acts: [2], need: { fund: 0.3 },
-        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.3); } },
+        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.3) &&
+                 (Q.budget || 0) <= 8 || (Q.arrears || 0) >= 2; } },
       // 質問の質
       { n: 2170, id: 'a2_kokkai_shitsumon', name: '質問の質', acts: [2], need: { diet: 0.3 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
@@ -4209,11 +4296,12 @@
       { n: 7136, id: 'kakushin_shicho_sa', name: '革新自治体の財政', acts: [3], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 江田三郎の離党　帯左/中間左・1977年〜
+      // 江田三郎の離党　帯左/中間左・1977年〜・edaが在席
       { n: 7318, id: 'eda_ridatsu_sa', name: '江田三郎の離党', acts: [3], need: { split: 0.3 },
         when: function (Q) { return Q.year >= 1977 &&
                  Q.c_split >= window.JSP.needOf(Q, 0.3) &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, 'eda'); } },
       // 土井委員長の登場　帯左/中間左
       { n: 7601, id: 'doi_shunin_sa', name: '土井委員長の登場', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
@@ -4407,6 +4495,7 @@
       'seat_uha', 'seat_chuu', 'seat_chusa', 'seat_muha', 'seat_saha',
       'del_uha', 'del_chuu', 'del_chusa', 'del_muha', 'del_saha',
       'kouho', 'sohyo_giin',
+      'capital_acc', 'capital_dec',
       'hc_last_won',
       'kyokai_grip', 'saha_independent',
       'mood_uha', 'mood_chuu', 'mood_chusa', 'mood_saha',
@@ -6421,6 +6510,26 @@
       Q.nom_win = Math.round(nc0.win * 100);
       Q.nom_cap = nc0.cap;
       Q.nom_floor = this.nomFloor(Q);
+      //  政治資源の入りは endturn で払うが、脇柱ではいつでも見えていてほしい
+      if (this.LEADERS) {
+        var L2 = this.LEADERS, fit2 = 0, i2, p2, f2;
+        for (i2 = 0; i2 < L2.POSTS.length; i2++) {
+          p2 = L2.POSTS[i2];
+          f2 = Q['post_' + p2] ? L2.FIG[Q['post_' + p2]] : null;
+          if (f2 && !L2.gone(Q, Q['post_' + p2])) { fit2 += (f2.fit && f2.fit[p2]) || 0; }
+        }
+        var ang2 = Math.max(Q.mood_uha || 0, Q.mood_chuu || 0, Q.mood_chusa || 0, Q.mood_saha || 0);
+        Q.capital_in = Math.round((fit2 / this.CAPITAL_PER_FIT) *
+          (1 - Math.min(0.45, ang2 / 220)) * this.diff(Q).income * 100) / 100;
+      }
+      //  分担金と維持費も、払うのは endturn だが見込みはいつでも出す。
+      //  そうしないと一手目の脇柱がどちらも 0 になる。
+      var mul3 = this.diff(Q).income;
+      Q.dues_now = Math.round(((this.unionPower(Q).total * this.DUES_RATE +
+        (Q.members || 0) / 100000 * this.MEMBER_DUES_PER_100K) * mul3 +
+        (Q.dues_urban || 0)) * 100) / 100;
+      Q.upkeep_now = Math.round((((Q.members || 50000) / 100000 * this.UPKEEP_PER_100K +
+        this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep) * 10) / 10;
       //  総評から出してもらった候補は、通れば議席になる。ならないほうの
       //  代議員票は総評のものである。右へ寄る決議は、その人たちの
       //  反対を越えないと通らない ── 議席は借りられるが、党大会は借りられない。

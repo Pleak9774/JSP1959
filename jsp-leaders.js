@@ -239,6 +239,15 @@
     return false;
   }
 
+  //  その人物がいま盤面にいるか。事象の門はこれを見る。
+  //  gone は「退場したか」だけを見るので、登場前（from より手前）は
+  //  拾えない。事象の側で要るのは「いま動けるか」なので、両方を見る。
+  function here(Q, id) {
+    var f = FIG[id];
+    if (!f) { return false; }
+    return !gone(Q, id) && (Q.year || 0) >= f.from;
+  }
+
   function roster(Q) {
     return Object.keys(FIG).filter(function (id) {
       return !gone(Q, id) && Q.year >= FIG[id].from;
@@ -637,6 +646,6 @@
     elect: elect, appoint: appoint, nominate: nominate, support: support, passives: passives,
     canAct: canAct, doAct: doAct, tick: tickCooldowns,
     sync: syncIds, roster: roster, candidates: candidates, candidateLines: candidateLines,
-    gone: gone
+    gone: gone, here: here
   };
 }());
