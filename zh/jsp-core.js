@@ -2630,6 +2630,9 @@
       { n: 156, id: 'minkan_senko', name: '労働戦線統一の民間先行', acts: [4], need: { labor: 0.2 }, fixed: true,
         when: function (Q) { return Q.year >= 1980 &&
                  Q.minsha_exists; } },
+      // 指紋押捺拒否　1980年〜・史実
+      { n: 4301, id: 'a4_shimon', name: '指紋押捺拒否', acts: [4], need: { rally: 0.2 }, fixed: true,
+        when: function (Q) { return Q.year >= 1980; } },
       // 社公合意　軸未定/社公民・1980年〜・史実
       { n: 4005, id: 'a4_shako_goi', name: '社公合意', acts: [4], need: { rel: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1980 &&
@@ -2652,6 +2655,9 @@
       { n: 7401, id: 'rincho_sa', name: '第二臨調', acts: [4], need: { labor: 0.25 }, fixed: true,
         when: function (Q) { return Q.year >= 1981 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 難民条約と国民年金　1982年〜・史実
+      { n: 4302, id: 'a4_nanmin', name: '難民条約と国民年金', acts: [4], need: { diet: 0.2 }, fixed: true,
+        when: function (Q) { return Q.year >= 1982; } },
       // 全民労協　帯中間右/右・1982年〜・史実
       { n: 4008, id: 'a4_zenmin_rokyo', name: '全民労協', acts: [4], need: { labor: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
@@ -2780,6 +2786,9 @@
         when: function (Q) { return Q.year >= 1986; } },
       // 国鉄の後始末　1986年〜・史実
       { n: 343, id: 'a5_kokutetsu_saiyou', name: '国鉄の後始末', acts: [5], need: { labor: 0.14 }, fixed: true,
+        when: function (Q) { return Q.year >= 1986; } },
+      // 押捺拒否一万人　1986年〜・史実
+      { n: 5301, id: 'a5_shimon_zenkoku', name: '押捺拒否一万人', acts: [5], need: { rally: 0.22 }, fixed: true,
         when: function (Q) { return Q.year >= 1986; } },
       // 一九八六年七月　1986年〜・史実
       { n: 5001, id: 'a5_doujitsu86', name: '一九八六年七月', acts: [5], need: { hr: 0.15 }, fixed: true,
@@ -2915,6 +2924,9 @@
       { n: 7606, id: 'wangan_sa', name: '湾岸', acts: [5], need: { rally: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 日韓覚書と特別永住　1991年〜・史実
+      { n: 5302, id: 'a5_tokubetsu_eiju', name: '日韓覚書と特別永住', acts: [5], need: { rel: 0.25 }, fixed: true,
+        when: function (Q) { return Q.year >= 1991; } },
       // ソ連が消えた　帯中間右/右・1991年〜・史実
       { n: 5012, id: 'a5_soren', name: 'ソ連が消えた', acts: [5], need: { koryo: 0.3 }, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
@@ -4221,6 +4233,31 @@
       //  幕を選ばずに置いていたので、監査では協会の独立の 23/117 が第Ⅰ幕、
       //  56/117 が第Ⅱ幕に起きていた ── 一九五九年に社会主義協会を
       //  「党内党」として規制する決議が通る盤面になっていた。
+      //  参院選。三年ごとの半数改選。手を消費しない割り込みとして出す。
+      //  中身は一つの頁（hc.election）を年ごとに使い回す。
+      { n: 7001, id: 'hc1962', name: '参院選', acts: [2], fixed: true,
+        when: function (Q) { return Q.year >= 1962; } },
+      { n: 7002, id: 'hc1965', name: '参院選', acts: [2], fixed: true,
+        when: function (Q) { return Q.year >= 1965; } },
+      { n: 7003, id: 'hc1968', name: '参院選', acts: [2], fixed: true,
+        when: function (Q) { return Q.year >= 1968; } },
+      { n: 7004, id: 'hc1971', name: '参院選', acts: [3], fixed: true,
+        when: function (Q) { return Q.year >= 1971; } },
+      { n: 7005, id: 'hc1974', name: '参院選', acts: [3], fixed: true,
+        when: function (Q) { return Q.year >= 1974; } },
+      { n: 7006, id: 'hc1977', name: '参院選', acts: [3], fixed: true,
+        when: function (Q) { return Q.year >= 1977; } },
+      { n: 7007, id: 'hc1980', name: '参院選', acts: [4], fixed: true,
+        when: function (Q) { return Q.year >= 1980; } },
+      { n: 7008, id: 'hc1983', name: '参院選', acts: [4], fixed: true,
+        when: function (Q) { return Q.year >= 1983; } },
+      { n: 7009, id: 'hc1986', name: '参院選', acts: [5], fixed: true,
+        when: function (Q) { return Q.year >= 1986; } },
+      { n: 7010, id: 'hc1989', name: '参院選', acts: [5], fixed: true,
+        when: function (Q) { return Q.year >= 1989; } },
+      { n: 7011, id: 'hc1992', name: '参院選', acts: [5], fixed: true,
+        when: function (Q) { return Q.year >= 1992; } },
+
       { n: 6, id: 'kyokai', name: '協会規制問題', acts: [3, 4, 5], need: { org: 0.17 },
         when: function (Q) { return (Q.act || 1) >= 3 && Q.kyokai_grip >= 52 &&
                  Q.c_org >= window.JSP.needOf(Q, 0.17) && !Q.saha_independent; } }
@@ -4369,6 +4406,8 @@
       'route', 'seats_hr', 'seats_hc', 'budget', 'capital', 'members',
       'seat_uha', 'seat_chuu', 'seat_chusa', 'seat_muha', 'seat_saha',
       'del_uha', 'del_chuu', 'del_chusa', 'del_muha', 'del_saha',
+      'kouho', 'sohyo_giin',
+      'hc_last_won',
       'kyokai_grip', 'saha_independent',
       'mood_uha', 'mood_chuu', 'mood_chusa', 'mood_saha',
       'rel_kyosan', 'rel_minsha', 'rel_komei', 'rel_jimin', 'rel_sohyo',
@@ -4441,23 +4480,72 @@
       return cfg.elections[i] || 0;
     },
 
-    //  中選挙区制の候補者調整。ひとつの選挙区に複数立てるので、
-    //  何人立てるかで議席が大きく変わる。立てすぎれば票を分け合って共倒れし、
-    //  絞りすぎれば取れたはずの議席を捨てる。
-    //  史実の1969年（140→90）は、1967年の勢いのまま候補を立てて
-    //  票の減少に気づかなかった結果でもある。
-    //   nom: -1 = 絞る / 0 = 標準 / +1 = 多く立てる
-    nominationEffect: function (Q, share) {
-      var nom = Q.nomination || 0;
-      if (nom === 0) { return 1.0; }
-      if (nom < 0) {
-        // 絞る：共倒れは避けられるが、伸びているときは取り逃す
-        return share >= 26 ? 0.93 : 1.06;
-      }
-      // 多く立てる：票が伸びていれば効くが、減っていれば共倒れする
-      if (share >= 29) { return 1.07; }
-      if (share >= 24) { return 1.00; }
-      return 0.82;
+    // ══════════════════════════════════════════════════════════
+    //  擁立数
+    //
+    //  中選挙区制では定数三〜五の選挙区に各党が複数立てる。
+    //  立てていない選挙区の議席は、どれだけ票があっても取れない。
+    //
+    //  社会党の三十四年でいちばん動かなかった数がこれである。
+    //    一九五八年 246人 → 166議席（定数467、過半234）
+    //    一九六〇年 186人 → 145議席
+    //    一九九〇年 149人 → 136議席（定数512、過半257）
+    //    一九九三年 142人 →  70議席
+    //  一九五八年を除き、**全員当選しても過半に届かない数しか立てていない**。
+    //  単独過半が一度も見えなかったのは得票率の問題ではなく、この数である。
+    //
+    //  以前はこれを nomination（−1/0/+1）という一回きりの旗にして
+    //  議席へ ±7% を掛けていた。それでは、得票率を上げれば議席が
+    //  いくらでも伸びる盤になる ── 実測で得票 59.6% → 299議席、
+    //  つまり候補者を一人も増やさずに単独過半が取れていた。
+    // ══════════════════════════════════════════════════════════
+    //  史実の擁立数（衆院）
+    HIST_NOM: { 1958: 246, 1960: 186, 1963: 198, 1967: 209, 1969: 183, 1972: 161,
+                1976: 162, 1979: 157, 1980: 149, 1983: 144, 1986: 138, 1990: 149,
+                1993: 142 },
+    NOM_OPEN: 186,          // 一九六〇年に実際に立てた数
+
+    //  候補を一人立てるには供託金と選挙区の事務所と、そこで働く人が要る。
+    //  供託金は三十四年で上がり続けた（衆院 一九五九年 十万円 → 一九九二年 二百万円）。
+    nomCost: function (Q, n) {
+      var y = Q.year || 1959;
+      return Math.max(1, Math.round(n / 20 * 2.4 * (1 + (y - 1959) / 22)));
+    },
+
+    //  立て続けられる数。党員と持っている自治体で決まる。
+    //  ここを割ると、次の選挙までに勝手に戻ってくる（候補者は落ち続けない）。
+    nomFloor: function (Q) {
+      var m = (Q.members || 50000) / 50000;
+      var l = 1 + (Q.local_n || 0) * 0.03;
+      return clamp(Math.round(110 * m * l + 40), 80, 320);
+    },
+
+    //  立てた候補のうち何人が通るか。
+    //  効くのは「得票率」そのものではなく、
+    //  得票率 ÷（候補者数 ÷ 定数）── 一人あたりどれだけ票を回せるか。
+    //  史実十二回に当てた（比 → 当選率）。折れ点は三つ：
+    //    56 で 49%（共倒れの底）／64 で 65%／69.5 で 78%／83.8 で 91%
+    //  比が 56 を割ると票を分け合って共倒れする。
+    //  一九六九年（比 56.9、90議席）と一九九三年（比 55.5、70議席）がそれである。
+    //  逆に一九九〇年は比 83.8 ── 立てた 149 人のうち 136 人が通った。
+    //  平均のずれは十二回で 3.1 議席。
+    nomWinRate: function (ratio) {
+      var w;
+      if (ratio <= 64) { w = 0.49 + (ratio - 56) * 0.0200; }
+      else if (ratio <= 69.5) { w = 0.650 + (ratio - 64) * 0.0236; }
+      else { w = 0.780 + (ratio - 69.5) * 0.0093; }
+      return clamp(w, 0.18, 0.95);
+    },
+
+    //  この盤面で、いま立てている数だと最大何議席取れるか。
+    nomCeiling: function (Q, share) {
+      var k = Q.kouho || this.NOM_OPEN;
+      var tot = Q.hr_total || 511;
+      var dens = k / tot;
+      var ratio = dens > 0 ? share / dens : 0;
+      var win = this.nomWinRate(ratio);
+      return { kouho: k, ratio: Math.round(ratio * 10) / 10,
+               win: win, cap: Math.round(k * win) };
     },
 
     //  選挙を執行して結果を Q に焼く。どの年でも使える
@@ -4805,6 +4893,83 @@
     //  参院の各党の議席。衛院の得票率から作る。
     //  社会党だけは全国区と名士票の分を乗せる（seats_hc と揃える）。
     HC_TOTAL: 252,
+
+    // ══════════════════════════════════════════════════════════
+    //  参院
+    //
+    //  三年ごとに半数を改選する。以前は参院を衆院の得票率から
+    //  一本の式で出していた（share/100 × 252 × 1.25）ので、
+    //  参院は盤面の一部ではなく衆院の影だった。
+    //  実際には性質の違う二つの区で出来ている。
+    //
+    //   地方区（七十六）　定数一〜四。一人区が多く、小さい党は落ちる。
+    //   全国区（五十）　　全国が一つの区。名前と組織票で決まる。
+    //                    八三年から拘束名簿式の比例代表になるが、
+    //                    組織票で決まるという性質は変わらない。
+    //
+    //  社会党が参院で衆院より高く出ていたのは、全国区に労組の
+    //  推薦名簿があったからである。だから組織が痩せると、
+    //  参院のほうが先に落ちる ── 一九八〇年代がそれである。
+    // ══════════════════════════════════════════════════════════
+    HC_YEARS: [1962, 1965, 1968, 1971, 1974, 1977, 1980, 1983, 1986, 1989, 1992],
+    //  史実の社会党の参院議席（その選挙のあとの総数）
+    HIST_HC: { 1959: 85, 1962: 66, 1965: 73, 1968: 65, 1971: 66, 1974: 62,
+               1977: 56, 1980: 47, 1983: 44, 1986: 42, 1989: 66, 1992: 71 },
+    //  改選数。七一年に定数が二五〇→二五二になる
+    hcSeatsUp: function (year) {
+      var n = (year >= 1971) ? 126 : 125;
+      return { chihou: n - 50, zenkoku: 50, total: n };
+    },
+
+    //  組織票の厚み（0..1）。全国区はここで決まる。
+    //  開幕の総評五五・同盟〇でおよそ 0.5。
+    hcOrgVote: function (Q) {
+      var p = this.unionPower(Q).total;
+      //  一九八九年に総評と同盟が畳まれる。連合・全労協との関係をまだ
+      //  結んでいない盤では unionPower が 0 を返し、全国区が消える。
+      //  そこまで落ちないよう、総評との関係から下限を置く。
+      var floor = Math.max(0, Q.rel_sohyo || 0) / 100 * 0.35;
+      return clamp(Math.max(p / 900, floor), 0, 1);
+    },
+
+    //  参院選を執行する。半数改選なので、前回の当選分はそのまま残る。
+    runHCElection: function (Q, year) {
+      var up = this.hcSeatsUp(year);
+      var sh = this.tally(Q).shakai / 100;
+      var org = this.hcOrgVote(Q);
+      //  比例代表は八三年から。名簿の順で決まるので、党の名前が効く
+      var meibo = (year >= 1983) ? 1 : 0;
+      //  地方区。一人区では小さい党が落ちるので、得票率より低く出る
+      var chihou = Math.round(up.chihou * sh * 0.92 * (1 + (Q.hc_chihou_push || 0)));
+      //  全国区。労組の推薦名簿のぶん、得票率より高く出る
+      var zenkoku = Math.round(up.zenkoku * sh * (1 + 0.9 * org) * (1 + (Q.hc_zenkoku_push || 0)));
+      chihou = clamp(chihou, 0, up.chihou);
+      zenkoku = clamp(zenkoku, 0, up.zenkoku);
+      var won = chihou + zenkoku;
+      Q.hc_chihou = chihou;
+      Q.hc_zenkoku = zenkoku;
+      Q.hc_won = won;
+      Q.hc_meibo = meibo;
+      Q.hc_org_pct = Math.round(org * 100);
+      Q.hc_prev = Q.seats_hc || 0;
+      //  非改選は前回の当選分。ここを持っていないと半数改選にならない
+      Q.seats_hc = clamp((Q.hc_last_won === undefined ? 47 : Q.hc_last_won) + won,
+                         0, this.HC_TOTAL);
+      Q.hc_last_won = won;
+      Q.hc_diff = Q.seats_hc - Q.hc_prev;
+      Q.hc_year = year;
+      Q.hist_hc = this.HIST_HC[year] || 0;
+      Q.hc_chihou_push = 0; Q.hc_zenkoku_push = 0;
+      //  参院の内訳を引き直す
+      this.hcBreakdown(Q, this.allocate(Q).share);
+      //  参院の過半（一二七）を野党で越えているか
+      Q.hc_majority_line = Math.floor(this.HC_TOTAL / 2) + 1;
+      this.tallyCounter(Q, 'hc');
+      this.tallyCounter(Q, 'name');
+      this.refresh(Q);
+      return Q;
+    },
+
     hcBreakdown: function (Q, share) {
       var P = ['jimin', 'shakai', 'minsha', 'komei', 'kyosan', 'other'];
       var w = {}, i, k, sum = 0;
@@ -4860,13 +5025,31 @@
     runElection: function (Q, year) {
       //  暦を後ろへ戻さない。選挙は年の目印であって、時間の巻き戻しではない。
       this.advanceYear(Q, Math.max(year, Q.year || 0));
+      //  事象で積んだ候補者の当て（nom_bonus）が、選挙のときに実際の
+      //  擁立数になる。この値は五十二か所で書かれていたのに、
+      //  どこからも読まれていなかった ── 新人を擁立しても盤面が動かない。
+      if (Q.nom_bonus) {
+        Q.nom_bonus_used = Q.nom_bonus;
+        Q.kouho = (Q.kouho || this.NOM_OPEN) + Math.round(Q.nom_bonus * 7);
+        Q.nom_bonus = 0;
+      } else { Q.nom_bonus_used = 0; }
       var r = this.allocate(Q);
-      var nomK = this.nominationEffect(Q, r.share.shakai);
-      Q.nom_effect = Math.round(nomK * 100);
-      if (nomK !== 1.0) {
-        var before = r.seats.shakai;
-        r.seats.shakai = Math.round(before * nomK);
-        var diff = before - r.seats.shakai;
+      //  立てていない選挙区は取れない。得票率が生む議席を、
+      //  擁立数の天井で切る（nomCeiling）。切った分は他党へ回す。
+      //  結果は res_ で持つ。nom_ のほうは refresh が持つ「次の見込み」で、
+      //  runElection の最後の refresh がそれを上書きしてしまうため
+      //  （実測で、選挙の頁に次回の天井が出ていた）。
+      var nc = this.nomCeiling(Q, r.share.shakai);
+      Q.res_kouho = nc.kouho;
+      Q.res_nom_ratio = nc.ratio;
+      Q.res_nom_win = Math.round(nc.win * 100);
+      Q.res_nom_cap = nc.cap;
+      Q.nom_effect = Q.res_nom_win;      // 表示の名前は据え置く
+      Q.res_nom_lost = 0;
+      if (r.seats.shakai > nc.cap) {
+        var diff = r.seats.shakai - nc.cap;
+        Q.res_nom_lost = diff;
+        r.seats.shakai = nc.cap;
         r.seats.jimin += Math.round(diff * 0.5);
         r.seats.other += diff - Math.round(diff * 0.5);
       }
@@ -4917,9 +5100,9 @@
       //                    1986 17.2% → 54（実績42）
       //  これを入れる前は seats_hc が開幕の85から一方向にしか動かず、
       //  勝利点の四要素のうち参院だけが盤面と無関係に効いていた。
-      Q.hc_target = Math.round(r.share.shakai / 100 * 252 * 1.25);
-      this.tallyCounter(Q, 'hc');
-            Q.seats_hc = Math.max(0, Math.min(126, Math.round((Q.seats_hc || 85) * 0.5 + Q.hc_target * 0.5)));
+      //  参院は参院選（runHCElection）が持つ。ここでは触らない。
+      //  以前はここで share から一本の式で作っていたので、
+      //  参院が盤面の一部ではなく衆院の影になっていた。
       //  参院の内訳。以前は社会党の数しか無かったので、議席図が描けない。
       //  衛院と同じ得票率から作る（社会党だけ名士票の係数 1.25 が乗る）。
       //  定数 252 に合うよう規格化し、余りは「その他」へ入れる。
@@ -4939,6 +5122,13 @@
       //  選挙の控え。図表はこれを読む。控えに乗るので文字列で持つ。
       this.logElection(Q, year);
       this.cabinetCheck(Q);
+      //  選挙が済むと擁立数は目減りする（落ちた候補は次に立たない）。
+      //  党員と自治体で決まる床までは、放っておいても戻る。
+      var fl = this.nomFloor(Q);
+      Q.kouho = (Q.kouho || this.NOM_OPEN) > fl
+        ? Math.max(fl, Math.round((Q.kouho || this.NOM_OPEN) * 0.94))
+        : Math.min(fl, (Q.kouho || this.NOM_OPEN) + 6);
+      Q.nomination = 0;
       Q.next_election_idx = (Q.next_election_idx || 0) + 1;
       this.refresh(Q);
       return r;
@@ -6223,6 +6413,20 @@
       Q.discard_over = (Q.discard_used > D.discard) ? 1 : 0;
       //  新左翼。窓は一九七二年二月で閉じる。
       Q.nl_near = this.nlNear(Q);
+      //  擁立数。いま立てている数だと、この盤面で最大何議席まで届くか。
+      if (Q.kouho === undefined || Q.kouho === null) { Q.kouho = this.NOM_OPEN; }
+      var nc0 = this.nomCeiling(Q, this.pct(this.tally(Q).shakai));
+      Q.nom_kouho = nc0.kouho;
+      Q.nom_ratio = nc0.ratio;
+      Q.nom_win = Math.round(nc0.win * 100);
+      Q.nom_cap = nc0.cap;
+      Q.nom_floor = this.nomFloor(Q);
+      //  総評から出してもらった候補は、通れば議席になる。ならないほうの
+      //  代議員票は総評のものである。右へ寄る決議は、その人たちの
+      //  反対を越えないと通らない ── 議席は借りられるが、党大会は借りられない。
+      Q.sohyo_giin = Q.sohyo_giin || 0;
+      Q.route_right_cost = 2 + Math.min(4, Q.sohyo_giin);
+      Q.nom_short = Math.max(0, (Math.floor((Q.hr_total || 511) / 2) + 1) - nc0.cap);
       Q.nl_open = ((Q.act || 1) >= 2 && (Q.year || 0) <= this.NL_WINDOW) ? 1 : 0;
       Q.nl_left = Math.max(0, this.NL_INTAKE_MAX - (Q.nl_intake || 0));
       Q.nl_intake = Q.nl_intake || 0;
