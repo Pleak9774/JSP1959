@@ -1136,9 +1136,53 @@
     UPKEEP_PER_100K: 0.35,
     UPKEEP_PER_CITY: 0.5,
     CAPITAL_DECAY: 0.96,
+    // ══════════════════════════════════════════════════════════
+    //  難度
+    //
+    //  見送り（@discard）は回を消費しない。山は尽きず、引くたびに
+    //  その山の中から無作為に一枚出るので、気に入らなければ見送って
+    //  引き直す、を繰り返せば毎手その時いちばん都合のいい札を選べた。
+    //  引きの偶然が消え、手札という制約そのものが無くなる。
+    //
+    //  見送りに毎手の無料枠を置く。枠を使い切ったあとの見送りは
+    //  回を食う ── 「札を探すのに一手使った」ということである。
+    //
+    //    0 簡単　1 普通　2 難しい　3 史実（控えを取れない）
+    DIFF: [
+      { id: 0, name: '簡単',   discard: 3, budget:  6, capital:  4, upkeep: 0.7, bar: 1.00, save: 1 },
+      { id: 1, name: '普通',   discard: 2, budget:  0, capital:  0, upkeep: 1.0, bar: 1.05, save: 1 },
+      { id: 2, name: '難しい', discard: 1, budget: -3, capital: -2, upkeep: 1.3, bar: 1.12, save: 1 },
+      { id: 3, name: '史実',   discard: 0, budget: -3, capital: -2, upkeep: 1.3, bar: 1.12, save: 0 }
+    ],
+    diff: function (Q) {
+      var i = (Q && Q.difficulty !== undefined && Q.difficulty !== null) ? Q.difficulty : 1;
+      return this.DIFF[i] || this.DIFF[1];
+    },
+
+    //  史実の局では控えを取らせない。雛形の autosave を包んで黙らせ、
+    //  頭の Save/Load も隠す。盤の進行には触れない。
+    applySaveLock: function (Q) {
+      try {
+        var U = window.dendryUI;
+        if (!U) { return; }
+        if (this.diff(Q).save) { return; }
+        if (!U.__jspNoSave) {
+          U.__jspNoSave = 1;
+          U.autosave = function () { return; };
+        }
+        if (typeof document === 'undefined') { return; }
+        var links = document.querySelectorAll('#header-links a');
+        for (var i = 0; i < links.length; i++) {
+          if (/showSaveSlots/.test(links[i].getAttribute('onclick') || '')) {
+            links[i].style.display = 'none';
+          }
+        }
+      } catch (e) { return; }
+    },
+
     upkeep: function (Q) {
-      var cost = (Q.members || 50000) / 100000 * this.UPKEEP_PER_100K +
-                 this.localCount(Q) * this.UPKEEP_PER_CITY;
+      var cost = ((Q.members || 50000) / 100000 * this.UPKEEP_PER_100K +
+                  this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep;
       Q.upkeep_acc = (Q.upkeep_acc || 0) + cost;
       var pay = Math.floor(Q.upkeep_acc);
       if (pay > 0) { Q.upkeep_acc = Math.round((Q.upkeep_acc - pay) * 100) / 100; Q.budget -= pay; }
@@ -4259,6 +4303,7 @@
 
     //  承継する値。30個以内に収める（設計案の承継契約）
     CARRY: [
+      'difficulty',
       'route', 'seats_hr', 'seats_hc', 'budget', 'capital', 'members',
       'seat_uha', 'seat_chuu', 'seat_chusa', 'seat_muha', 'seat_saha',
       'del_uha', 'del_chuu', 'del_chusa', 'del_muha', 'del_saha',
@@ -5681,7 +5726,7 @@
       //  線ごとの高さを掛ける。中間右は低く、左と右は高い。
       var bar = this.BAND_BAR[this.bandOf(Q)] || 1.0;
       Q.band_bar = bar;
-      var base = Math.round(raw * 1.05 * bar * 10) / 10;
+      var base = Math.round(raw * this.diff(Q).bar * bar * 10) / 10;
 
       // 三つの目標。どれかひとつ達成していれば「目標達成」
       var g_cabinet = ((Q.cabinet_posts_ever || Q.cabinet_posts || 0) > 0) || !!Q.ever_in_power;
@@ -6100,6 +6145,14 @@
       //  脱党した派閥に積まれた不満は、席を継いだ派閥へ繰り上げてから
       //  0 に潰す。カードや指導部や事象が加算したぶんは、ここで拾われる。
       this.moodInherit(Q);
+      //  難度。見送りの無料枠と、控えを取れるかどうか。
+      var D = this.diff(Q);
+      Q.diff_name = D.name;
+      Q.discard_free = D.discard;
+      Q.discard_used = Q.discard_used || 0;
+      Q.discard_left = Math.max(0, D.discard - Q.discard_used);
+      Q.discard_over = (Q.discard_used > D.discard) ? 1 : 0;
+      this.applySaveLock(Q);
       var gf = ['uha', 'chuu', 'saha'], gi;
       for (gi = 0; gi < gf.length; gi++) {
         Q['gone_' + gf[gi]] = this.inParty(Q, gf[gi]) ? 0 : 1;
