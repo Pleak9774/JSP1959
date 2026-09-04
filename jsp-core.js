@@ -6438,6 +6438,7 @@
       }
       Q.disp_tally    = this.tallyLine(Q);
       Q.disp_layers   = this.layerBlock(Q);
+      Q.disp_unions   = this.unionBlock(Q);
       Q.disp_del      = this.delegateBlock(Q);
       Q.name_chair    = this.nameOf(Q.post_chair);
       Q.name_secgen   = this.nameOf(Q.post_secgen);
@@ -6496,6 +6497,38 @@
         out.push('<span style="color:' + PCOLOR[p] + ';font-weight:bold">' + PNAME[p] + '</span> ' + this.pct(v[p]) + '%');
       }
       return out.join('　');
+    },
+
+    //  労働四団体の一覧。組合員数と、その中の左右の比を出す。
+    //  以前はここに「総評は同盟のおよそ二倍あり、だから右へ寄る取引は
+    //  失うほうが得るほうより大きい」という説明文を置いていた。
+    //  比は毎手動くので、説明ではなく数を出す。
+    unionBlock: function (Q) {
+      var y = this.yearOf(Q), k, u, size, lr, rows = [], rel, w;
+      var order = ['sohyo', 'domei', 'churitsu', 'shinsan',
+                   'rengo', 'zenrokyo', 'zenroren', 'sohyo_after'];
+      for (var i = 0; i < order.length; i++) {
+        k = order[i];
+        u = this.UNIONS[k];
+        size = this.unionSize(k, y, Q);
+        if (!size) { continue; }
+        rel = Math.round(Q[u.rel] || 0);
+        w = (u.share === undefined) ? 1 : u.share;
+        //  左の比。再編後の三団体は成り立ちで決まっているので固定値を出す。
+        if (k === 'rengo') { lr = 22; }
+        else if (k === 'zenrokyo') { lr = 96; }
+        else if (k === 'zenroren') { lr = 98; }
+        else { lr = (Q['lr_' + k] === undefined) ? this.LR_START[k] : Q['lr_' + k]; }
+        lr = Math.round(lr * 10) / 10;
+        rows.push('<b>' + u.name + '</b>　' + (Math.round(size * 10) / 10) + '万人　'
+          + '<span style="color:#B23A34">左 ' + lr + '%</span>'
+          + '／<span style="color:#3E6E8C">右 ' + (Math.round((100 - lr) * 10) / 10) + '%</span>'
+          + '　党との関係 ' + rel
+          + '　<span style="opacity:.6">官公労 ' + Math.round(u.kokorou * 100) + '%'
+          + (w < 1 ? '・党のものと数えるのは ' + Math.round(w * 100) + '%' : '')
+          + '</span>');
+      }
+      return rows.join('<br>');
     },
 
     layerBlock: function (Q) {
