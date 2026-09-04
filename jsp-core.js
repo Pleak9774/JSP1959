@@ -257,7 +257,19 @@
     REORG_TEKKO_MAX: 34,
     REORG_ROSOKON_MAX: 26,
     DUES_RATE: 0.0016,   // 動員力 1 につき一手あたりの分担金
-    MEMBER_DUES_PER_100K: 0.45,   // 党員十万人あたりの党費（一手）
+    //  党費。まず党員の関数である ── 地道に組織を作った党が後半に
+    //  金を持っているのは筋が通る。ただし線形にすると、党員を倍にした
+    //  だけで収入も倍になり、組織化が唯一の答えになってしまう。
+    //  指数 0.6 で、四倍にして 2.3 倍。実際に届く幅は五万〜十五万人で、
+    //  そのあいだ一手あたり 0.34 → 0.67 になる。
+    MEMBER_DUES_BASE: 50000,
+    MEMBER_DUES_K: 0.34,
+    MEMBER_DUES_EXP: 0.6,
+    memberDues: function (Q) {
+      var m = Math.max(0, Q.members || 0);
+      if (m <= 0) { return 0; }
+      return this.MEMBER_DUES_K * Math.pow(m / this.MEMBER_DUES_BASE, this.MEMBER_DUES_EXP);
+    },
 
     //  各団体の中の左右の比を動かす。
     //  路線が左にあるほど、協会が強いほど、オルグを積むほど左が厚くなる。
@@ -729,8 +741,8 @@
     unionDues: function (Q) {
       var p = this.unionPower(Q);
       //  党費。組合の分担金とは別に、党員から直接入る。
-      //  一九五九年の五万人でおよそ 0.35/手。組合が離れても残る金である。
-      var fee = (Q.members || 0) / 100000 * this.MEMBER_DUES_PER_100K;
+      //  一九五九年の五万人で 0.34/手。組合が離れても残る金である。
+      var fee = this.memberDues(Q);
       var mul = this.diff(Q).income;
       Q.dues_acc = (Q.dues_acc || 0) + (p.total * this.DUES_RATE + fee) * mul;
       var pay = Math.floor(Q.dues_acc);
@@ -1138,7 +1150,21 @@
     //    0.35 / 0.96      careless hr 61 / 資金峰18 / 政治資源峰28 / 未払23回
     //                     金に気を配る打ち手 hr103 / 資金峰45 / 未払0回
     //  金を見ない打ち手と見る打ち手で 42議席の差が付く。それまでは差が無かった。
-    UPKEEP_PER_100K: 0.35,
+    //  専従と機関紙。党員に比例するが、こちらも線形ではない ──
+    //  機関紙は一度刷れば部数が増えても割安になるし、県連の事務所は
+    //  党員が倍になっても倍にはならない。指数は党費（0.6）より小さく、
+    //  そのぶん「組織を作れば手元は楽になる、ただし楽になり方は鈍る」。
+    //  五万人で 0.175、十五万五千人で 0.29。自治体の分は線形のまま
+    //  （一つ持てば一つぶんの役所が要る）。
+    UPKEEP_MEMBER_BASE: 50000,
+    UPKEEP_MEMBER_K: 0.175,
+    UPKEEP_MEMBER_EXP: 0.45,
+    memberUpkeep: function (Q) {
+      var m = Math.max(0, Q.members || 0);
+      if (m <= 0) { return 0; }
+      return this.UPKEEP_MEMBER_K *
+        Math.pow(m / this.UPKEEP_MEMBER_BASE, this.UPKEEP_MEMBER_EXP);
+    },
     UPKEEP_PER_CITY: 0.34,
     CAPITAL_DECAY: 0.90,
     CAPITAL_SOFT: 12,   // ここまでは減らない。上だけ削る
@@ -1291,7 +1317,7 @@
     },
 
     upkeep: function (Q) {
-      var cost = ((Q.members || 50000) / 100000 * this.UPKEEP_PER_100K +
+      var cost = (this.memberUpkeep(Q) +
                   this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep;
       Q.upkeep_acc = (Q.upkeep_acc || 0) + cost;
       var pay = Math.floor(Q.upkeep_acc);
@@ -6526,10 +6552,9 @@
       //  そうしないと一手目の脇柱がどちらも 0 になる。
       var mul3 = this.diff(Q).income;
       Q.dues_now = Math.round(((this.unionPower(Q).total * this.DUES_RATE +
-        (Q.members || 0) / 100000 * this.MEMBER_DUES_PER_100K) * mul3 +
-        (Q.dues_urban || 0)) * 100) / 100;
-      Q.upkeep_now = Math.round((((Q.members || 50000) / 100000 * this.UPKEEP_PER_100K +
-        this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep) * 10) / 10;
+        this.memberDues(Q)) * mul3 + (Q.dues_urban || 0)) * 100) / 100;
+      Q.upkeep_now = Math.round(((this.memberUpkeep(Q) +
+        this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep) * 100) / 100;
       //  総評から出してもらった候補は、通れば議席になる。ならないほうの
       //  代議員票は総評のものである。右へ寄る決議は、その人たちの
       //  反対を越えないと通らない ── 議席は借りられるが、党大会は借りられない。
