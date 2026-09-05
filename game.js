@@ -13,7 +13,52 @@
     ui = dendryUI;
     game = ui.game;
 
-    // Add your custom code here.
+    //  選べない札（冷却中・回数切れ・資源不足）は押せないようにする。
+    //  雛形は薄く塗るだけで、押せばそのまま頁が開いていた。指導部の札で
+    //  誤って押す報告が多かった。捕捉段階で止めるので、雛形の
+    //  委譲された click より先に走る。
+    //  雛形はピン留めの札に unavailable-card を付けない（山札の札には付ける）。
+    //  choose-if が偽の札をエンジンの選択肢から引いて印を付け、押しても開かないようにする。
+    var content = document.getElementById('content');
+    var cannot = function (id) {
+      try {
+        var ch = dendryUI.dendryEngine.getCurrentChoices();
+        for (var i = 0; i < ch.length; i++) { if (ch[i].id === id) { return ch[i].canChoose === false; } }
+      } catch (e) { return false; }
+      return false;
+    };
+    var mark = function () {
+      var lis = content.querySelectorAll('ul.pinned-cards li, ul.decks li, ul.hand li');
+      for (var i = 0; i < lis.length; i++) {
+        var a = lis[i].querySelector('a[card-id]');
+        if (a && cannot(a.getAttribute('card-id'))) { lis[i].classList.add('unavailable-card'); }
+      }
+    };
+    if (content && !content.jspGuard) {
+      content.jspGuard = true;
+      content.addEventListener('click', function (evt) {
+        var t = evt.target, a = null;
+        while (t && t !== content) {
+          if (t.classList && t.classList.contains('unavailable-card')) {
+            evt.preventDefault(); evt.stopPropagation(); return false;
+          }
+          if (!a && t.getAttribute && t.getAttribute('card-id')) { a = t; }
+          t = t.parentNode;
+        }
+        if (a && cannot(a.getAttribute('card-id'))) {
+          evt.preventDefault(); evt.stopPropagation(); return false;
+        }
+        return true;
+      }, true);
+      var pending = false;
+      new MutationObserver(function () {
+        if (pending) { return; }
+        pending = true;
+        //  rAF は裏の tab で止まる。時計で回す。
+        setTimeout(function () { pending = false; mark(); }, 0);
+      }).observe(content, { childList: true, subtree: true });
+      mark();
+    }
   };
 
   var TITLE = "" + '_' + "";
