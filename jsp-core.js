@@ -1864,6 +1864,8 @@
         Q.crisis_gain = Math.min(Q.turns_left, this.CRISIS_MAX_FINE) * (this.GRAIN_COARSE - 1);
         //  暦は turns_left で測るので、総手数も同じだけ増やす。
         //  そうしないと危機のあいだだけ暦が先へ走る（tickYear の①）。
+        //  増やしたぶん一手あたりの月数が三分の一になる ── 危機の一手が
+        //  一か月になるというのは、暦の側から見るとこのことである。
         var pcfg = this.ACTS[Q.act || 1];
         var pnow = Q.phase_turns || (pcfg && pcfg.phases[(Q.phase || 1) - 1]) || Q.turns_left;
         Q.phase_turns = pnow + Q.crisis_gain;
@@ -2301,6 +2303,12 @@
       // 警職法　1958年〜・史実
       { n: 1011, id: 'a1_keishokuho', name: '警職法', acts: [1], need: { diet: 0.2 }, year: 1958, fixed: true,
         when: function (Q) { return Q.year >= 1958; } },
+      // 長崎国旗事件　1958年〜・史実
+      { n: 8101, id: 'a1_nagasaki_kokki', name: '長崎国旗事件', acts: [1], need: { rel: 0.12 }, year: 1958, fixed: true,
+        when: function (Q) { return Q.year >= 1958; } },
+      // 団地　1958年〜・史実
+      { n: 8102, id: 'a1_danchi', name: '団地', acts: [1], need: { org: 0.12 }, year: 1958, fixed: true,
+        when: function (Q) { return Q.year >= 1958; } },
       // 砂川・伊達判決　1959年〜・史実
       { n: 1002, id: 'a1_sunagawa', name: '砂川・伊達判決', acts: [1], need: { rally: 0.15 }, year: 1959, fixed: true,
         when: function (Q) { return Q.year >= 1959; } },
@@ -2353,6 +2361,12 @@
                  !window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 国民皆保険　1961年〜・史実
       { n: 2165, id: 'a2_kokumin_kenko', name: '国民皆保険', acts: [2], need: { diet: 0.2 }, year: 1961, fixed: true,
+        when: function (Q) { return Q.year >= 1961; } },
+      // 農業基本法　1961年〜・史実
+      { n: 8103, id: 'a2_nogyo_kihonho', name: '農業基本法', acts: [2], need: { org: 0.14 }, year: 1961, fixed: true,
+        when: function (Q) { return Q.year >= 1961; } },
+      // ソ連の核実験再開　1961年〜・史実
+      { n: 8104, id: 'a2_kakujikken', name: 'ソ連の核実験再開', acts: [2], need: { rally: 0.14 }, year: 1961, fixed: true,
         when: function (Q) { return Q.year >= 1961; } },
       // 日韓基本条約　帯中間右/右・1963年〜・史実
       { n: 115, id: 'nikkan', name: '日韓基本条約', acts: [2], need: { diet: 0.14 }, year: 1963, fixed: true,
@@ -2504,6 +2518,12 @@
         when: function (Q) { return Q.year >= 1970; } },
       // よど号　1970年〜・史実
       { n: 3201, id: 'a3_yodogo', name: 'よど号', acts: [3], need: { name: 0.15 }, year: 1970, fixed: true,
+        when: function (Q) { return Q.year >= 1970; } },
+      // 七〇年安保の自動延長　1970年〜・史実
+      { n: 8105, id: 'a3_anpo_jido70', name: '七〇年安保の自動延長', acts: [3], need: { rally: 0.14 }, year: 1970, fixed: true,
+        when: function (Q) { return Q.year >= 1970; } },
+      // ウーマン・リブ　1970年〜・史実
+      { n: 8113, id: 'a3_uman_ribu', name: 'ウーマン・リブ', acts: [3], need: { org: 0.16 }, year: 1970, fixed: true,
         when: function (Q) { return Q.year >= 1970; } },
       // 三里塚　1971年〜・史実
       { n: 3003, id: 'a3_sanrizuka', name: '三里塚', acts: [3], need: { rally: 0.25 }, year: 1971, fixed: true,
@@ -2685,6 +2705,16 @@
       { n: 4161, id: 'a4_nicchu_yuko', name: '日中平和友好条約', acts: [4], need: { rel: 0.15 }, year: 1978, fixed: true,
         when: function (Q) { return Q.year >= 1978 &&
                  Q.kyokai_grip >= 35; } },
+      // 社会民主連合　1978年〜・史実
+      { n: 8106, id: 'a4_shaminren', name: '社会民主連合', acts: [4], need: { rel: 0.14 }, year: 1978, fixed: true,
+        when: function (Q) { return Q.year >= 1978 &&
+                 Q.shamin_exists; } },
+      // 日米防衛協力の指針　1978年〜・史実
+      { n: 8107, id: 'a4_guideline', name: '日米防衛協力の指針', acts: [4], need: { diet: 0.16 }, year: 1978, fixed: true,
+        when: function (Q) { return Q.year >= 1978; } },
+      // 超法規的行動　1978年〜・史実
+      { n: 8108, id: 'a4_kurisu', name: '超法規的行動', acts: [4], need: { diet: 0.14 }, year: 1978, fixed: true,
+        when: function (Q) { return Q.year >= 1978; } },
       // 自治体からの撤退　1979年〜・史実
       { n: 441, id: 'a4_shakomin_jichitai', name: '自治体からの撤退', acts: [4], need: { org: 0.14 }, year: 1979, fixed: true,
         when: function (Q) { return Q.year >= 1979 &&
@@ -2753,6 +2783,12 @@
       { n: 7401, id: 'rincho_sa', name: '第二臨調', acts: [4], need: { labor: 0.25 }, year: 1981, fixed: true,
         when: function (Q) { return Q.year >= 1981 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 中国残留孤児　1981年〜・史実
+      { n: 8109, id: 'a4_zanryu_koji', name: '中国残留孤児', acts: [4], need: { diet: 0.14 }, year: 1981, fixed: true,
+        when: function (Q) { return Q.year >= 1981; } },
+      // 国際障害者年　1981年〜・史実
+      { n: 8110, id: 'a4_shogaisha', name: '国際障害者年', acts: [4], need: { org: 0.16 }, year: 1981, fixed: true,
+        when: function (Q) { return Q.year >= 1981; } },
       // 労働戦線統一の民間先行　1982年〜・史実
       { n: 156, id: 'minkan_senko', name: '労働戦線統一の民間先行', acts: [4], need: { labor: 0.2 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
@@ -2837,6 +2873,12 @@
         when: function (Q) { return Q.year >= 1983; } },
       // 国鉄の赤字　1984年〜・史実
       { n: 4169, id: 'a4_kokutetsu_akaji', name: '国鉄の赤字', acts: [4], need: { labor: 0.3 }, year: 1984, fixed: true,
+        when: function (Q) { return Q.year >= 1984; } },
+      // 臨時教育審議会　1984年〜・史実
+      { n: 8111, id: 'a4_rinkyoshin', name: '臨時教育審議会', acts: [4], need: { labor: 0.16 }, year: 1984, fixed: true,
+        when: function (Q) { return Q.year >= 1984; } },
+      // 健康保険の一割負担　1984年〜・史実
+      { n: 8112, id: 'a4_kenpo_kaisei', name: '健康保険の一割負担', acts: [4], need: { labor: 0.18 }, year: 1984, fixed: true,
         when: function (Q) { return Q.year >= 1984; } },
       // 国鉄の処理　帯中間右/右・1985年〜・史実
       { n: 4014, id: 'a4_kokutetsu_bunkatsu', name: '国鉄の処理', acts: [4], need: { labor: 0.4 }, year: 1985, fixed: true,
@@ -2934,6 +2976,9 @@
       { n: 7603, id: 'shohizei_seiritsu_sa', name: '消費税成立', acts: [5], need: { diet: 0.3 }, year: 1988, fixed: true,
         when: function (Q) { return Q.year >= 1988 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 自粛　1988年〜・史実
+      { n: 8114, id: 'a5_jishuku', name: '自粛', acts: [5], need: { diet: 0.16 }, year: 1988, fixed: true,
+        when: function (Q) { return Q.year >= 1988; } },
       // 宇野内閣　1989年〜・史実
       { n: 5007, id: 'a5_uno', name: '宇野内閣', acts: [5], need: { name: 0.3 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
@@ -3067,6 +3112,9 @@
       { n: 7609, id: 'shosenkyoku_sa', name: '小選挙区制', acts: [5], need: { koryo: 0.35 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 東京佐川急便　1992年〜・史実
+      { n: 8115, id: 'a5_sagawa', name: '東京佐川急便', acts: [5], need: { name: 0.16 }, year: 1992, fixed: true,
+        when: function (Q) { return Q.year >= 1992; } },
       // 内閣不信任　1993年〜・史実
       { n: 5018, id: 'a5_fushinnin', name: '内閣不信任', acts: [5], need: { diet: 0.4 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
@@ -4367,60 +4415,75 @@
       //  「一九七三年 石油危機」「一九七四年 七人委員会」
       //  「一九七五年 革新自治体の財政危機」の三つが、
       //  盤面が一九七六年になってから続けて出ていた。
-      //  題に年が書いてあるのに盤面の年と合わない ── これが
+      //  題に年月が書いてあるのに盤面の日付と合わない ── これが
       //  「事象と時間が離れている」の中身である。
-      //  参院選と同じで、年が来たら割り込む形にする。手は消費しない。
-      { n: 7101, id: 'sp_kozo1962', name: '構造改革論争', acts: [2], fixed: true,
-        when: function (Q) { return Q.year >= 1962; } },
-      { n: 7102, id: 'sp_year1964', name: '一九六四年', acts: [2], fixed: true,
-        when: function (Q) { return Q.year >= 1964; } },
-      { n: 7103, id: 'sp_michi1966', name: '日本における社会主義への道', acts: [2], fixed: true,
-        when: function (Q) { return Q.year >= 1966; } },
-      { n: 7111, id: 'sp_oil1973', name: '石油危機', acts: [3], fixed: true,
-        when: function (Q) { return Q.year >= 1973; } },
-      { n: 7112, id: 'sp_nanin1974', name: '七人委員会', acts: [3], fixed: true,
-        when: function (Q) { return Q.year >= 1974; } },
-      { n: 7113, id: 'sp_zaisei1975', name: '革新自治体の財政危機', acts: [3], fixed: true,
-        when: function (Q) { return Q.year >= 1975; } },
-      { n: 7121, id: 'sp_hibuso1984', name: '非武装中立', acts: [4], fixed: true,
-        when: function (Q) { return Q.year >= 1984; } },
-      { n: 7131, id: 'sp_kokutetsu1987', name: '国鉄分割民営化', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1987; } },
+      //  参院選と同じで、日付が来たら割り込む形にする。手は消費しない。
+      //  局面の終わりに残すのは総選挙だけになった。
+      { n: 9101, id: 'sp_kozo1962', name: '構造改革論争', acts: [2], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1962, 1); } },
+      { n: 9102, id: 'sp_yokohama1963', name: '横浜市長選', acts: [2], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1963, 4); } },
+      { n: 9103, id: 'sp_year1964', name: '一九六四年', acts: [2], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1964, 11); } },
+      { n: 9104, id: 'sp_michi1966', name: '日本における社会主義への道', acts: [2], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1966, 1); } },
+      { n: 9105, id: 'sp_tokyo1967', name: '東京都知事選', acts: [2], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1967, 4); } },
+      { n: 9111, id: 'sp_rengo_sekigun1972', name: 'あさま山荘', acts: [3], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1972, 2); } },
+      { n: 9112, id: 'sp_oil1973', name: '石油危機', acts: [3], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1973, 10); } },
+      { n: 9113, id: 'sp_nanin1974', name: '七人委員会', acts: [3], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1974, 2); } },
+      { n: 9114, id: 'sp_zaisei1975', name: '革新自治体の財政危機', acts: [3], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1975, 4); } },
+      { n: 9115, id: 'sp_eda1977', name: '江田三郎', acts: [3], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1977, 2); } },
+      { n: 9121, id: 'sp_jichitai1979', name: '革新自治体の崩壊', acts: [4], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1979, 4); } },
+      { n: 9122, id: 'sp_shako1980', name: '社公合意', acts: [4], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1980, 1); } },
+      { n: 9123, id: 'sp_hibuso1984', name: '非武装中立', acts: [4], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1984, 1); } },
+      { n: 9131, id: 'sp_shin_sengen1986', name: '新宣言', acts: [5], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1986, 1); } },
+      { n: 9132, id: 'sp_kokutetsu1987', name: '国鉄分割民営化', acts: [5], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1987, 4); } },
       //  消費税とマドンナは七月の参院選の結果を語る。参院選のあとに出す。
-      { n: 7132, id: 'sp_madonna1989', name: '消費税とマドンナ', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1989 && !!Q.evdone_hc1989; } },
+      { n: 9133, id: 'sp_madonna1989', name: '消費税とマドンナ', acts: [5], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 7) && !!Q.evdone_hc1989; } },
       //  連合の結成は十一月。参院選とマドンナのあと。
-      { n: 7133, id: 'sp_rengo1989', name: '連合結成', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1989 && !!Q.evdone_sp_madonna1989; } },
-      { n: 7141, id: 'sp_gulf1991', name: '湾岸戦争', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1991; } },
-      { n: 7142, id: 'sp_pko1992', name: 'PKO協力法', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1992; } },
+      { n: 9134, id: 'sp_rengo1989', name: '連合結成', acts: [5], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 11) && !!Q.evdone_sp_madonna1989; } },
+      { n: 9135, id: 'sp_gulf1991', name: '湾岸戦争', acts: [5], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1991, 1); } },
+      { n: 9136, id: 'sp_pko1992', name: 'PKO協力法', acts: [5], fixed: true,
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1992, 6); } },
 
       //  参院選。三年ごとの半数改選。手を消費しない割り込みとして出す。
       //  中身は一つの頁（hc.election）を年ごとに使い回す。
       { n: 7001, id: 'hc1962', name: '参院選', acts: [2], fixed: true,
-        when: function (Q) { return Q.year >= 1962; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1962, 7); } },
       { n: 7002, id: 'hc1965', name: '参院選', acts: [2], fixed: true,
-        when: function (Q) { return Q.year >= 1965; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1965, 7); } },
       { n: 7003, id: 'hc1968', name: '参院選', acts: [2], fixed: true,
-        when: function (Q) { return Q.year >= 1968; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1968, 7); } },
       { n: 7004, id: 'hc1971', name: '参院選', acts: [3], fixed: true,
-        when: function (Q) { return Q.year >= 1971; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1971, 6); } },
       { n: 7005, id: 'hc1974', name: '参院選', acts: [3], fixed: true,
-        when: function (Q) { return Q.year >= 1974; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1974, 7); } },
       { n: 7006, id: 'hc1977', name: '参院選', acts: [3], fixed: true,
-        when: function (Q) { return Q.year >= 1977; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1977, 7); } },
       { n: 7007, id: 'hc1980', name: '参院選', acts: [4], fixed: true,
-        when: function (Q) { return Q.year >= 1980; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1980, 6); } },
       { n: 7008, id: 'hc1983', name: '参院選', acts: [4], fixed: true,
-        when: function (Q) { return Q.year >= 1983; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1983, 6); } },
       { n: 7009, id: 'hc1986', name: '参院選', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1986; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1986, 7); } },
       { n: 7010, id: 'hc1989', name: '参院選', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1989; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 7); } },
       { n: 7011, id: 'hc1992', name: '参院選', acts: [5], fixed: true,
-        when: function (Q) { return Q.year >= 1992; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1992, 7); } },
 
       { n: 6, id: 'kyokai', name: '協会規制問題', acts: [3, 4, 5], need: { org: 0.17 },
         when: function (Q) { return (Q.act || 1) >= 3 && Q.kyokai_grip >= 52 &&
@@ -4523,24 +4586,27 @@
     //     一九七八〜八五年に伸ばしていたので、第三局面が閉じる時点で
     //     盤面が一九八五年になり、そこで一九八三年の総選挙をやっていた。
     //     目印で区切れば、選挙の年と盤面の年は必ず一致する。
+    //  ③ 年でしか動かないと、一手ごとに何も変わらないか、
+    //     いきなり一年跳ぶかのどちらかになる。月で持てば、
+    //     ふつうの一手は三か月、危機の一手は一か月ぶん動く。
     tickYear: function (Q) {
       var cfg = this.ACTS[Q.act || 1];
       if (!cfg) { return Q; }
       Q.act_turn = (Q.act_turn || 0) + 1;
       var ph = Math.max(1, Q.phase || 1);
-      var marks = cfg.marks || [cfg.to];
-      var a = (ph > 1) ? (marks[ph - 2] || cfg.from) : cfg.from;
-      var b = marks[ph - 1] || cfg.to;
+      var marks = cfg.marks || [[cfg.to, 12]];
+      var a = (ph > 1) ? (marks[ph - 2] || [cfg.from, cfg.fromM || 1])
+                       : [cfg.from, cfg.fromM || 1];
+      var b = marks[ph - 1] || [cfg.to, 12];
       //  局面の進み具合。phase_turns は危機で増えた分を含む総手数で、
       //  turns_left と同じ時に同じだけ増える（crisisCheck）。
       var tot = Q.phase_turns || cfg.phases[ph - 1] || 1;
       var used = Math.max(0, tot - (Q.turns_left || 0));
-      var y = a + Math.round((b - a) * Math.min(1, used / tot));
-      //  暦は後ろへ戻さない。幕頭の場面や選挙が先に年を立てることがある
-      if ((Q.year || 0) > y) { y = Q.year; }
-      if (y > cfg.to) { y = cfg.to; }
-      if (y > (Q.year || 0)) { this.advanceYear(Q, y); }
-      return Q;
+      var am = this.ymOf(a[0], a[1]), bm = this.ymOf(b[0], b[1]);
+      var m = Math.round(am + (bm - am) * Math.min(1, used / tot));
+      var last = this.ymOf(cfg.to, 12);
+      if (m > last) { m = last; }
+      return this.setDate(Q, this.yearOfYm(m), this.monthOfYm(m));
     },
 
     tickCounters: function (Q) {
@@ -4588,22 +4654,54 @@
     //  まるごと出ないか、さもなければ「盤面は一九八五年、しかしいま
     //  一九八三年の総選挙をやっている」という食い違いになる。
     //  手数の合計は変えていない（第Ⅲ幕 32、第Ⅳ幕 32）。
+    //  marks は「その局面が閉じる年月」＝暦の目印である。ふつうは総選挙の日。
+    //  暦はこの目印のあいだを月で進む（tickYear）。一手＝一四半期なので、
+    //  局面の手数は「その局面が覆う月数 ÷ 三」に合わせてある。
+    //
+    //  第Ⅲ・Ⅳ幕は最後の総選挙のあとに一局面を置いた。置かないと
+    //  幕の終わりの年（第Ⅲ幕の一九七七年、第Ⅳ幕の一九八四〜八五年）に
+    //  手が一つも立たず、その年の史実 ── 江田三郎の離党、社会市民連合、
+    //  国鉄の分割民営化、男女雇用機会均等法、プラザ合意 ── が
+    //  まるごと出ないか、さもなければ「盤面は一九八五年、しかしいま
+    //  一九八三年の総選挙をやっている」という食い違いになる。
+    //  手数の合計は変えていない（第Ⅲ幕 32、第Ⅳ幕 32、第Ⅴ幕 31）。
     ACTS: {
-      1: { from: 1958, to: 1960, turns: 12, phases: [6, 4, 2],
-           marks: [1959, 1960, 1960],
+      1: { from: 1958, fromM: 1, to: 1960, turns: 12, phases: [6, 4, 2],
+           marks: [[1959, 9], [1960, 6], [1960, 11]],
            elections: [1960], pass: 130, title: '分裂と安保' },
-      2: { from: 1961, to: 1969, turns: 36, phases: [12, 12, 12],
-           marks: [1963, 1967, 1969],
+      2: { from: 1961, fromM: 1, to: 1969, turns: 36, phases: [12, 12, 12],
+           marks: [[1963, 11], [1967, 1], [1969, 12]],
            elections: [1963, 1967, 1969], pass: 110, title: '構造改革論争' },
-      3: { from: 1970, to: 1977, turns: 32, phases: [15, 13, 4],
-           marks: [1972, 1976, 1977],
+      3: { from: 1970, fromM: 1, to: 1977, turns: 32, phases: [12, 16, 4],
+           marks: [[1972, 12], [1976, 12], [1977, 12]],
            elections: [1972, 1976], pass: 115, title: '袋小路' },
-      4: { from: 1978, to: 1985, turns: 32, phases: [13, 6, 8, 5],
-           marks: [1979, 1980, 1983, 1985],
+      4: { from: 1978, fromM: 1, to: 1985, turns: 32, phases: [7, 4, 13, 8],
+           marks: [[1979, 10], [1980, 6], [1983, 12], [1985, 12]],
            elections: [1979, 1980, 1983], pass: 105, title: '現実路線への漂流' },
-      5: { from: 1986, to: 1993, turns: 31, phases: [8, 14, 9],
-           marks: [1986, 1990, 1993],
+      5: { from: 1986, fromM: 1, to: 1993, turns: 31, phases: [4, 14, 13],
+           marks: [[1986, 7], [1990, 2], [1993, 7]],
            elections: [1986, 1990, 1993], pass: 100, title: '土井と崩壊' }
+    },
+
+    //  暦は「西暦×12＋月−1」という一本の数で持つ。年をまたぐ足し算が
+    //  そのままできるので、事象の門も「一九七三年十月以降」と書ける。
+    ymOf: function (y, m) { return y * 12 + ((m || 1) - 1); },
+    yearOfYm: function (m) { return Math.floor(m / 12); },
+    monthOfYm: function (m) { return (m % 12) + 1; },
+    MONTH_JA: ['一月', '二月', '三月', '四月', '五月', '六月',
+               '七月', '八月', '九月', '十月', '十一月', '十二月'],
+
+    //  暦を進める。後ろへは戻さない。
+    setDate: function (Q, year, month) {
+      var m = this.ymOf(year, month || 1);
+      if (m < (Q.ym || 0)) { m = Q.ym; }
+      Q.ym = m;
+      Q.month = this.monthOfYm(m);
+      Q.quarter = Math.floor((Q.month - 1) / 3) + 1;
+      Q.month_name = this.MONTH_JA[Q.month - 1];
+      var y = this.yearOfYm(m);
+      if (y > (Q.year || 0)) { this.advanceYear(Q, y); }
+      return Q;
     },
 
     //  承継する値。30個以内に収める（設計案の承継契約）
@@ -4675,7 +4773,7 @@
       Q.jichitai_done_phase = 0;
       Q.crisis_used = 0; Q.crisis_on = 0; Q.crisis_turns_left = 0;
       Q.next_election_idx = 0;
-      this.advanceYear(Q, cfg.from);
+      this.setDate(Q, cfg.from, cfg.fromM || 1);
       Q.year = cfg.from;
       this.refresh(Q);
       return Q;
@@ -5213,6 +5311,10 @@
     HIST_HR: { 1960: 145, 1963: 144, 1967: 140, 1969: 90, 1972: 118, 1976: 123,
                1979: 107, 1980: 107, 1983: 112, 1986: 85, 1990: 136, 1993: 70 },
 
+    //  投票日の月。暦をここへ合わせる（局面の目印と同じ日）
+    HR_MONTH: { 1960: 11, 1963: 11, 1967: 1, 1969: 12, 1972: 12, 1976: 12,
+                1979: 10, 1980: 6, 1983: 12, 1986: 7, 1990: 2, 1993: 7 },
+
     logElection: function (Q, year) {
       //  末尾に新党の合計を足す。前の控えには無いが、
       //  読む側は無ければ 0 として扱うので古い控えもそのまま読める。
@@ -5233,7 +5335,7 @@
 
     runElection: function (Q, year) {
       //  暦を後ろへ戻さない。選挙は年の目印であって、時間の巻き戻しではない。
-      this.advanceYear(Q, Math.max(year, Q.year || 0));
+      this.setDate(Q, year, this.HR_MONTH[year] || 12);
       //  事象で積んだ候補者の当て（nom_bonus）が、選挙のときに実際の
       //  擁立数になる。この値は五十二か所で書かれていたのに、
       //  どこからも読まれていなかった ── 新人を擁立しても盤面が動かない。
@@ -6606,6 +6708,11 @@
       }
       Q.grain = Q.crisis_on ? this.GRAIN_FINE : this.GRAIN_COARSE;
       Q.grain_name = Q.grain === this.GRAIN_FINE ? '一か月' : '一四半期';
+      //  暦の見出し。控えを読み直したときに月が入っていなければ一月にする
+      if (!Q.ym) { Q.ym = this.ymOf(Q.year || 1958, Q.month || 1); }
+      Q.month = this.monthOfYm(Q.ym);
+      Q.quarter = Math.floor((Q.month - 1) / 3) + 1;
+      Q.month_name = this.MONTH_JA[Q.month - 1];
       Q.route_band = this.bandOf(Q);
       Q.band_name = this.ROUTE_BANDS[Q.route_band - 1].name;
       Q.bloc = this.blocOf(Q);
