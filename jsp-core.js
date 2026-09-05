@@ -1847,6 +1847,30 @@
       return Q;
     },
 
+    //  自社連立に入る。民社党化した党が、自民党が過半を割った選挙のあとに組む。
+    //  首班は取れない。総評と協会は離れ、同盟の系譜と自民との窓口が残る。
+    enterJisha: function (Q) {
+      var C = this.CAB;
+      Q.jisha_pact = 1; Q.jisha_cabinet = 1; Q.jisha_lost = 0;
+      Q.jisha_year = Q.year || 1983;
+      Q.cab_route = 4; Q.cab_nonldp = (Q.seats_hr || 0) + (Q.res_jimin || 0); Q.act_power = 1;
+      if (C) { C.enterPower(Q, 4); }
+      Q.rel_jimin = Math.max(Q.rel_jimin || 0, 40);
+      Q.rel_kyosan = Math.min(Q.rel_kyosan || 0, -60);
+      Q.rel_komei = (Q.rel_komei || 0) - 12;
+      Q.rel_minsha = (Q.rel_minsha || 0) + 10;
+      Q.rel_sohyo = (Q.rel_sohyo || 0) - 25;
+      Q.rel_domei = (Q.rel_domei || 0) + 20;
+      Q.mood_saha = (Q.mood_saha || 0) + 35;
+      Q.mood_chusa = (Q.mood_chusa || 0) + 15;
+      Q.mood_uha = Math.max(0, (Q.mood_uha || 0) - 15);
+      Q.kyokai_grip = Math.max(0, (Q.kyokai_grip || 0) - 20);
+      Q.route = (Q.route || 0) + 0.5;
+      this.push(Q, ['minrou', 'jieigyo'], 3);
+      this.push(Q, ['kokorou'], -4);
+      return Q;
+    },
+
     mergeMinshu: function (Q, name) {
       var wide = (name !== '社会民主党');
       var i, l, v, k, take = 0, keep = wide ? 0.85 : 0.65;
@@ -2658,6 +2682,9 @@
       // 七〇年安保への構え　1969年〜・史実
       { n: 2049, id: 'a2_anpo_jido', name: '七〇年安保への構え', acts: [2], need: { rally: 0.4 }, year: 1969, fixed: true,
         when: function (Q) { return Q.year >= 1969; } },
+      // 自社連立の打診　史実
+      { n: 4807, id: 'a4_jisha_dashin', name: '自社連立の打診', acts: [3, 4], need: { diet: 0.2 }, fixed: true,
+        when: function (Q) { return Q.minsha_ka && !Q.jisha_pact && !Q.in_power && !Q.kyosan_merged && !Q.minshu_shinto && (Q.elec_year || 0) >= 1976 && (Q.res_jimin || 0) < Math.floor((Q.hr_total || 511) / 2) + 1 && (Q.res_jimin || 0) + (Q.seats_hr || 0) >= Math.floor((Q.hr_total || 511) / 2) + 1; } },
       // 自動延長　1970年〜・史実
       { n: 3001, id: 'a3_jido_encho', name: '自動延長', acts: [3], need: { rally: 0.2 }, year: 1970, fixed: true,
         when: function (Q) { return Q.year >= 1970; } },
@@ -3105,6 +3132,12 @@
       // 補助金の一律削減　1985年〜・史実
       { n: 4804, id: 'a4_hojokin', name: '補助金の一律削減', acts: [4], need: { diet: 0.2 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985; } },
+      // 自社連立の再打診　史実
+      { n: 5807, id: 'a5_jisha_saido', name: '自社連立の再打診', acts: [5], need: { diet: 0.2 }, fixed: true,
+        when: function (Q) { return Q.minsha_ka && Q.reorg_done && !Q.jisha_pact && !Q.in_power && !Q.kyosan_merged && !Q.minshu_shinto && Q.evdone_a4_jisha_dashin && (Q.elec_year || 0) >= 1986 && (Q.res_jimin || 0) < Math.floor((Q.hr_total || 511) / 2) + 1 && (Q.res_jimin || 0) + (Q.seats_hr || 0) >= Math.floor((Q.hr_total || 511) / 2) + 1; } },
+      // 国民民主党　史実
+      { n: 5808, id: 'a5_kokumin_minshu', name: '国民民主党', acts: [5], need: { koryo: 0.2 }, fixed: true,
+        when: function (Q) { return Q.jisha_cabinet && Q.in_power && Q.cab_kind === 4 && Q.reorg_done && !Q.kokumin_minshu && !Q.kyosan_merged && !Q.minshu_shinto; } },
       // 昭和が終わる　1986年〜・史実
       { n: 173, id: 'tenno', name: '昭和が終わる', acts: [5], need: { rel: 0.2 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986 &&
@@ -3299,7 +3332,7 @@
       // 民主リベラル新党　1991年〜・史実
       { n: 5806, id: 'a5_minshu_kessei', name: '民主リベラル新党', acts: [5], need: { rel: 0.2 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
-                 Q.rengo_formed && Q.reorg_done && !Q.minshu_shinto && !Q.kyosan_merged && window.JSP.bandOf(Q) === 4 && (window.JSP.factionOf(Q.post_chair) === "uha" || window.JSP.factionOf(Q.post_chair) === "chuu"); } },
+                 Q.rengo_formed && Q.reorg_done && !Q.minshu_shinto && !Q.kyosan_merged && !Q.jisha_pact && !Q.jisha_cabinet && window.JSP.bandOf(Q) === 4 && (window.JSP.factionOf(Q.post_chair) === "uha" || window.JSP.factionOf(Q.post_chair) === "chuu"); } },
       // PKO国会　帯中間右/右・1992年〜・史実
       { n: 5014, id: 'a5_pko', name: 'PKO国会', acts: [5], need: { diet: 0.35 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992 &&
@@ -4612,6 +4645,15 @@
       { n: 8022, id: 'c3_rengo_seiken', name: '連立の座席', acts: [4, 5], need: { diet: 0.3 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
                  [3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 民主社会主義の党　帯右
+      { n: 4806, id: 'a4_minsha_ka', name: '民主社会主義の党', acts: [3, 4, 5], need: { koryo: 0.2 },
+        when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 (Q.year || 0) >= 1970 && Q.kyosan_haijo && !Q.minsha_ka && !Q.kyosan_merged && !Q.minshu_shinto && (!Q.minsha_exists || Q.minsha_merged || (Q.rel_minsha || 0) >= 30); } },
+      // 与党の社会党
+      { n: 4808, id: 'c4_jisha_yoto', name: '与党の社会党', acts: [4, 5], need: { diet: 0.2 },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.2) &&
+                 Q.in_power && Q.cab_kind === 4; } },
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
@@ -6010,6 +6052,12 @@
       { id: 'hijimin_shinto', art: 'motif/akushu55.jpg',
         name: '非自民の新党', desc: '野党を一つの党に結集した。',
         when: function (Q) { return !!Q.minshu_shinto; } },
+      { id: 'jisha_naikaku', art: 'motif/sokaku.jpg',
+        name: '自社内閣', desc: '自民党と連立を組んだ。',
+        when: function (Q) { return !!Q.jisha_cabinet; } },
+      { id: 'kokumin_minshu_to', art: 'motif/minsha60.jpg',
+        name: '国民民主党', desc: '連合の民間労組に支えられた、保守中道の党になった。',
+        when: function (Q) { return !!Q.kokumin_minshu; } },
       { id: 'kakushin_jichitai', art: 'motif/minobe67.png',
         name: '革新自治体', desc: '四つ以上の自治体で首長を取った。',
         when: function (Q) {
@@ -6581,6 +6629,23 @@
         Q.act_power = 1;
         return 1;
       }
+      //  自社連立。民社党化した党が自民党と組んでいるとき、自民と我々の
+      //  合計が過半なら連立は続く（まだ入っていなければ入る）。数を失えば解ける。
+      if (Q.jisha_pact) {
+        var js = (Q.seats_hr || 0) + (Q.res_jimin || 0);
+        if (js >= maj) {
+          Q.cab_route = 4; Q.cab_nonldp = js;
+          if (C) { C.enterPower(Q, 4); }
+          if (wasIn) { Q.power_elections = (Q.power_elections || 0) + 1; }
+          Q.act_power = 1;
+          return 4;
+        }
+        Q.jisha_pact = 0;
+        Q.jisha_lost = 1;
+        if (C && Q.in_power) { C.leavePower(Q); }
+        Q.cab_route = 0; Q.cab_nonldp = this.nonLdpSeats(Q);
+        return 0;
+      }
       //  分裂した新党を含めて数える（nonLdpSeats に一本化）。
       //  以前は ldp_split を直に足していたので、新党を入れると二重になる。
       var nonLDP = this.nonLdpSeats(Q);
@@ -6952,8 +7017,11 @@
       Q.chair_right = (cf === 'uha' || cf === 'chuu') ? 1 : 0;
       Q.gassho_ready = (!Q.kyosan_merged && !Q.minshu_shinto && Q.kyosan_kaikaku &&
         Q.evdone_toou && Q.route_band <= 2 && (Q.rel_kyosan || 0) >= 50) ? 1 : 0;
-      Q.minshu_ready = (!Q.minshu_shinto && !Q.kyosan_merged && Q.rengo_formed &&
-        Q.route_band === 4 && Q.chair_right) ? 1 : 0;
+      Q.minshu_ready = (!Q.minshu_shinto && !Q.kyosan_merged && !Q.jisha_pact && !Q.jisha_cabinet &&
+        Q.rengo_formed && Q.route_band === 4 && Q.chair_right) ? 1 : 0;
+      //  民社党化の門。右の帯で共産を排除し、民社党が居ればその関係、居なければ右派が党内に残っている。
+      Q.minsha_ka_ready = (Q.route_band === 4 && Q.kyosan_haijo && !Q.minsha_ka && !Q.kyosan_merged &&
+        !Q.minshu_shinto && (!Q.minsha_exists || Q.minsha_merged || (Q.rel_minsha || 0) >= 30)) ? 1 : 0;
       if (!Q.party_name) { Q.party_name = '社会党'; }
       //  脱党した派閥に積まれた不満は、席を継いだ派閥へ繰り上げてから
       //  0 に潰す。カードや指導部や事象が加算したぶんは、ここで拾われる。

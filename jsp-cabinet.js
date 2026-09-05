@@ -92,6 +92,11 @@
 
   function share(Q) {
     if (Q.cab_kind === 1) { return 1; }
+    //  自社連立。相手は自民党なので、非自民の合計ではなく自民と我々の合計で割る。
+    if (Q.cab_kind === 4) {
+      var t4 = (Q.seats_hr || 0) + (Q.res_jimin || 0);
+      return Math.min(1, (Q.seats_hr || 0) / Math.max(1, t4));
+    }
     var tot = Q.cab_nonldp || Q.seats_hr || 1;
     return Math.min(1, (Q.seats_hr || 0) / tot);
   }
@@ -115,7 +120,7 @@
   function canTake(Q, key) {
     var m = MIN[key];
     if (!m || Q['has_' + key]) { return false; }
-    if (key === 'souri' && Q.cab_kind === 3) { return false; }   // 参加だけでは首班は取れない
+    if (key === 'souri' && (Q.cab_kind === 3 || Q.cab_kind === 4)) { return false; }   // 参加だけでは首班は取れない（自社連立も）
     return left(Q) >= m.w;
   }
 
@@ -284,7 +289,7 @@
     if (Q.in_power) { return Q; }
     Q.in_power = 1;
     Q.cab_kind = route;
-    Q.coalition_rel = route === 1 ? 100 : 62;
+    Q.coalition_rel = route === 1 ? 100 : (route === 4 ? 58 : 62);
     Q.national_budget = 60;
     Q.gov_turns = 0;
     Q.cab_rel_fired = 0;
@@ -295,6 +300,8 @@
   }
 
   function leavePower(Q) {
+    //  自社連立が倒れれば、自民との約束も消える
+    if (Q.cab_kind === 4) { Q.jisha_pact = 0; }
     Q.in_power = 0; Q.cab_kind = 0; Q.coalition_rel = 0;
     clearAll(Q);
     sync(Q);
