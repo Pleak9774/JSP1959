@@ -6432,6 +6432,13 @@
     //  組織が残っているか。政権を取れなくても、
     //  次の三十年に渡せるものがあれば、それは負けではない。
     GLOBAL_ORG_NEED: { base_frac: 62, members: 90000, union_power: 300 },
+
+    //  民社党化の線だけは、全局勝利の線が高い。
+    //  自民党の隣の椅子は議席が少なくても手に入るので、そこを勝ちにすると
+    //  「総評を手放して自民党に付いた小さい党」が最短の道になってしまう。
+    //  この線では衆院 MINSHA_WIN_SEATS 議席と、組閣を二回続けること
+    //  （＝総選挙を一度またいで政権を保つこと）の両方を課す。
+    MINSHA_WIN_SEATS: 150,
     orgSurvives: function (Q) {
       var n = this.GLOBAL_ORG_NEED;
       this.baseScore(Q);
@@ -6445,16 +6452,25 @@
 
     globalVictory: function (Q) {
       this.finalScore(Q);
-      var held = (Q.power_elections || 0) >= 1;      //  選挙をまたいで政権を保った
+      //  選挙をまたいで政権を保った＝組閣を二回続けた
+      var held = (Q.power_elections || 0) >= 1;
       var everCab = !!Q.ever_in_power || (Q.cabinet_posts_ever || 0) > 0;
       var org = this.orgSurvives(Q);
       var above = (Q.final_score || 0) > (Q.final_base || 0);
       Q.gv_held = held ? 1 : 0;
       Q.gv_cabinet = everCab ? 1 : 0;
       Q.gv_org = org ? 1 : 0;
+      //  民社党化の線。議席と連続組閣の両方が要る。
+      var mk = !!Q.minsha_ka;
+      Q.gv_minsha_line = mk ? 1 : 0;
+      Q.gv_seat_need = this.MINSHA_WIN_SEATS;
+      Q.gv_seat_ok = ((Q.seats_hr || 0) >= this.MINSHA_WIN_SEATS) ? 1 : 0;
       //  ① 政権を保った ── これだけで全局勝利
       //  ② 一九九三年まで行って、組閣したことがあるか、組織が残っている
-      Q.global_win = (held || everCab || (org && above)) ? 1 : 0;
+      //  民社党化の線では ① も ② も使えない。上の二つを両方満たすことだけが勝ちになる。
+      Q.global_win = (mk ? (held && Q.gv_seat_ok === 1)
+        : (held || everCab || (org && above))) ? 1 : 0;
+      //  見出しは起きたことを言う。勝ったかどうかは global_win が言う。
       Q.gv_kind = held ? 3 : (everCab ? 2 : (org && above ? 1 : 0));
       this.verdicts(Q);
       return Q.global_win;
