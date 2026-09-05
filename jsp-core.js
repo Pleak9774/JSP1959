@@ -163,6 +163,19 @@
       return Q;
     },
 
+    //  総選挙のたびに大会は千人で開き直す。事象が代議員を積み上げ続けるので、
+    //  放っておくと合計が千を大きく越え（実測 1883）、「計千」の表示が嘘になり、
+    //  事象一件ぶんの重みも局が進むほど薄まっていた。比率は保つ。
+    normDelegates: function (Q) {
+      var ks = ['uha', 'chuu', 'chusa', 'muha', 'saha'], i, s = 0;
+      for (i = 0; i < ks.length; i++) { s += Q['del_' + ks[i]] || 0; }
+      if (s <= 0) { return Q; }
+      for (i = 0; i < ks.length; i++) {
+        if (Q['del_' + ks[i]] !== undefined) { Q['del_' + ks[i]] = Math.round((Q['del_' + ks[i]] || 0) / s * 1000); }
+      }
+      return Q;
+    },
+
     // ── 代議員票。協会が動かせる分を切り出す ──────────────────
     delegates: function (Q) {
       var ky = Math.round(Q.del_chusa * Q.kyokai_grip / 100);
@@ -5643,6 +5656,8 @@
         Q.seat_muha = Math.round(Q.seat_muha * k);
         if (Q.seat_saha) { Q.seat_saha = Math.round(Q.seat_saha * k); }
       }
+      //  大会は千人で開き直す（比率は保つ）
+      this.normDelegates(Q);
       // 一九八〇年 ── 大平首相の急死による弔い合戦。自民が圧勝した。
       // 社会党は 107 で前回と同じ。伸びた分は中小政党から取られている。
       if (year === 1980) {
@@ -6752,17 +6767,32 @@
     //  逆に左の線では、この引きは味方である。
 
     //  大会が支持している線。代議員の構成そのもの。
-    CONGRESS_W: { saha: -3.5, chusa: -1.0, muha: 0, chuu: 1.0, uha: 2.5 },
+    //  無派閥の代議員は大会の線を持たない。中央の線に付く。
+    //  以前は重み 0（＝中道）で平均に入れていたので、事象で無派閥が積み上がるほど
+    //  大会の線が真ん中へ寄り、協会が三割を握っていても左の中央を右へ引き戻していた
+    //  （報告あり：無派閥 995 票、協会 633 票で線が中間左）。
+    //  いまは派閥の代議員だけで線を決め、無派閥は引きの速さを鈍らせるだけにする。
+    //  協会が動かす代議員（中間左派のうち掌握度ぶん）は左派の重みで数える。
+    //  脇柱は「社会主義協会 633 票」と別に出しているのに、線の計算では
+    //  中間左派の重み（−1）で数えていたので、協会が三割を握っても線が
+    //  中間左に留まり、脇柱の数字と線が食い違っていた。
+    CONGRESS_W: { saha: -3.5, chusa: -1.0, chuu: 1.0, uha: 2.5 },
     congressRoute: function (Q) {
       var w = this.CONGRESS_W, k, d, num = 0, den = 0;
+      var grip = (Q.kyokai_grip === undefined ? 50 : Q.kyokai_grip);
+      var ky = Math.round((Q.del_chusa || 0) * grip / 100);
       for (k in w) {
         if (!w.hasOwnProperty(k)) { continue; }
-        d = Q['del_' + k] || 0; num += d * w[k]; den += d;
+        d = Q['del_' + k] || 0;
+        if (k === 'chusa') { d -= ky; }
+        if (k === 'saha') { d += ky; }
+        num += d * w[k]; den += d;
       }
       var r = den ? num / den : 0;
-      //  協会が職場を握っているほど、大会は左に寄る。
-      //  代議員の頭数だけでは出てこない部分である。
-      r -= ((Q.kyokai_grip === undefined ? 50 : Q.kyokai_grip) - 45) * 0.02;
+      r = Math.max(-5, Math.min(5, r));
+      var muha = Q.del_muha || 0;
+      Q.congress_weight = (den + muha) > 0 ? den / (den + muha) : 1;
+      Q.congress_muha_pct = Math.round((1 - Q.congress_weight) * 100);
       Q.congress_route = Math.round(r * 10) / 10;
       Q.congress_gap = Math.round(((Q.route || 0) - r) * 10) / 10;
       return r;
@@ -6783,7 +6813,8 @@
       //  党の重心が怒っているとき、大会の引きは強くなる（最大で二倍）。
       //  出て行けない派の怒りは、ここで線を引き戻す力になる。
       var cr = this.CONGRESS_RATE * (1 + Math.min(60, Q.congress_anger || 0) / 60);
-      Q.route_drag = (Q.route_drag || 0) + gap * cr;
+      //  無派閥が多いほど引きは鈍い（線そのものは動かさない）
+      Q.route_drag = (Q.route_drag || 0) + gap * cr * (Q.congress_weight || 1);
       //  半目盛りたまったら実際に動かす
       while (Q.route_drag <= -0.5) {
         Q.route_drag += 0.5; Q.route = Math.max(-5, (Q.route || 0) - 0.5);
@@ -7026,6 +7057,7 @@
       Q.band_name = this.ROUTE_BANDS[Q.route_band - 1].name;
       //  大会の線と、中央との差。脇柱で見せる。
       this.congressRoute(Q);
+      Q.del_total = this.delegates(Q).total;
       if (Q.congress_drag_pct === undefined) { Q.congress_drag_pct = 0; }
       if (Q.congress_last === undefined) { Q.congress_last = 0; }
       Q.bloc = this.blocOf(Q);
