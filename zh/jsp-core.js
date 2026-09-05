@@ -7195,9 +7195,13 @@
         sum = 0;
         for (j = 0; j < PARTIES.length; j++) { sum += Q['lean_' + l + '_' + PARTIES[j]] || 0; }
         sh = sum > 0 ? (Q['lean_' + l + '_shakai'] / sum * 100) : 0;
+        //  潮流の線も並べる。支持は放っておくとこの線へ戻る（erode）。
+        //  「毎手、全層の支持が下がる」という報告は、六十年代の潮流が
+        //  この線を毎年引き下げていることで、線が見えていなかった。
+        var tide = sum > 0 ? (this.baselineLean(Q, l) / sum * 100) : 0;
         rows.push('<b>' + LNAME[l] + '</b>　人口 ' + Q['pop_' + l] + '%　組織率 ' +
           Math.round(Q['org_' + l] * 100) + '%　社会党 ' + this.pct(sh) +
-          '%　<span style="opacity:.6">上限 ' + Math.round(this.capOf(Q, l)) + '%</span>');
+          '%　<span style="opacity:.6">' + '潮流的线 ' + this.pct(tide) + '%　' + '上限 ' + Math.round(this.capOf(Q, l)) + '%</span>');
       }
       return rows.join('<br>');
     },
