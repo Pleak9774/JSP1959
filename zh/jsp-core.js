@@ -6771,10 +6771,15 @@
     //  一手ぶん、大会が中央の線を自分のほうへ引く。
     //  一幕（三十二手）ほうっておくと、二目盛りぶん近く戻される。
     CONGRESS_RATE: 0.035,
+    //  引き戻しは画面に出す。以前は溜まりも大会の線も見えず、
+    //  「何の前触れも無く線が半目盛り右へ動く」という報告になった。
+    //    congress_last      この手に動いたか（1 右へ、2 左へ、0 動かず）
+    //    congress_drag_pct  次の半目盛りまでの溜まり（％）
     congressDrift: function (Q) {
       var target = this.congressRoute(Q);
       var gap = target - (Q.route || 0);
-      if (Math.abs(gap) < 0.05) { Q.route_drag = 0; return Q; }
+      Q.congress_last = 0;
+      if (Math.abs(gap) < 0.05) { Q.route_drag = 0; Q.congress_drag_pct = 0; return Q; }
       //  党の重心が怒っているとき、大会の引きは強くなる（最大で二倍）。
       //  出て行けない派の怒りは、ここで線を引き戻す力になる。
       var cr = this.CONGRESS_RATE * (1 + Math.min(60, Q.congress_anger || 0) / 60);
@@ -6783,11 +6788,14 @@
       while (Q.route_drag <= -0.5) {
         Q.route_drag += 0.5; Q.route = Math.max(-5, (Q.route || 0) - 0.5);
         Q.congress_pulled = (Q.congress_pulled || 0) + 1;
+        Q.congress_last = 2;
       }
       while (Q.route_drag >= 0.5) {
         Q.route_drag -= 0.5; Q.route = Math.min(5, (Q.route || 0) + 0.5);
         Q.congress_pulled = (Q.congress_pulled || 0) + 1;
+        Q.congress_last = 1;
       }
+      Q.congress_drag_pct = Math.round(Math.abs(Q.route_drag || 0) / 0.5 * 100);
       return Q;
     },
 
@@ -7016,6 +7024,10 @@
       Q.month_name = this.MONTH_JA[Q.month - 1];
       Q.route_band = this.bandOf(Q);
       Q.band_name = this.ROUTE_BANDS[Q.route_band - 1].name;
+      //  大会の線と、中央との差。脇柱で見せる。
+      this.congressRoute(Q);
+      if (Q.congress_drag_pct === undefined) { Q.congress_drag_pct = 0; }
+      if (Q.congress_last === undefined) { Q.congress_last = 0; }
       Q.bloc = this.blocOf(Q);
       var by = Q.year || 1959;
       //  民社党が無い盤では「公明・民社」と書けない。右派が党に残っている
