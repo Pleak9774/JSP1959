@@ -553,7 +553,10 @@
       case 'sone':     Q.capital += 4; Q.rel_sohyo -= 6; break;
       case 'sakisaka': J.push(Q, ['kokorou'], 4); Q.kyokai_grip = Math.min(100, Q.kyokai_grip + 6); break;
       case 'ishibashi': J.push(Q, ['shinchukan'], 4); Q.mood_saha -= 6; break;
-      case 'asukata':  Q.budget += 5; Q.del_muha += 30; break;
+      //  飛鳥田は全国革新市長会長である。会を動かしたのなら会は立っている。
+      //  ここで旗を立てないと、自治体の札の「首長会を通じて資金を回す」だけが
+      //  使えないままになる（同じ組織なのに口が二つに割れていた）。
+      case 'asukata':  Q.budget += 5; Q.del_muha += 30; Q.shicho_kai = 1; break;
       case 'doi':      J.push(Q, ['mishoshiki', 'shinchukan'], 3); Q.capital += 2; break;
       case 'takazawa': J.push(Q, ['kokorou'], 4); Q.kyokai_grip = Math.min(100, Q.kyokai_grip + 5); break;
       case 'tahideo':  J.push(Q, ['shinchukan'], 5); break;
