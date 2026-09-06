@@ -205,7 +205,7 @@
       note: '労働運動出身の書記長。党務を回す人。山花貞夫の父',
       fit: { chair: 2, secgen: 5, policy: 2, diet: 3, org: 4, youth: 2 },
       passive: '毎回、労組系の代議員 +2',
-      act: { name: '党務を締める', desc: '労組系代議員 +25、総評 +8', cost: { capital: 2 }, cd: 3, uses: 3 } },
+      act: { name: '労組を固める', desc: '労組系代議員 +25、総評 +8', cost: { capital: 2 }, cd: 3, uses: 3 } },
     miyake: { n: 30, name: '三宅正一', faction: 'chusa', from: 1955, to: 1980,
       note: '農民運動の長老。衆院副議長。農村に党の足場を作った数少ない人',
       fit: { chair: 3, secgen: 3, policy: 3, diet: 4, org: 4, youth: 1 },

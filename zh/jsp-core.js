@@ -1469,7 +1469,7 @@
         gain: 0
       },
       shinei: {
-        name: '与阵营的距离', lo: -3, hi: 3,
+        name: '与各阵营的距离', lo: -3, hi: 3,
         //  ＋が西側（日米安保の維持・運用）、−が東側（ソ連・中国との関係）。
         //  非武装中立を掲げた党が、外務省の実務で毎日答えを出す軸である。
         //  西へ寄れば都市の浮動層は戻り、官公労と未組織は党を選ぶ理由を失う。
@@ -3218,7 +3218,7 @@
       { n: 5007, id: 'a5_uno', name: '宇野内閣', acts: [5], need: { name: 0.3 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
       // 山が動いた　帯中間右/右・1989年〜・史実
-      { n: 5008, id: 'a5_yama_ga_ugoita', name: '山动了', acts: [5], need: { hc: 0.35 }, year: 1989, fixed: true,
+      { n: 5008, id: 'a5_yama_ga_ugoita', name: '地动山摇', acts: [5], need: { hc: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.seats_hc >= 80; } },
@@ -3246,7 +3246,7 @@
       { n: 5204, id: 'a5_tochi_kihon', name: '土地基本法', acts: [5], need: { diet: 0.25 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
       // 山が動いた　帯左/中間左・1989年〜・史実
-      { n: 7604, id: 'yama_ga_ugoita_sa', name: '山动了', acts: [5], need: { hc: 0.35 }, year: 1989, fixed: true,
+      { n: 7604, id: 'yama_ga_ugoita_sa', name: '地动山摇', acts: [5], need: { hc: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.seats_hc >= 80; } },
@@ -6013,64 +6013,64 @@
         name: '入阁', desc: '进入了内阁。',
         when: function (Q) { return !!Q.ever_in_power || (Q.cabinet_posts_ever || 0) > 0; } },
       { id: 'shuhan', art: 'motif/honkaigi.jpg',
-        name: '首班', desc: '由社会党推出了内阁总理大臣。',
+        name: '首班', desc: '内阁总理大臣出自社会党内。',
         when: function (Q) { return !!Q.has_souri; } },
       { id: 'nishio_nokotta', art: 'motif/minsha60.jpg',
-        name: '西尾留下了', desc: '民主社会党没有成立。',
+        name: '保卫团结', desc: '民主社会党没有成立。',
         when: function (Q) { return (Q.act || 1) >= 2 && !Q.minsha_exists; } },
       { id: 'eda_nokotta', art: 'motif/ryouha50.png',
-        name: '江田留下了', desc: '社会民主连合没有成立。',
+        name: '统一的铃木派', desc: '社会民主连合没有成立。',
         when: function (Q) { return (Q.act || 1) >= 4 && !Q.shamin_exists; } },
       { id: 'mada_warete_inai', art: 'motif/touitsu55.jpg',
-        name: '没有分裂', desc: '一次也没有分裂。',
+        name: '大同团结的无产政党', desc: '没有任何派阀从党内分裂。',
         when: function (Q) { return (Q.splits || 0) === 0 && (Q.act || 1) >= 2; } },
       { id: 'hibuso_kanto', art: 'motif/kenpou.jpg',
-        name: '非武装中立', desc: '直到收局也没有降下非武装中立。',
+        name: '非武装中立', desc: '始终坚持非武装中立原则。',
         end: true, when: function (Q) { return !!Q.hibuso_churitsu; } },
       { id: 'kokumin_seito', art: 'motif/shotengai.jpg',
-        name: '国民政党', desc: '社会党是国民政党。',
+        name: '国民政党', desc: '社会党是一个国民政党。',
         end: true, when: function (Q) { return window.JSP.bandOf(Q) === 4; } },
       { id: 'shinsayoku_orgu', art: 'events/kaihoha.jpg',
-        name: '组织员', desc: '把街头的活动家接进县联，接满了名额。',
+        name: '组织员', desc: '从街头招募活动家把县联的办公室都塞满了。',
         when: function (Q) { return (Q.nl_intake || 0) >= window.JSP.NL_INTAKE_MAX; } },
       { id: 'asama_no_ato', art: 'motif/yokkaichi.jpg',
-        name: '山庄之后', desc: '跟新左翼合过手，浅间山庄之后仍旧没有丢掉城里的受雇者。',
+        name: '反向的打入主义', desc: '跟新左翼合过手，但浅间山庄之后没有失去城市劳动者的支持。',
         when: function (Q) { return !!Q.nl_fallout_done && (Q.nl_hit || 0) >= 60 &&
                  (Q.lean_shinchukan_shakai || 0) >= 30; } },
       { id: 'kozo_kaikaku_sen', art: 'motif/danchi.jpg',
-        name: '構造改革', desc: '把江田三郎的路线变成了党的路线。',
+        name: '構造改革', desc: '在党内坚持江田路线。',
         when: function (Q) { return !!Q.kozo_kaikaku; } },
       { id: 'michi_saitaku', art: 'motif/ronoto28.jpg',
-        name: '走向社会主义的道路', desc: '通过了《日本走向社会主义的道路》。',
+        name: '通向社会主义的道路', desc: '在党大会上通过了《日本走向社会主义的道路》。',
         when: function (Q) { return !!Q.michi_adopted; } },
       { id: 'sutoken', art: 'motif/miyahara.jpg',
-        name: '罢工权', desc: '在罢工权罢工中获胜。',
+        name: '为了罢工权', desc: '在罢工权罢工中获胜。',
         when: function (Q) { return !!Q.sutoken_won; } },
       { id: 'sayoku_toitsu', art: 'motif/sohyo_taikai.png',
-        name: '左翼统一', desc: '劳动战线在左侧完成了统一。',
+        name: '劳动战线的革命统一', desc: '劳动战线在左侧完成了最终的统一。',
         when: function (Q) { return !!Q.left_unity; } },
       { id: 'zenrokyo_dachi', art: 'motif/gekkan_sohyo.png',
-        name: '全劳协', desc: '在连合之外另建了一个全国中央组织。',
+        name: '全劳协', desc: '在连合之外另建了一个全国工会中央组织。',
         when: function (Q) { return !!Q.zenrokyo; } },
       { id: 'kosen', art: 'motif/ryouha50.png',
-        name: '党首公选', desc: '促成共产党实行党首公选，让宫本显治退了下去。',
+        name: '党首公选', desc: '促成共产党实行党首公选，并迫使宫本显治引退。',
         when: function (Q) { return !!Q.kyosan_kaikaku; } },
       { id: 'shakyo_gassho', art: 'motif/touitsu55.jpg',
-        name: '社共合同', desc: '和共产党合成了一个党。',
+        name: '社共合同', desc: '和共产党实现了社会主义政党的统一。',
         when: function (Q) { return !!Q.kyosan_merged; } },
       //  実績の id は盤面の旗（minshu_shinto）と別の名にする。同じ名だと
       //  エンジンの achieve が旗を上書きして、結末の分岐が外れた（実測）。
       { id: 'hijimin_shinto', art: 'motif/akushu55.jpg',
-        name: '非自民的新党', desc: '把在野党结集成了一个党。',
+        name: '非自民的统一新党', desc: '同在野党合并成了一个民主新党。',
         when: function (Q) { return !!Q.minshu_shinto; } },
       { id: 'jisha_naikaku', art: 'motif/sokaku.jpg',
-        name: '自社内阁', desc: '和自民党组了联合。',
+        name: '自社内阁', desc: '同自民党联合执政。',
         when: function (Q) { return !!Q.jisha_cabinet; } },
       { id: 'kokumin_minshu_to', art: 'motif/minsha60.jpg',
-        name: '国民民主党', desc: '成了一个由连合的民间劳组撑着的保守中道政党。',
+        name: '国民民主党', desc: '社会党变成了一个由民间工会支撑的保守中道政党。',
         when: function (Q) { return !!Q.kokumin_minshu; } },
       { id: 'kakushin_jichitai', art: 'motif/minobe67.png',
-        name: '革新自治体', desc: '在四个以上的自治体取得首长。',
+        name: '革新自治体', desc: '在四个以上的自治体执政。',
         when: function (Q) {
           var n = (Q.local_kyoto || 0) + (Q.local_tokyo || 0) + (Q.local_yokohama || 0) +
                   (Q.local_osaka || 0) + (Q.local_hiroshima || 0) + (Q.local_nagasaki || 0) +
@@ -6078,7 +6078,7 @@
           return n >= 4;
         } },
       { id: 'yama_ga_ugoita', art: 'motif/sangiin.jpg',
-        name: '山动了', desc: '在参议院的改选议席上压过了自民党。',
+        name: '地动山摇', desc: '在参议院的改选议席上超过过了自民党。',
         when: function (Q) { return !!Q.madonna; } },
       //  幕の目標
       { id: 'act1_pass', art: 'motif/taikai59.jpg',
@@ -6098,16 +6098,16 @@
         end: true, when: function (Q) { return !!Q.act_pass && (Q.act || 0) === 5; } },
       //  結末
       { id: 'kanso_1993', art: 'motif/toki.png',
-        name: '一九九三年', desc: '把三十四年打到了最后。',
+        name: '一九九三年', desc: '恭喜你走到了最后。',
         end: true, when: function (Q) { return !!Q.ran_full; } },
       { id: 'shori_no_shori', art: 'motif/akushu55.jpg',
-        name: '胜利的胜利', desc: '达成了目标，也超过了史实的数字。' },
+        name: '胜利的胜利', desc: '达成了目标，党在各方面都取得了完全的胜利。' },
       { id: 'shori_no_shippai', art: 'motif/saitouitsu55.jpg',
-        name: '胜利的失败', desc: '达成了目标，数字却与史实几乎无异。' },
+        name: '胜利的失败', desc: '达成了目标，但党的问题没有得到解决。' },
       { id: 'shippai_no_shori', art: 'motif/mayday49.png',
-        name: '失败的胜利', desc: '没有达成目标，但超过了史实的数字。' },
+        name: '失败的胜利', desc: '没有达成目标，但党的问题已经得到了解决。' },
       { id: 'shippai_no_shippai', art: 'motif/hahaoya55.png',
-        name: '失败的失败', desc: '输了，只留下了曾经反对的记录。' },
+        name: '失败的失败', desc: '输了，只留下了社会党议员们在议会战斗的记录。' },
       { id: 'zenkyoku_shori', art: 'motif/saitouitsu_taikai.png',
         name: '全局胜利', desc: '在贯穿三十四年的判定中获胜。',
         end: true, when: function (Q) { return !!Q.global_win; } },
@@ -6492,28 +6492,28 @@
     //  経済・組織・中央政治・地方政治の四つで別々に見る。
     VERDICT: {
       keizai: [
-        '没有自己的财政。裁了专职，把机关报做薄，还是不够。而一个没钱的党，凡是要花钱的决定都会先放弃掉。',
-        '每年都是紧巴巴地转过来的。工会分担金变细的速度，跟收党费的速度，终究没能扯平。',
-        '总算有了分担金之外的柱子。靠城里的个人后援会和党费，工会就算换了模样，财政也没有塌。',
-        '不用为钱发愁就雇得起人，养得起调查部门，对案也写得出数字。这些东西，这个党在史实里一样也没有过。'
+        '党务财政陷入全面枯竭。即便大幅裁减党工专职编制、压缩机关报印刷版面，财政赤字仍难以为继。由于缺乏独立的财源支持，党在面对各项政治议题与选战动员时，往往在方案论证阶段便因经费匮乏而被迫放弃。',
+        '财政常年处于紧平衡与慢性亏损状态。随着产业结构转型与传统工会势力萎缩，来自总评等工会组织的分担金加速缩减，而个人党员党费的增长杯水车薪，收支失衡的局面始终未能得到根本扭转。',
+        '成功开拓了工会分担金之外的多元财源支柱。依托都市后援会的民间小额募款与健全的党员定期缴费机制，即便外部劳工战线发生剧烈变动，中央与地方各级党部的日常运营依然维持了稳定的财务独立性。',
+        '建立了充裕且健康的现代政党财政体系。充沛的资金不仅能长期支撑专业化的全职幕僚与智库调研团队，更使党在提出各项政策对案时具备详实的财源推演与预算数据，彻底摆脱了战后在野党缺乏实务精算能力的沉疴。'
       ],
       soshiki: [
-        '组织几乎没剩下什么。一个动员不出人的党，举什么旗都只是举一下就完了。',
-        '骨架是留住了，只是很细。劳动战线重编时没拿到主导权，党员也没长，年头就这么过去了。',
-        '基盘保住了。不论是劳动战线还是党员，手里都有交得给下一代的东西。',
-        '组织长厚了。动员得出多少人，就直接是多大的政治可能性。'
+        '基层组织网络几近瓦解，党员老龄化与脱党现象无法遏制。由于缺乏扎根职场与社区的核心骨干，党在重要政治议题上的号召多停留在口头宣示层面，已丧失在全国范围内发起有效社会运动与基层动员的现实能力。',
+        '勉强维持了党支部的基本骨架，但组织基盘已极为脆弱。在战后劳动战线重编与工会整合进程中未能掌握主导权，普通党员规模长期停滞不前，组织体系未能突破既有官公劳工会的狭窄圈子，陷入慢性损耗。',
+        '稳固了坚实的基层组织与阶级动员纽带。不仅在劳动战线与工会体系的重组风暴中守住了核心阵地，更成功吸纳了未组织劳工与市民团体的骨干力量，培养出一批兼具理论素养与实务能力的年轻干部队伍。',
+        '成功蜕变为主体规模庞大的现代化大众政党。基层支部广泛渗透至城镇社区、青年团体与新兴服务行业，形成了覆盖全国的高效动员网络，将庞大的社会组织力直接转化为施压执政当局、重塑政治议程的制度性实力。'
       ],
       chuo: [
-        '在国会里，始终是个少数党。拦得住法案，可通不过法案。',
-        '一直是在野第一党。不多也不少。而政权，靠这双手是做不出来的。',
-        '在联合里拿到了座位。出了阁僚，也把一部分政策做了出来。对这个党来说，这是头一回。',
-        '拿到了政权，还跨过一场选举把它保住了。这个党被叫作"万年在野党"的历史，到这里断了。'
+        '在中央政局中始终处于被边缘化的少数地位。在国会内既无力组建足够抗衡执政党的议事联盟，也缺乏推动立法的主导权，除了利用议事规则抵制法案之外无法将自身的政治主张转化为实质性的国家法律。',
+        '长期扮演“在野第一党”的角色。国会议席足以维系阻止执政党单方面修宪的“三分之一壁垒”，却始终无法跨过单独执政或主导组阁的门槛，在“五五年体制”的抗议性生态位上陷入长期停滞。',
+        '成功打破了自民党一党独大的垄断格局，作为执政联盟的核心力量入主中央政权。不仅实际掌握了关键阁僚席位，更将多项长期倡导的福利保障与社会民主政策落实为内阁施政纲领，实现了历史性的执政突破。',
+        '不仅推戴党首出任内阁总理大臣，更在执政后面临的全国大选中经受住了民意检验、成功连任并巩固了政权。彻底终结了战后数十年被冠以“万年在野党”的历史定论，在日本宪政史上奠定了稳定的中道革新轮替执政格局。'
       ],
       chiho: [
-        '自治体一个也没剩下。能真把政策做出来的地方，这个党终究没有过。',
-        '自治体少了。七十年代造出来的那些制度，到八十年代的行革里被一一点名，然后一层层削掉。',
-        '自治体全守住了。中央拿不到的东西，在地方一直拿得到。',
-        '地方的落脚地很厚。就算国政议席掉了的年份，也是首长和地方议员在撑着这个党。'
+        '在地方自治体首长与议会选举中遭遇全面溃败，革新地方政权彻底清零。由于丧失了直接推行民生实验的地方执政阵地，党的各项政策构想被剥离了实践土壤，退化为无从验证的纸上蓝图。',
+        '地方革新阵地大幅收缩。20世纪70年代全盛期在各大主要都市推行的老人免费医疗、环境公害防治等开创性地方政策，在80年代中央主导的“行政改革”与财政紧缩浪潮中被逐一清算和削减，地方根据地日渐萎缩。',
+        '牢固捍卫了关键都道府县与核心市的革新自治政权。在中央政权由保守阵营把持的时期，地方自治体成为党推行民生福祉、环境保护与基层民主实验的稳固后方，以扎实的地方施政成果抵御了自民党的地方渗透。',
+        '构筑起极其深厚的地方执政根基与基层治理网络。不论中央选情与国会议席如何起伏变动，遍布全国的革新自治体首长与庞大的地方议员队伍始终构成了坚不可摧的支撑体系，使党在基层社会扎下了长久的执政合法性。'
       ]
     },
 
