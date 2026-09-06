@@ -589,6 +589,80 @@
       return Q;
     },
 
+    //  一九八九年の再編がいま何になるか。四つの門と総評の二役で決まる。
+    //  unionReorg はここを読むだけにして、判定を一箇所に集める。
+    //  盤面（reorgBlock）も同じところから引くので、表示と結果がずれない。
+    REORG_KIND_NAME: {
+      zenrokyo_unify: '全労協が労戦を統一する',
+      rename: '総評が全労協に名を変えるだけ ── 連合は大きくならない',
+      right_unify: '右で統一する ── 官公労は全労協へ移る',
+      sohyo_survive: '総評が残り、統一労組懇が左の半分を持って出る',
+      history: '史実の線 ── 四団体が連合へ、全労連と全労協が割れて出る'
+    },
+
+    reorgOutlook: function (Q) {
+      var sohyo = this.unionSize('sohyo', 1985);
+      var domei = this.unionSize('domei', 1985);
+      var lrS = (Q.lr_sohyo === undefined ? this.LR_START.sohyo : Q.lr_sohyo) / 100;
+      var pts = Q.left_unity_pts || 0;
+      var o = {
+        sohyoLeft: sohyo * lrS,
+        domeiHard: domei * (1 - Math.min(0.6, pts * 0.012)),
+        tekko: (Q.u_tekko === undefined) ? this.TEKKO_START : Q.u_tekko,
+        rosokon: (Q.u_rosokon === undefined) ? this.ROSOKON_START : Q.u_rosokon,
+        chair: Q.sohyo_chair || 'chusa',
+        secgen: Q.sohyo_secgen || 'chuu'
+      };
+      o.lefts  = (o.chair === 'saha' ? 1 : 0) + (o.secgen === 'saha' ? 1 : 0);
+      o.rights = (o.chair === 'uha' ? 1 : 0) + (o.secgen === 'uha' ? 1 : 0);
+      o.g_left    = o.sohyoLeft >= this.REORG_LEFT_NEED;
+      o.g_domei   = o.domeiHard <= this.REORG_DOMEI_MAX;
+      o.g_tekko   = o.tekko <= this.REORG_TEKKO_MAX;
+      o.g_rosokon = o.rosokon <= this.REORG_ROSOKON_MAX;
+      o.canLeft = o.g_left && o.g_domei && o.g_tekko && o.g_rosokon;
+      o.gates = (o.g_left ? 1 : 0) + (o.g_domei ? 1 : 0)
+              + (o.g_tekko ? 1 : 0) + (o.g_rosokon ? 1 : 0);
+      o.kind = (o.lefts === 2 && o.canLeft) ? 'zenrokyo_unify'
+             : (o.lefts === 2 ? 'rename'
+             : (o.rights === 2 ? 'right_unify'
+             : (o.lefts === 1 ? 'sohyo_survive' : 'history')));
+      return o;
+    },
+
+    //  再編の形。決まっていればそれを、まだなら見込みを返す。
+    //  一九八九年の事象は endturn（unionReorg）より先に立つので、
+    //  事象の門と文面はこちらを読む。決まったあとは動かない。
+    reorgKind: function (Q) {
+      return Q.reorg_kind || this.reorgOutlook(Q).kind;
+    },
+
+    //  四つの門の進み具合。総評が解散するまで毎手見えている。
+    reorgBlock: function (Q) {
+      if (Q.reorg_done) {
+        return '<b>' + (this.REORG_KIND_NAME[Q.reorg_kind] || '') + '</b>'
+          + '　<span style="opacity:.6">一九八九年に決着した。</span>';
+      }
+      var o = this.reorgOutlook(Q);
+      var FAC = { saha: '左派', chusa: '中間左派', chuu: '中間右派', uha: '右派' };
+      var g = function (ok, label, now, need) {
+        return (ok ? '<span style="color:#3E6E8C;">✓</span> '
+                   : '<span style="color:#B23A34;">✗</span> ')
+          + label + '　<b>' + (Math.round(now * 10) / 10) + '</b> 万人'
+          + ' <span style="opacity:.6">（要 ' + need + '）</span>';
+      };
+      var rows = [
+        '総評　議長 <b>' + (FAC[o.chair] || o.chair) + '</b>　事務局長 <b>'
+          + (FAC[o.secgen] || o.secgen) + '</b>',
+        g(o.g_left, '総評の左', o.sohyoLeft, this.REORG_LEFT_NEED + ' 万人以上'),
+        g(o.g_domei, '同盟の固い右', o.domeiHard, this.REORG_DOMEI_MAX + ' 万人以下'),
+        g(o.g_tekko, '鉄鋼労連系右派', o.tekko, this.REORG_TEKKO_MAX + ' 万人以下'),
+        g(o.g_rosokon, '統一労組懇', o.rosokon, this.REORG_ROSOKON_MAX + ' 万人以下'),
+        '<span style="opacity:.6">このまま一九八九年を迎えると ──</span> <b>'
+          + this.REORG_KIND_NAME[o.kind] + '</b>'
+      ];
+      return rows.join('<br>');
+    },
+
     //  解散と再編。一度だけ走る。
     //  総評の左のうち、共産党に近い分が全労連へ、党に近い分が全労協へ抜ける。
     //  抜けなかった分と同盟・中立労連が連合になる。
@@ -615,27 +689,15 @@
       //  ── 誰が総評を率いていたかで、統一の形が変わる ──────────
       //  議長と事務局長。二人とも左なら左へ、二人とも右なら右へ、
       //  混ざれば史実どおり連合になる。総評の大会で決まっている。
-      var ch = Q.sohyo_chair || 'chusa';
-      var sg = Q.sohyo_secgen || 'chuu';
-      var lefts = (ch === 'saha' ? 1 : 0) + (sg === 'saha' ? 1 : 0);
-      var rights = (ch === 'uha' ? 1 : 0) + (sg === 'uha' ? 1 : 0);
-      //  総評の左が厚く、同盟の右の塊が痩せていること。
-      //  同盟はオルグを積むほど切り崩される。
-      var sohyoLeft = sohyo * lrS;
-      var domeiHard = domei * (1 - Math.min(0.6, (Q.left_unity_pts || 0) * 0.012));
+      //  四つの門も含めて reorgOutlook が一箇所で持っている。
+      //  盤面に出している値と、ここで読む値を同じにするため。
+      var o = this.reorgOutlook(Q);
+      var lefts = o.lefts, rights = o.rights, canLeft = o.canLeft;
+      var sohyoLeft = o.sohyoLeft, tekko = o.tekko, rosokon = o.rosokon;
       Q.reorg_sohyo_left = Math.round(sohyoLeft);
-      Q.reorg_domei_hard = Math.round(domeiHard);
-
-      var tekko = (Q.u_tekko === undefined) ? this.TEKKO_START : Q.u_tekko;
-      var rosokon = (Q.u_rosokon === undefined) ? this.ROSOKON_START : Q.u_rosokon;
+      Q.reorg_domei_hard = Math.round(o.domeiHard);
       Q.reorg_tekko = Math.round(tekko);
       Q.reorg_rosokon = Math.round(rosokon);
-      //  左で統一するには四つとも要る。総評が大きいだけでは足りない。
-      //  中の右（鉄鋼系）と、中の共産系（統一労組懇）を先に落としておくこと。
-      var canLeft = sohyoLeft >= this.REORG_LEFT_NEED &&
-                    domeiHard <= this.REORG_DOMEI_MAX &&
-                    tekko <= this.REORG_TEKKO_MAX &&
-                    rosokon <= this.REORG_ROSOKON_MAX;
       if (lefts === 2 && canLeft) {
         //  ① 全労協が労戦を統一する。総評も全労連も残らない。
         //     民社党はこの線には付いてこない ── 必ず出て行く。
@@ -2253,6 +2315,26 @@
     lw: function (Q, base) {
       return Math.round(base * this.localWeight(Q) * (this.localMult(Q) || 1) * 10) / 10;
     },
+    //  毎手の積み。負担の表と保有から出す。
+    localBurden: function (Q) {
+      var c, d = 0;
+      for (c in this.LOCAL_BURDEN) {
+        if (this.LOCAL_BURDEN.hasOwnProperty(c) && Q['local_' + c]) { d += this.LOCAL_BURDEN[c]; }
+      }
+      return Math.round(d * 10) / 10;
+    },
+
+    //  締めで抜ける量。以前は 8×重み の定数だった。局面は十二手から
+    //  十六手まであり、幕が進むほど保有も増えるので、定数では積みに
+    //  追いつかない ── 「どれだけ締めても無駄」という声はここから出る。
+    //  一局面ぶんの積み（毎手の負担 × その局面の手数）を物差しにする。
+    localCut: function (Q, mult) {
+      var w = this.localWeight(Q);
+      var span = (Q.local_burden_now !== undefined ? Q.local_burden_now : this.localBurden(Q))
+                 * (Q.phase_turns || 12);
+      return Math.round(Math.max(8 * w, span) * (mult || 1) * 10) / 10;
+    },
+
     accrueLocalDebt: function (Q) {
       var c, d = 0;
       for (c in this.LOCAL_BURDEN) {
@@ -2470,10 +2552,12 @@
       // ═══ generated:events start ═══
       // 勤評闘争　1958年〜・史実
       { n: 1001, id: 'a1_kinpyo', name: '勤評闘争', acts: [1], need: { labor: 0.15 }, year: 1958, fixed: true,
-        when: function (Q) { return Q.year >= 1958; } },
+        when: function (Q) { return Q.year >= 1958 &&
+                 !Q.evdone_a1_gyakkoro; } },
       // 警職法　1958年〜・史実
       { n: 1011, id: 'a1_keishokuho', name: '警職法', acts: [1], need: { diet: 0.2 }, year: 1958, fixed: true,
-        when: function (Q) { return Q.year >= 1958; } },
+        when: function (Q) { return Q.year >= 1958 &&
+                 !Q.evdone_keishokuho; } },
       // 長崎国旗事件　1958年〜・史実
       { n: 8101, id: 'a1_nagasaki_kokki', name: '長崎国旗事件', acts: [1], need: { rel: 0.12 }, year: 1958, fixed: true,
         when: function (Q) { return Q.year >= 1958; } },
@@ -2515,8 +2599,8 @@
       // 所得倍増　1960年〜・史実
       { n: 1009, id: 'a1_ike_baizo', name: '所得倍増', acts: [1], need: { name: 0.2 }, year: 1960, fixed: true,
         when: function (Q) { return Q.year >= 1960; } },
-      // 日比谷の壇上　1960年〜・asanumaが退場後・史実
-      { n: 1010, id: 'a1_asanuma_shi', name: '日比谷の壇上', acts: [1], need: { name: 0.35 }, year: 1960, fixed: true,
+      // 弔い合戦　1960年〜・asanumaが退場後・史実
+      { n: 1010, id: 'a1_asanuma_shi', name: '弔い合戦', acts: [1], need: { name: 0.35 }, year: 1960, fixed: true,
         when: function (Q) { return Q.year >= 1960 &&
                  !window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 民社党結成　1960年〜・史実
@@ -2530,7 +2614,8 @@
       // 政暴法　1961年〜・asanumaが退場後・史実
       { n: 2001, id: 'a2_seiboho', name: '政暴法', acts: [2], need: { diet: 0.15 }, year: 1961, fixed: true,
         when: function (Q) { return Q.year >= 1961 &&
-                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+                 !window.JSP.LEADERS.here(Q, 'asanuma') &&
+                 !Q.evdone_seiboho; } },
       // 河上委員長　1961年〜・kawakamiが在席・asanumaが退場後・史実
       { n: 2002, id: 'a2_kawakami', name: '河上委員長', acts: [2], need: { chair: 0.15 }, year: 1961, fixed: true,
         when: function (Q) { return Q.year >= 1961 &&
@@ -2554,7 +2639,8 @@
       // 日韓基本条約　帯中間右/右・1963年〜・史実
       { n: 115, id: 'nikkan', name: '日韓基本条約', acts: [2], need: { diet: 0.14 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a2_nikkan; } },
       // ベトナム戦争と北爆　帯中間右/右・1963年〜・史実
       { n: 116, id: 'vietnam', name: 'ベトナム戦争と北爆', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
@@ -2580,11 +2666,13 @@
         when: function (Q) { return Q.year >= 1963; } },
       // 松川事件の判決　1963年〜・史実
       { n: 2161, id: 'a2_matsukawa', name: '松川事件の判決', acts: [2], need: { rally: 0.15 }, year: 1963, fixed: true,
-        when: function (Q) { return Q.year >= 1963; } },
+        when: function (Q) { return Q.year >= 1963 &&
+                 !Q.evdone_matsukawa; } },
       // 日韓基本条約　帯左/中間左・1963年〜・史実
       { n: 7115, id: 'nikkan_sa', name: '日韓基本条約', acts: [2], need: { diet: 0.14 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a2_nikkan; } },
       // ベトナム戦争と北爆　帯左/中間左・1963年〜・史実
       { n: 7116, id: 'vietnam_sa', name: 'ベトナム戦争と北爆', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
@@ -2612,7 +2700,8 @@
         when: function (Q) { return Q.year >= 1965; } },
       // 日韓基本条約　1965年〜・史実
       { n: 2009, id: 'a2_nikkan', name: '日韓基本条約', acts: [2], need: { diet: 0.3 }, year: 1965, fixed: true,
-        when: function (Q) { return Q.year >= 1965; } },
+        when: function (Q) { return Q.year >= 1965 &&
+                 !Q.evdone_nikkan && !Q.evdone_nikkan_sa; } },
       // 北爆　1965年〜・史実
       { n: 2010, id: 'a2_vietnam', name: '北爆', acts: [2], need: { rally: 0.3 }, year: 1965, fixed: true,
         when: function (Q) { return Q.year >= 1965; } },
@@ -2701,7 +2790,7 @@
       // 公害国会　1970年〜・史実
       { n: 3002, id: 'a3_kogai_kokkai', name: '公害国会', acts: [3], need: { diet: 0.2 }, year: 1970, fixed: true,
         when: function (Q) { return Q.year >= 1970 &&
-                 Q.local_n >= 1; } },
+                 (Q.local_n >= 1) && !Q.evdone_a3_kougai_kokkai; } },
       // 万国博　1970年〜・史実
       { n: 3161, id: 'a3_bankoku', name: '万国博', acts: [3], need: { name: 0.15 }, year: 1970, fixed: true,
         when: function (Q) { return Q.year >= 1970; } },
@@ -2738,7 +2827,8 @@
         when: function (Q) { return Q.year >= 1971; } },
       // 日中国交正常化　1972年〜・史実
       { n: 133, id: 'nicchu', name: '日中国交正常化', acts: [3], need: { rel: 0.14 }, year: 1972, fixed: true,
-        when: function (Q) { return Q.year >= 1972; } },
+        when: function (Q) { return Q.year >= 1972 &&
+                 !Q.evdone_a3_nicchu; } },
       // 金脈問題　1972年〜・史実
       { n: 135, id: 'kinmyaku', name: '金脈問題', acts: [3], need: { diet: 0.2 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972; } },
@@ -2753,7 +2843,8 @@
         when: function (Q) { return Q.year >= 1972; } },
       // 日中国交正常化　1972年〜・史実
       { n: 3007, id: 'a3_nicchu', name: '日中国交正常化', acts: [3], need: { rel: 0.25 }, year: 1972, fixed: true,
-        when: function (Q) { return Q.year >= 1972; } },
+        when: function (Q) { return Q.year >= 1972 &&
+                 !Q.evdone_nicchu; } },
       // 一九七二年十二月　1972年〜・史実
       { n: 3008, id: 'a3_1972', name: '一九七二年十二月', acts: [3], need: { hr: 0.3 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
@@ -2835,7 +2926,8 @@
       // 保革伯仲　帯中間右/右・1976年〜・史実
       { n: 138, id: 'hokaku_hakuchu', name: '保革伯仲', acts: [3], need: { diet: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a3_hakuchu; } },
       // 中道連合の始まり　軸未定/社公民・1976年〜・史実
       { n: 140, id: 'shakomin_goi_zen', name: '中道連合の始まり', acts: [3], need: { rel: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -2863,7 +2955,7 @@
       { n: 3017, id: 'a3_hakuchu', name: '保革伯仲', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 Q.minsha_exists && Q.seats_hr >= 110; } },
+                 (Q.minsha_exists && Q.seats_hr >= 110) && !Q.evdone_hokaku_hakuchu && !Q.evdone_hokaku_hakuchu_sa; } },
       // 一九七六年十二月　1976年〜・史実
       { n: 3170, id: 'a3_1976_senkyo', name: '一九七六年十二月', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -2875,7 +2967,7 @@
       { n: 7138, id: 'hokaku_hakuchu_sa', name: '保革伯仲', acts: [3], need: { diet: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 Q.seats_hr >= 110; } },
+                 (Q.seats_hr >= 110) && !Q.evdone_a3_hakuchu; } },
       // ロッキード　帯左/中間左・1976年〜・史実
       { n: 7315, id: 'lockheed_sa', name: 'ロッキード', acts: [3], need: { name: 0.35 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -2945,7 +3037,8 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 元号法制化　1979年〜・史実
       { n: 4162, id: 'a4_gengo', name: '元号法制化', acts: [4], need: { diet: 0.15 }, year: 1979, fixed: true,
-        when: function (Q) { return Q.year >= 1979; } },
+        when: function (Q) { return Q.year >= 1979 &&
+                 !Q.evdone_gengo; } },
       // 一九七九年十月　1979年〜・史実
       { n: 4163, id: 'a4_1979_senkyo', name: '一九七九年十月', acts: [4], need: { hr: 0.25 }, year: 1979, fixed: true,
         when: function (Q) { return Q.year >= 1979; } },
@@ -2967,7 +3060,8 @@
         when: function (Q) { return Q.year >= 1980; } },
       // 教科書問題　1980年〜・史実
       { n: 153, id: 'kyokasho', name: '教科書問題', acts: [4], need: { rel: 0.14 }, year: 1980, fixed: true,
-        when: function (Q) { return Q.year >= 1980; } },
+        when: function (Q) { return Q.year >= 1980 &&
+                 !Q.evdone_a4_kyokashu; } },
       // 指紋押捺拒否　1980年〜・史実
       { n: 4301, id: 'a4_shimon', name: '指紋押捺拒否', acts: [4], need: { rally: 0.2 }, year: 1980, fixed: true,
         when: function (Q) { return Q.year >= 1980; } },
@@ -3018,7 +3112,8 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 教科書問題　1982年〜・史実
       { n: 4010, id: 'a4_kyokashu', name: '教科書問題', acts: [4], need: { rally: 0.2 }, year: 1982, fixed: true,
-        when: function (Q) { return Q.year >= 1982; } },
+        when: function (Q) { return Q.year >= 1982 &&
+                 !Q.evdone_kyokasho; } },
       // 全民労協　帯左/中間左・1982年〜・史実
       { n: 7404, id: 'zenmin_rokyo_sa', name: '全民労協', acts: [4], need: { labor: 0.3 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
@@ -3036,7 +3131,8 @@
         when: function (Q) { return Q.year >= 1983; } },
       // 男女雇用機会均等法　1983年〜・史実
       { n: 155, id: 'kintou_ho', name: '男女雇用機会均等法', acts: [4], need: { diet: 0.2 }, year: 1983, fixed: true,
-        when: function (Q) { return Q.year >= 1983; } },
+        when: function (Q) { return Q.year >= 1983 &&
+                 !Q.evdone_a4_danjo && !Q.evdone_danjo_sa; } },
       // 電電と専売の民営化　1983年〜・史実
       { n: 332, id: 'a4_denden', name: '電電と専売の民営化', acts: [4], need: { labor: 0.14 }, year: 1983, fixed: true,
         when: function (Q) { return Q.year >= 1983; } },
@@ -3107,7 +3203,8 @@
       // 男女雇用機会均等法　帯中間右/右・1985年〜・史実
       { n: 4015, id: 'a4_danjo', name: '男女雇用機会均等法', acts: [4], need: { diet: 0.25 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_kintou_ho; } },
       // 電電と専売　1985年〜・史実
       { n: 4165, id: 'a4_denden_senbai', name: '電電と専売', acts: [4], need: { labor: 0.25 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985; } },
@@ -3137,7 +3234,8 @@
       // 男女雇用機会均等法　帯左/中間左・1985年〜・史実
       { n: 7407, id: 'danjo_sa', name: '男女雇用機会均等法', acts: [4], need: { diet: 0.25 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_kintou_ho; } },
       // 補助金の一律削減　1985年〜・史実
       { n: 4804, id: 'a4_hojokin', name: '補助金の一律削減', acts: [4], need: { diet: 0.2 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985; } },
@@ -3150,7 +3248,7 @@
       // 昭和が終わる　1986年〜・史実
       { n: 173, id: 'tenno', name: '昭和が終わる', acts: [5], need: { rel: 0.2 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986 &&
-                 Q.local_n >= 1; } },
+                 (Q.local_n >= 1) && !Q.evdone_a5_showa_owari; } },
       // マドンナたち　1986年〜・史実
       { n: 341, id: 'a5_madonna', name: 'マドンナたち', acts: [5], need: { org: 0.14 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986; } },
@@ -3174,7 +3272,8 @@
         when: function (Q) { return Q.year >= 1986; } },
       // 売上税　1987年〜・史実
       { n: 5003, id: 'a5_baiagezei', name: '売上税', acts: [5], need: { diet: 0.2 }, year: 1987, fixed: true,
-        when: function (Q) { return Q.year >= 1987; } },
+        when: function (Q) { return Q.year >= 1987 &&
+                 !Q.evdone_uriagezei; } },
       // 民間連合　1987年〜・史実
       { n: 5004, id: 'a5_rengo_minkan', name: '民間連合', acts: [5], need: { labor: 0.2 }, year: 1987, fixed: true,
         when: function (Q) { return Q.year >= 1987 &&
@@ -3225,10 +3324,12 @@
       // 連合結成　帯中間右/右・1989年〜・史実
       { n: 5009, id: 'a5_rengo_kessei', name: '連合結成', acts: [5], need: { labor: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0; } },
       // 昭和が終わる　1989年〜・史実
       { n: 5163, id: 'a5_showa_owari', name: '昭和が終わる', acts: [5], need: { name: 0.2 }, year: 1989, fixed: true,
-        when: function (Q) { return Q.year >= 1989; } },
+        when: function (Q) { return Q.year >= 1989 &&
+                 !Q.evdone_tenno; } },
       // 四月一日　1989年〜・史実
       { n: 5164, id: 'a5_shohizei_jisshi', name: '四月一日', acts: [5], need: { diet: 0.25 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
@@ -3241,7 +3342,7 @@
       // 総評解散　1989年〜・史実
       { n: 5169, id: 'a5_sohyo_kaisan', name: '総評解散', acts: [5], need: { labor: 0.3 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
-                 Q.kyokai_grip >= 35; } },
+                 Q.kyokai_grip >= 35 && window.JSP.reorgKind(Q) !== 'sohyo_survive'; } },
       // 土地基本法　1989年〜・史実
       { n: 5204, id: 'a5_tochi_kihon', name: '土地基本法', acts: [5], need: { diet: 0.25 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
@@ -3253,7 +3354,8 @@
       // 連合結成　帯左/中間左・1989年〜・史実
       { n: 7605, id: 'rengo_kessei_sa', name: '連合結成', acts: [5], need: { labor: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0; } },
       // 労働戦線の帰結　1989年〜・史実
       { n: 8002, id: 'a5_roso_kiketsu', name: '労働戦線の帰結', acts: [5], need: { labor: 0.2 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
@@ -3397,10 +3499,12 @@
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 警職法の記憶
       { n: 101, id: 'keishokuho', name: '警職法の記憶', acts: [1], need: { rally: 0.12 },
-        when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.12); } },
+        when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.12) &&
+                 !Q.evdone_a1_keishokuho; } },
       // 機関紙の拡張運動
       { n: 102, id: 'kikanshi_kakucho', name: '機関紙の拡張運動', acts: [2], need: { fund: 0.12 },
-        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.12); } },
+        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.12) &&
+                 !Q.evdone_a2_kikanshi; } },
       // 原水禁世界大会
       { n: 103, id: 'gensuikin_59', name: '原水禁世界大会', acts: [3], need: { rally: 0.2 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.2); } },
@@ -3421,7 +3525,8 @@
                  window.JSP.LEADERS.here(Q, 'asanuma'); } },
       // 松川事件の判決
       { n: 108, id: 'matsukawa', name: '松川事件の判決', acts: [2], need: { diet: 0.2 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.2); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.2) &&
+                 !Q.evdone_a2_matsukawa; } },
       // 全学連の突出　帯左/中間左
       { n: 109, id: 'zengakuren_59', name: '全学連の突出', acts: [2], need: { rally: 0.28 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.28) &&
@@ -3430,12 +3535,14 @@
       { n: 111, id: 'seiboho', name: '政暴法', acts: [2], need: { diet: 0.14 },
         when: function (Q) { return Q.year <= 1963 &&
                  Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
-                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+                 !window.JSP.LEADERS.here(Q, 'asanuma') &&
+                 !Q.evdone_a2_seiboho; } },
       // 江田ビジョン　帯中間左/中間右・edaが在席
       { n: 112, id: 'eda_vision', name: '江田ビジョン', acts: [2], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
                  [2, 3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 window.JSP.LEADERS.here(Q, 'eda'); } },
+                 window.JSP.LEADERS.here(Q, 'eda') &&
+                 !Q.evdone_a2_eda_vision; } },
       // LT貿易
       { n: 113, id: 'lt_boeki', name: 'LT貿易', acts: [2], need: { rel: 0.14 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.14); } },
@@ -3480,7 +3587,8 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 元号法制化
       { n: 151, id: 'gengo', name: '元号法制化', acts: [4], need: { diet: 0.14 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
+                 !Q.evdone_a4_gengo; } },
       // 「道」の廃棄論　帯中間右/右
       { n: 157, id: 'shakai_minshu', name: '「道」の廃棄論', acts: [4], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
@@ -3491,7 +3599,8 @@
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 売上税
       { n: 171, id: 'uriagezei', name: '売上税', acts: [5], need: { diet: 0.14 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
+                 !Q.evdone_a5_baiagezei; } },
       // 土井委員長の登場　帯中間右/右
       { n: 172, id: 'doi_shunin', name: '土井委員長の登場', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
@@ -3583,7 +3692,8 @@
       // 勤評闘争
       { n: 302, id: 'a1_gyakkoro', name: '勤評闘争', acts: [1], need: { labor: 0.12 },
         when: function (Q) { return Q.year <= 1960 &&
-                 Q.c_labor >= window.JSP.needOf(Q, 0.12); } },
+                 Q.c_labor >= window.JSP.needOf(Q, 0.12) &&
+                 !Q.evdone_a1_kinpyo; } },
       // 統一の条件
       { n: 303, id: 'a1_toitsu_joken', name: '統一の条件', acts: [1], need: { koryo: 0.2 },
         when: function (Q) { return Q.year <= 1960 &&
@@ -3618,7 +3728,8 @@
                  Q.komei_exists; } },
       // 公害国会
       { n: 321, id: 'a3_kougai_kokkai', name: '公害国会', acts: [3], need: { diet: 0.14 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
+                 !Q.evdone_a3_kogai_kokkai; } },
       // 党の宣伝機構
       { n: 326, id: 'a3_shakai_shinbun', name: '党の宣伝機構', acts: [3], need: { fund: 0.2 },
         when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.2); } },
@@ -3702,7 +3813,8 @@
                  Q.c_rally >= window.JSP.needOf(Q, 0.25); } },
       // 社会保障の設計
       { n: 423, id: 'a2_shakai_hosho', name: '社会保障の設計', acts: [2], need: { diet: 0.25 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25) &&
+                 !Q.evdone_a2_b3_shakai_hoshou; } },
       // 炭鉱の閉山
       { n: 424, id: 'a2_hokkaido_tanko', name: '炭鉱の閉山', acts: [2], need: { labor: 0.25 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.25) &&
@@ -3942,7 +4054,8 @@
         when: function (Q) { return Q.year >= 1962 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
                  [2, 3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 window.JSP.LEADERS.here(Q, 'eda'); } },
+                 window.JSP.LEADERS.here(Q, 'eda') &&
+                 !Q.evdone_eda_vision; } },
       // 原水禁の分裂　1963年〜
       { n: 2005, id: 'a2_gensuikin_split', name: '原水禁の分裂', acts: [2], need: { rally: 0.25 }, year: 1963,
         when: function (Q) { return Q.year >= 1963 &&
@@ -4007,7 +4120,8 @@
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35); } },
       // 機関紙拡張
       { n: 2039, id: 'a2_kikanshi', name: '機関紙拡張', acts: [2], need: { mem: 0.25 },
-        when: function (Q) { return Q.c_mem >= window.JSP.needOf(Q, 0.25); } },
+        when: function (Q) { return Q.c_mem >= window.JSP.needOf(Q, 0.25) &&
+                 !Q.evdone_kikanshi_kakucho; } },
       // 非武装中立の詰め
       { n: 2040, id: 'a2_hibuso_ron', name: '非武装中立の詰め', acts: [2], need: { koryo: 0.3 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.3) &&
@@ -4389,7 +4503,8 @@
       // 社会保障の設計　帯中間右
       { n: 2122, id: 'a2_b3_shakai_hoshou', name: '社会保障の設計', acts: [2], need: { koryo: 0.25 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25) &&
-                 [3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a2_shakai_hosho; } },
       // 民社党との対話　帯右
       { n: 2131, id: 'a2_b4_minsha_taiwa', name: '民社党との対話', acts: [2], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
@@ -5275,6 +5390,28 @@
                  komei: a[4], kyosan: a[5], other: a[6], total: a[7],
                  hist: a[8], hc: a[9], sp: a[10] || 0 };
       });
+    },
+
+    //  選挙の履歴を文字で。図表（elecSvg）は文庫の奥にあるので、
+    //  状況の頁にはこちらを置く ── 「今回いくつ取ったか」は
+    //  選挙の頁でしか見られず、あとから確かめる場所が無かった。
+    elecTable: function (Q) {
+      var rows = this.elecRows(Q);
+      if (!rows.length) { return '<span style="opacity:.6">まだ総選挙をしていない。</span>'; }
+      var out = [], i, r, d, ds, hs;
+      for (i = 0; i < rows.length; i += 1) {
+        r = rows[i];
+        d = (i === 0) ? 0 : (r.shakai - rows[i - 1].shakai);
+        ds = (i === 0) ? '' : (d > 0 ? '<span style="color:#3E6E8C;">+' + d + '</span>'
+              : (d < 0 ? '<span style="color:#B23A34;">' + d + '</span>'
+              : '<span style="opacity:.5">±0</span>'));
+        hs = r.hist ? ('<span style="opacity:.5">史実 ' + r.hist + '</span>') : '';
+        out.push(r.year + '年　衆院 <b>' + r.shakai + '</b> / ' + r.total
+          + (ds ? '　' + ds : '') + '　参院 ' + r.hc
+          + (r.sp ? '　<span style="opacity:.6">分かれた党 ' + r.sp + '</span>' : '')
+          + '　' + hs);
+      }
+      return out.join('<br>');
     },
 
     elecSvg: function (Q, W, H) {
@@ -7065,6 +7202,9 @@
         if (this.LOCAL_BURDEN.hasOwnProperty(lc) && Q['local_' + lc]) { lb += this.LOCAL_BURDEN[lc]; }
       }
       Q.local_burden_now = Math.round(lb * 10) / 10;
+      //  一回の締めで抜ける量。札の上でここを見せないと、
+      //  積みの数字だけが大きく見えて「締めても無駄」に見える。
+      Q.local_cut_now = this.localCut(Q, 1);
       if (Q.congress_drag_pct === undefined) { Q.congress_drag_pct = 0; }
       if (Q.congress_last === undefined) { Q.congress_last = 0; }
       Q.bloc = this.blocOf(Q);
@@ -7147,6 +7287,8 @@
       Q.disp_tally    = this.tallyLine(Q);
       Q.disp_layers   = this.layerBlock(Q);
       Q.disp_unions   = this.unionBlock(Q);
+      Q.disp_reorg    = this.reorgBlock(Q);
+      Q.reorg_kind_now = this.reorgKind(Q);
       Q.disp_del      = this.delegateBlock(Q);
       Q.name_chair    = this.nameOf(Q.post_chair);
       Q.name_secgen   = this.nameOf(Q.post_secgen);
