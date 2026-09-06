@@ -5907,6 +5907,17 @@
         tilt: { kokorou: 1.90, minrou: 1.14, mishoshiki: 0.99, jieigyo: 1.04, noson: 1.06, shinchukan: 0.52 } }
     },
 
+    //  いま持っている自治体の名前。CITIES の表から作る。
+    //  以前は場面ごとに京都・横浜・東京の三つを条件で並べていたので、
+    //  大阪から先を取っても名前が出ず、数（local_n）と食い違っていた。
+    localNames: function (Q) {
+      var c, out = [];
+      for (c in this.CITIES) {
+        if (this.CITIES.hasOwnProperty(c) && Q['local_' + c]) { out.push(this.CITIES[c].name); }
+      }
+      return out.length ? out.join('・') : 'なし';
+    },
+
     //  その年・その都市の階層構成。全国表 × 傾き、合計 100% に正規化。
     cityPop: function (Q, city) {
       var c = this.CITIES[city];
@@ -7321,6 +7332,7 @@
       Q.disp_tally    = this.tallyLine(Q);
       Q.disp_layers   = this.layerBlock(Q);
       Q.disp_unions   = this.unionBlock(Q);
+      Q.disp_local    = this.localNames(Q);
       //  中間左派の道具でなだめられる幅。積んだ無派閥代議員から出る。
       Q.chusa_soothe = Math.min(13, 4 + Math.floor((Q.del_muha || 0) / 55));
       Q.disp_reorg    = this.reorgBlock(Q);
