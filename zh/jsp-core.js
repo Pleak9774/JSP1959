@@ -1366,6 +1366,14 @@
     //  開幕は適性合計 30（六人とも適任）で、一手あたり 1.2 前後になる。
     //  減衰 0.96 と釣り合う天井は 30 ほど。貯め込みは効かない。
     CAPITAL_PER_FIT: 20,
+    //  議員団の大きさ。国会で使える手は議席の数で決まる。
+    //  一九五九年の 166 議席で 1.15、九十議席で 0.9、単独過半（256）で 1.45。
+    //  下は 0.8、上は 1.6 で止める ── 崩れても入りが枯れず、
+    //  勝ちすぎても雪だるまにならない。
+    seatScale: function (Q) {
+      return Math.max(0.8, Math.min(1.6, 0.597 + (Q.seats_hr || 0) * 0.003333));
+    },
+
     capitalIncome: function (Q) {
       var L = this.LEADERS;
       if (!L) { return 0; }
@@ -1380,7 +1388,7 @@
                            Q.mood_chusa || 0, Q.mood_saha || 0);
       //  怒りが 85（開幕の右派）で約六割、100 を超えると五割五分で底を打つ
       var unity = 1 - Math.min(0.45, anger / 220);
-      var inc = (fit / this.CAPITAL_PER_FIT) * unity * this.diff(Q).income;
+      var inc = (fit / this.CAPITAL_PER_FIT) * unity * this.seatScale(Q) * this.diff(Q).income;
       Q.capital_in = Math.round(inc * 100) / 100;
       Q.capital_acc = (Q.capital_acc || 0) + inc;
       var pay = Math.floor(Q.capital_acc);
@@ -2350,7 +2358,10 @@
     //  官公労は組織率が九割、新中間層は二割。同じ 1pt でも重さが違う。
     RIGHT_LOSE: { kokorou: 2.6, minrou: 1.8, mishoshiki: 1.6, noson: 0.6, jieigyo: 0.2, shinchukan: 0.2 },
     RIGHT_GAIN: { shinchukan: 1.4, jieigyo: 1.2, noson: 0.6, minrou: 0.4, mishoshiki: 0.3 },
-    LEFT_LOSE:  { shinchukan: 1.5, jieigyo: 1.2, noson: 1.0, mishoshiki: 0.5, minrou: 0.3 },
+    //  新中間層は一九九三年に人口の三十六%を占める。毎点 1.5 削ると、
+    //  左へ振り切った盤ではこの層だけで得票が六%落ちた ── 取引としては
+    //  重すぎるので 1.2 にする。取引そのものは残す。
+    LEFT_LOSE:  { shinchukan: 1.2, jieigyo: 1.2, noson: 1.0, mishoshiki: 0.5, minrou: 0.3 },
     LEFT_GAIN:  { kokorou: 1.2, minrou: 0.6, mishoshiki: 0.4 },
 
     baselineLean: function (Q, l) {
@@ -7260,7 +7271,8 @@
         }
         var ang2 = Math.max(Q.mood_uha || 0, Q.mood_chuu || 0, Q.mood_chusa || 0, Q.mood_saha || 0);
         Q.capital_in = Math.round((fit2 / this.CAPITAL_PER_FIT) *
-          (1 - Math.min(0.45, ang2 / 220)) * this.diff(Q).income * 100) / 100;
+          (1 - Math.min(0.45, ang2 / 220)) * this.seatScale(Q)
+          * this.diff(Q).income * 100) / 100;
       }
       //  分担金と維持費も、払うのは endturn だが見込みはいつでも出す。
       //  そうしないと一手目の脇柱がどちらも 0 になる。
@@ -7287,6 +7299,8 @@
       Q.disp_tally    = this.tallyLine(Q);
       Q.disp_layers   = this.layerBlock(Q);
       Q.disp_unions   = this.unionBlock(Q);
+      //  中間左派の道具でなだめられる幅。積んだ無派閥代議員から出る。
+      Q.chusa_soothe = Math.min(13, 4 + Math.floor((Q.del_muha || 0) / 55));
       Q.disp_reorg    = this.reorgBlock(Q);
       Q.reorg_kind_now = this.reorgKind(Q);
       Q.disp_del      = this.delegateBlock(Q);
