@@ -7337,6 +7337,16 @@
       Q.chusa_soothe = Math.min(13, 4 + Math.floor((Q.del_muha || 0) / 55));
       Q.disp_reorg    = this.reorgBlock(Q);
       Q.reorg_kind_now = this.reorgKind(Q);
+      //  五通りの kind を、文の中でよく要る三つの旗に畳む。
+      //   sohyo_gone   総評はこの先も残らないか（残る線は sohyo_survive だけ）
+      //   rengo_dekiru 連合ができるか（史実の線と、右で統一する線）
+      //   rosen_hidari 左で統一されるか（全労協が労戦を統一する）
+      Q.sohyo_gone   = (Q.reorg_kind_now === 'sohyo_survive') ? 0 : 1;
+      Q.rengo_dekiru = (Q.reorg_kind_now === 'history' || Q.reorg_kind_now === 'right_unify') ? 1 : 0;
+      Q.rosen_hidari = (Q.reorg_kind_now === 'zenrokyo_unify') ? 1 : 0;
+      //  国鉄の始末が決まったか。決まる前は kokutetsu_n が無く、
+      //  そのままだと「= 0」（分割民営化）に読まれてしまう。
+      Q.kokutetsu_done = Q.kokutetsu_kind ? 1 : 0;
       Q.disp_del      = this.delegateBlock(Q);
       Q.name_chair    = this.nameOf(Q.post_chair);
       Q.name_secgen   = this.nameOf(Q.post_secgen);
