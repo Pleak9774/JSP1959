@@ -3011,7 +3011,8 @@
                  Q.local_n >= 1; } },
       // 社会市民連合　1977年〜・史実
       { n: 3210, id: 'a3_shakai_shiminren', name: '社会市民連合', acts: [3], need: { split: 0.35 }, year: 1977, fixed: true,
-        when: function (Q) { return Q.year >= 1977; } },
+        when: function (Q) { return Q.year >= 1977 &&
+                 Q.gone_chuu || Q.sp_shaminren; } },
       // 一九七七年参院選　1977年〜・史実
       { n: 3211, id: 'a3_1977_sanin', name: '一九七七年参院選', acts: [3], need: { hc: 0.35 }, year: 1977, fixed: true,
         when: function (Q) { return Q.year >= 1977 &&
