@@ -2577,8 +2577,7 @@
         when: function (Q) { return Q.year >= 1963; } },
       // 一九六三年総選挙　1963年〜・史実
       { n: 2013, id: 'a2_1963_senkyo', name: '一九六三年総選挙', acts: [2], need: { hr: 0.3 }, year: 1963, fixed: true,
-        when: function (Q) { return Q.year >= 1963 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1963; } },
       // 松川事件の判決　1963年〜・史実
       { n: 2161, id: 'a2_matsukawa', name: '松川事件の判決', acts: [2], need: { rally: 0.15 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963; } },
@@ -2644,8 +2643,7 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 一九六七年一月　1967年〜・史実
       { n: 2019, id: 'a2_1967', name: '一九六七年一月', acts: [2], need: { hr: 0.35 }, year: 1967, fixed: true,
-        when: function (Q) { return Q.year >= 1967 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1967; } },
       // 公害　1967年〜・史実
       { n: 2027, id: 'a2_kogai', name: '公害', acts: [2], need: { org: 0.3 }, year: 1967, fixed: true,
         when: function (Q) { return Q.year >= 1967; } },
@@ -2690,8 +2688,7 @@
         when: function (Q) { return Q.year >= 1969; } },
       // 一九六九年十二月　1969年〜・史実
       { n: 2024, id: 'a2_1969_haiboku', name: '一九六九年十二月', acts: [2], need: { hr: 0.5 }, year: 1969, fixed: true,
-        when: function (Q) { return Q.year >= 1969 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1969; } },
       // 七〇年安保への構え　1969年〜・史実
       { n: 2049, id: 'a2_anpo_jido', name: '七〇年安保への構え', acts: [2], need: { rally: 0.4 }, year: 1969, fixed: true,
         when: function (Q) { return Q.year >= 1969; } },
@@ -2951,8 +2948,7 @@
         when: function (Q) { return Q.year >= 1979; } },
       // 一九七九年十月　1979年〜・史実
       { n: 4163, id: 'a4_1979_senkyo', name: '一九七九年十月', acts: [4], need: { hr: 0.25 }, year: 1979, fixed: true,
-        when: function (Q) { return Q.year >= 1979 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1979; } },
       // 革新自治体の崩落　帯左/中間左・1979年〜・史実
       { n: 7402, id: 'jichitai_hokai_sa', name: '革新自治体の崩落', acts: [4], need: { org: 0.3 }, year: 1979, fixed: true,
         when: function (Q) { return Q.year >= 1979 &&
@@ -2987,8 +2983,7 @@
         when: function (Q) { return Q.year >= 1980; } },
       // 一九八〇年六月　1980年〜・史実
       { n: 4176, id: 'a4_1980_senkyo', name: '一九八〇年六月', acts: [4], need: { hr: 0.3 }, year: 1980, fixed: true,
-        when: function (Q) { return Q.year >= 1980 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1980; } },
       // 第二臨調　帯中間右/右・1981年〜・史実
       { n: 4007, id: 'a4_rincho', name: '第二臨調', acts: [4], need: { labor: 0.25 }, year: 1981, fixed: true,
         when: function (Q) { return Q.year >= 1981 &&
@@ -3073,7 +3068,8 @@
       // 一九八三年十二月　帯中間右/右・1983年〜・史実
       { n: 4020, id: 'a4_1983_senkyo', name: '一九八三年十二月', acts: [4], need: { hr: 0.35 }, year: 1983, fixed: true,
         when: function (Q) { return Q.year >= 1983 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.prev_seats !== undefined; } },
       // 医療費の自己負担　1983年〜・史実
       { n: 4203, id: 'a4_iryohi', name: '医療費の自己負担', acts: [4], need: { diet: 0.2 }, year: 1983, fixed: true,
         when: function (Q) { return Q.year >= 1983; } },
@@ -3276,7 +3272,8 @@
                  Q.komei_exists; } },
       // 参院選の大勝　1990年〜・史実
       { n: 452, id: 'a5_sanin_daishou', name: '参院選の大勝', acts: [5], need: { rally: 0.25 }, year: 1990, fixed: true,
-        when: function (Q) { return Q.year >= 1990; } },
+        when: function (Q) { return Q.year >= 1990 &&
+                 (Q.hc_diff || 0) >= 10 && (Q.seats_hc || 0) >= 60; } },
       // 自衛隊の海外派遣　1990年〜・史実
       { n: 453, id: 'a5_kaigai_haken', name: '自衛隊の海外派遣', acts: [5], need: { diet: 0.25 }, year: 1990, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
@@ -3297,8 +3294,7 @@
                  [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 一九九〇年二月　1990年〜・史実
       { n: 5010, id: 'a5_1990', name: '一九九〇年二月', acts: [5], need: { hr: 0.35 }, year: 1990, fixed: true,
-        when: function (Q) { return Q.year >= 1990 &&
-                 Q.minsha_exists; } },
+        when: function (Q) { return Q.year >= 1990; } },
       // 湾岸　帯中間右/右・1990年〜・史実
       { n: 5011, id: 'a5_wangan', name: '湾岸', acts: [5], need: { rally: 0.3 }, year: 1990, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
@@ -7058,6 +7054,17 @@
       //  大会の線と、中央との差。脇柱で見せる。
       this.congressRoute(Q);
       Q.del_total = this.delegates(Q).total;
+      //  選挙の事象が実際の数で語るための差分。prev_seats は runElection が立てる。
+      var sd = (Q.prev_seats === undefined) ? 0 : ((Q.seats_hr || 0) - (Q.prev_seats || 0));
+      Q.seat_delta = sd; Q.seat_delta_abs = Math.abs(sd);
+      Q.seat_dir = sd > 0 ? 1 : (sd < 0 ? 2 : 0);
+      Q.res_kokumin = (Q.res_komei || 0) + (Q.res_minsha || 0);
+      //  自治体の負担が毎手いくら積むか（脇柱の目安）
+      var lb = 0, lc;
+      for (lc in this.LOCAL_BURDEN) {
+        if (this.LOCAL_BURDEN.hasOwnProperty(lc) && Q['local_' + lc]) { lb += this.LOCAL_BURDEN[lc]; }
+      }
+      Q.local_burden_now = Math.round(lb * 10) / 10;
       if (Q.congress_drag_pct === undefined) { Q.congress_drag_pct = 0; }
       if (Q.congress_last === undefined) { Q.congress_last = 0; }
       Q.bloc = this.blocOf(Q);
