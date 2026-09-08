@@ -2489,6 +2489,13 @@
     //  三段（協会 → 拡張 → 網）で、左へ寄ったぶん都市の層が離れる分を
     //  三分の一ずつ打ち消す。三段そろえば打ち消し切る。
     KEIMOU_STEPS: 3,
+    //  政策協定。keimou_open と対になる、右へ寄る線の側の仕組み。
+    //  同盟系との政策協定を積んだ段数だけ、右へ寄って労働の側を
+    //  失う分が浅くなる。三段そろえば、失う分は消える。
+    //  これを持たないと、民社化の線は労働の層の天井が下がったまま伸びず、
+    //  組織を上限まで積んでも二三九議席（過半は二五七）で止まる。
+    KYOTEI_STEPS: 3,
+    KYOTEI_LAYERS: { kokorou: 1, minrou: 1, mishoshiki: 1 },
 
 
     baselineLean: function (Q, l) {
@@ -2517,7 +2524,13 @@
       //  左へ寄ると都市からは遠くなるが、労働の側が選ぶ理由は残る。
       var rr = Q.route || 0;
       if (rr > 0) {
-        b -= (this.RIGHT_LOSE[l] || 0) * rr;
+        var rloss = (this.RIGHT_LOSE[l] || 0) * rr;
+        //  組合との政策協定を積んだ段数だけ、労働の側を失う分が浅くなる。
+        if (Q.seisaku_kyotei && this.KYOTEI_LAYERS[l]) {
+          var qq = Math.min(this.KYOTEI_STEPS, Q.seisaku_kyotei);
+          rloss -= rloss * (qq / this.KYOTEI_STEPS);
+        }
+        b -= rloss;
         b += (this.RIGHT_GAIN[l] || 0) * rr;
       } else if (rr < 0) {
         var loss = (this.LEFT_LOSE[l] || 0) * (-rr);
@@ -5009,6 +5022,25 @@
       { n: 9207, id: 'a4_rodo_daigaku_mou', name: '労働大学の網', acts: [4], need: { org: 0.35 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35) &&
                  Q.evdone_a3_rodo_daigaku && !Q.evdone_a4_rodo_daigaku_mou; } },
+      // 聖域なき政治改革
+      { n: 9208, id: 'gov_minsha_seiiki', name: '聖域なき政治改革', acts: [4, 5], need: { cab: 0.2 },
+        when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
+                 Q.in_power && Q.cab_kind === 4 && Q.minsha_ka; } },
+      // 同盟との政策協定　帯中間右/右
+      { n: 9209, id: 'a4_domei_kyotei', name: '同盟との政策協定', acts: [4], need: { labor: 0.24 },
+        when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.24) &&
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a4_domei_kyotei; } },
+      // 政策推進労組会議　帯中間右/右
+      { n: 9210, id: 'a4_seisui_kaigi', name: '政策推進労組会議', acts: [4, 5], need: { labor: 0.32 },
+        when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.32) &&
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.seisaku_kyotei >= 1 && !Q.evdone_a4_seisui_kaigi; } },
+      // 協定の網　帯中間右/右
+      { n: 9211, id: 'a5_kyotei_mou', name: '協定の網', acts: [5], need: { labor: 0.38 },
+        when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.38) &&
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.seisaku_kyotei >= 2 && !Q.evdone_a5_kyotei_mou; } },
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
@@ -5347,6 +5379,7 @@
       'gov_ours', 'gov_ldp',
       'reorg_force', 'roso_hidari', 'sandbox',
       'keimou_open', 'keimou_seinen', 'keimou_kakudai',
+      'seisaku_kyotei',
       'jimin_kiban',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
       //  労働戦線。五九年の春闘の形、六六年と八三年の総評人事、
@@ -7565,6 +7598,7 @@
       Q.seido_name = this.seidoOf(Q).name;
       //  勤労者教育がいま何回ぶん効いているか（脇柱に出す）
       Q.keimou_n = Math.min(this.KEIMOU_STEPS, Q.keimou_open || 0);
+      Q.kyotei_n = Math.min(this.KYOTEI_STEPS, Q.seisaku_kyotei || 0);
       Q.keimou_stage = (Q.keimou_open || 0) + (Q.keimou_seinen || 0) + (Q.keimou_kakudai || 0);
       //  大会の線と、中央との差。脇柱で見せる。
       this.congressRoute(Q);
