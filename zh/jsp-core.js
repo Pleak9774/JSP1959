@@ -5345,7 +5345,7 @@
       'shin_sengen', 'rengo_formed', 'madonna', 'pko_stance', 'gulf_stance',
       'won_majority_ever', 'left_unity', 'senkyoku_seido', 'zenrokyo',
       'gov_ours', 'gov_ldp',
-      'reorg_force', 'roso_hidari',
+      'reorg_force', 'roso_hidari', 'sandbox',
       'keimou_open', 'keimou_seinen', 'keimou_kakudai',
       'jimin_kiban',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
@@ -6519,6 +6519,7 @@
         a = this.ACH[i];
         if (!a.when) { continue; }
         if (a.end && !atEnd) { continue; }
+        if (this.isSandbox(Q)) { break; }
         if (Q['achievement_' + a.id]) { continue; }
         ok = false;
         try { ok = !!a.when(Q); } catch (err) { ok = false; }
@@ -6564,12 +6565,82 @@
     },
 
     //  実績を渡す。エンジンが無くても進行には影響しない。
+    //  砂場では実績を取らない。盤面を手で作って取れる実績には意味が無い。
+    isSandbox: function (Q) {
+      if (Q && Q.sandbox) { return true; }
+      try {
+        var st = window.dendryUI && window.dendryUI.dendryEngine
+          && window.dendryUI.dendryEngine.state;
+        return !!(st && st.qualities && st.qualities.sandbox);
+      } catch (e) { return false; }
+    },
     award: function (name) {
       try {
+        if (this.isSandbox()) { return 0; }
         var e = window.dendryUI && window.dendryUI.dendryEngine;
         if (e && e.achieve) { e.achieve(name); }
       } catch (err) { return 0; }
       return 1;
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  砂場（テスト用）
+    //
+    //  好きな幕から、好きな厚さの盤面で始める。控えを書き換えて
+    //  金を足す手間を無くすためのもので、実績は一つも付かない。
+    //
+    //  外盤（人口・組織率・定数・他党の伸び）は年で決まるので、
+    //  始める幕の頭まで一年ずつ進めてから carryOver に渡す。
+    //  そうしないと一九八六年の盤に一九五八年の人口が乗る。
+    // ══════════════════════════════════════════════════════════
+    SANDBOX_KIT: {
+      1: { budget: 10, capital: 8,  members: 45000,  seats_hr: 0 },
+      2: { budget: 16, capital: 12, members: 55000,  seats_hr: 0 },
+      3: { budget: 20, capital: 14, members: 65000,  seats_hr: 0 },
+      4: { budget: 24, capital: 16, members: 70000,  seats_hr: 0 },
+      5: { budget: 28, capital: 18, members: 75000,  seats_hr: 0 }
+    },
+    //  厚さ。薄い＝素の値、普通＝そのまま、厚い＝資源を積む
+    SANDBOX_RICH: { thin: 0.5, normal: 1, thick: 3 },
+
+    sandboxStart: function (Q, act, rich) {
+      var cfg = this.ACTS[act] || this.ACTS[1];
+      var kit = this.SANDBOX_KIT[act] || this.SANDBOX_KIT[1];
+      var mul = this.SANDBOX_RICH[rich] || 1;
+      var y;
+      Q.sandbox = 1;
+      //  外盤を始める年まで進める。公明・共産の伸びと定数もここで入る。
+      for (y = 1959; y <= cfg.from; y += 1) { this.advanceYear(Q, y); }
+      //  史実の党の出入り。数えるべき相手が盤に無いと議席計算が狂う。
+      if (act >= 2 && !Q.minsha_exists && !Q.minsha_merged) { this.applySplit(Q, 'uha'); }
+      //  議席を一度ちゃんと配り直す（初期値のままだと幕に合わない）
+      try {
+        var r = this.allocate(Q);
+        Q.seats_hr = r.seats.shakai;
+        Q.res_shakai = r.seats.shakai;
+        Q.res_jimin = r.seats.jimin;
+        Q.res_komei = r.seats.komei;
+        Q.res_minsha = r.seats.minsha;
+        Q.res_kyosan = r.seats.kyosan;
+        Q.res_other = r.seats.other;
+        Q.prev_seats = Q.seats_hr;
+      } catch (e) { /* 配れなければ初期値のまま */ }
+      //  幕の頭へ
+      this.carryOver(Q, act);
+      //  資源を置き直す
+      Q.budget = Math.round(kit.budget * mul);
+      Q.capital = Math.round(kit.capital * mul);
+      Q.members = Math.round(kit.members * (mul > 1 ? 1.6 : (mul < 1 ? 0.7 : 1)));
+      Q.arrears = 0;
+      if (mul > 1) {
+        //  厚いときは議席と参院にも下駄を履かせる。試すためのものなので
+        //  取り方は問わない ── 実績が付かないのはそのためである。
+        Q.seats_hr = Math.max(Q.seats_hr || 0, Math.round((Q.hr_total || 467) * 0.28));
+        Q.res_shakai = Q.seats_hr;
+        Q.seats_hc = Math.max(Q.seats_hc || 0, 70);
+      }
+      this.refresh(Q);
+      return Q;
     },
 
     // ── 基盤 ─────────────────────────────────────────────────
