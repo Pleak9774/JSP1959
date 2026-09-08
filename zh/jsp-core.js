@@ -737,7 +737,10 @@
     unionReorg: function (Q) {
       var J = this;
       if (Q.reorg_done) { return Q; }
-      if (this.yearOf(Q) < this.REORG_YEAR) { return Q; }
+      //  一九八九年より前でも、左で束ね切ったときだけ先に決着する。
+      //  スト権ストに勝ち、総評の二役を左で押さえ、四つの門が開いている盤。
+      //  reorg_force は太田薫の行動が立てる。
+      if (this.yearOf(Q) < this.REORG_YEAR && !Q.reorg_force) { return Q; }
       Q.reorg_done = 1;
       //  解散の坂に入る前（1985年）の大きさで数える。
       //  1988年で採ると総評はもう 425→0 の途中で、四分の一しか残っていない。
@@ -4978,6 +4981,11 @@
         when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
+      // 勤労者教育協会　帯左/中間左
+      { n: 9205, id: 'a3_shinchukan_keimou', name: '勤労者教育協会', acts: [3], need: { org: 0.22 },
+        when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.22) &&
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a3_shinchukan_keimou; } },
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
@@ -5314,6 +5322,7 @@
       'shin_sengen', 'rengo_formed', 'madonna', 'pko_stance', 'gulf_stance',
       'won_majority_ever', 'left_unity', 'senkyoku_seido', 'zenrokyo',
       'gov_ours', 'gov_ldp',
+      'reorg_force', 'roso_hidari',
       'jimin_kiban',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
       //  労働戦線。五九年の春闘の形、六六年と八三年の総評人事、

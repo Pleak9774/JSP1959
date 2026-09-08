@@ -33,6 +33,112 @@
   //  fit   : 役職適性（高いほど自動選出で選ばれやすい）
   //  act   : 固有アクション。cost / cd（冷却） / uses（幕あたりの回数）
   var FIG = {
+
+    // ── 労働組合の側から入る人たち ────────────────────────────
+    //  この党の役員は議員から出るのが普通だが、支持組織の側から
+    //  役員に入れることもできる。組合の力は直に引き出せる代わりに、
+    //  党の外から見れば「組合の党」という印がその分だけ濃くなる。
+    ohta: { n: 41, name: '太田薰', faction: 'saha', from: 1958, to: 1985,
+      note: '総評議長。春闘を組み立てた男。「ヨーロッパ並みの賃金」',
+      fit: { chair: 2, secgen: 3, policy: 1, diet: 0, org: 5, youth: 1 },
+      passive: '毎回、総評との関係を 2 引き上げる',
+      acts: [
+        { name: '春闘を組み立て直す', desc: '総評 +12、官公労・民間労組 +4、資金 +5',
+          cost: { capital: 2 }, cd: 3, uses: 3, domain: 'labor',
+          fx: function (Q, J) {
+            Q.rel_sohyo = (Q.rel_sohyo || 0) + 12;
+            J.push(Q, ['kokorou', 'minrou'], 4);
+            Q.budget = (Q.budget || 0) + 5;
+            J.push(Q, ['shinchukan'], -2);
+          } },
+        { name: '労働戦線を左でまとめる', desc: 'スト権ストに勝っているときだけ。積み上げ +14、総評の左 +10。四つの門が開いていれば、その場で左の統一が決まる',
+          cost: { capital: 5, budget: 4 }, cd: 4, uses: 1, domain: 'labor',
+          need: function (Q) { return !!Q.sutoken_won && !Q.reorg_done; },
+          fx: function (Q, J) {
+            Q.left_unity_pts = (Q.left_unity_pts || 0) + 14;
+            Q.lr_sohyo = Math.min(100, ((Q.lr_sohyo === undefined) ? 34 : Q.lr_sohyo) + 10);
+            Q.rel_domei = (Q.rel_domei || 0) - 18;
+            Q.mood_uha = (Q.mood_uha || 0) + 12;
+            //  二役が左で、四つの門が開いていれば、一九八九年を待たずに決まる。
+            var o = J.reorgOutlook(Q);
+            if (o.lefts === 2 && o.canLeft) {
+              Q.reorg_force = 1;
+              J.unionReorg(Q);
+              Q.roso_hidari = 1;
+            }
+          } },
+        { name: '職場から党員を入れる', desc: '党員 +9000、官公労 +3',
+          cost: { budget: 4 }, cd: 3, uses: 2, domain: 'org',
+          fx: function (Q, J) {
+            Q.new_del = J.growMembers(Q, 9000);
+            J.push(Q, ['kokorou'], 3);
+            Q.kyokai_grip = Math.min(100, (Q.kyokai_grip || 50) + 3);
+          } }
+      ] },
+    iwai: { n: 42, name: '岩井章', faction: 'saha', from: 1955, to: 1980,
+      note: '総評事務局長。太田＝岩井体制の片方。組織の実務を握った',
+      fit: { chair: 0, secgen: 4, policy: 1, diet: 2, org: 5, youth: 1 },
+      passive: '毎回、官公労の組織率をわずかに上げる',
+      acts: [
+        { name: '単産を横に束ねる', desc: '官公労と民間労組を組織する',
+          cost: { budget: 5, capital: 2 }, cd: 3, uses: 3, domain: 'org',
+          fx: function (Q, J) {
+            J.organise(Q, ['kokorou', 'minrou'], 0.04);
+            Q.rel_sohyo = (Q.rel_sohyo || 0) + 6;
+          } },
+        { name: '政治スト方針を通す', desc: '闘争力 +、官公労 +5、左派 −8。新中間層 −4、自民 −10',
+          cost: { capital: 4 }, cd: 4, uses: 2, domain: 'rally',
+          fx: function (Q, J) {
+            J.push(Q, ['kokorou'], 5);
+            Q.mood_saha = Math.max(0, (Q.mood_saha || 0) - 8);
+            J.push(Q, ['shinchukan'], -4);
+            Q.rel_jimin = (Q.rel_jimin || 0) - 10;
+            Q.force_bonus = (Q.force_bonus || 0) + 1;
+          } }
+      ] },
+    tomizuka: { n: 43, name: '富冢三夫', faction: 'chusa', from: 1965, to: 1993,
+      note: '国労書記長のち総評事務局長。スト権ストを現場で回した',
+      fit: { chair: 1, secgen: 4, policy: 2, diet: 3, org: 4, youth: 1 },
+      passive: '毎回、官公労との関係をわずかに保つ',
+      acts: [
+        { name: '国鉄の職場を固める', desc: '官公労 +6、総評 +8、闘争力 +。新中間層 −3',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'labor',
+          fx: function (Q, J) {
+            J.push(Q, ['kokorou'], 6);
+            Q.rel_sohyo = (Q.rel_sohyo || 0) + 8;
+            J.push(Q, ['shinchukan'], -3);
+            Q.force_bonus = (Q.force_bonus || 0) + 1;
+          } },
+        { name: '分割民営化に対案を出す', desc: '国鉄の軸 +1、無派閥代議員 +14、新中間層 +4',
+          cost: { capital: 5 }, cd: 4, uses: 2, domain: 'diet',
+          fx: function (Q, J) {
+            J.enact(Q, 'kokutetsu', 1);
+            Q.del_muha = (Q.del_muha || 0) + 14;
+            J.push(Q, ['shinchukan'], 4);
+          } }
+      ] },
+    makieda: { n: 44, name: '槇枝元文', faction: 'saha', from: 1970, to: 1993,
+      note: '日教組委員長のち総評議長。教育と平和を一本で語った',
+      fit: { chair: 3, secgen: 3, policy: 3, diet: 1, org: 4, youth: 3 },
+      passive: '毎回、青年部の側の不満をわずかに抑える',
+      acts: [
+        { name: '教育の現場から組み直す', desc: '教育の軸 +1、官公労 +5、新中間層 +3。農村 −2',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'org',
+          fx: function (Q, J) {
+            J.enact(Q, 'kyoiku', 1);
+            J.push(Q, ['kokorou'], 5);
+            J.push(Q, ['shinchukan'], 3);
+            J.push(Q, ['noson'], -2);
+          } },
+        { name: '平和教育を全国に敷く', desc: '未組織 +5、新中間層 +4、左派 −6。右派 +8',
+          cost: { budget: 4 }, cd: 3, uses: 2, domain: 'rally',
+          fx: function (Q, J) {
+            J.push(Q, ['mishoshiki'], 5);
+            J.push(Q, ['shinchukan'], 4);
+            Q.mood_saha = Math.max(0, (Q.mood_saha || 0) - 6);
+            Q.mood_uha = (Q.mood_uha || 0) + 8;
+          } }
+      ] },
     suzuki: { n: 1, name: '铃木茂三郎', faction: 'chusa', from: 1955, to: 1970,
       note: '党内的左派元老，社会党再统一后的首任委员长。在党内、市民运动和工会中很有威望。',
       fit: { chair: 5, secgen: 2, policy: 2, diet: 1, org: 1, youth: 0 },
@@ -477,12 +583,21 @@
   }
 
   // ── 固有アクションの実行 ────────────────────────────────────
-  function canAct(Q, id) {
+  //  一人が複数の行動を持てる。acts が無ければ act 一つぶんとして読む。
+  //  控えの鍵は一つ目だけ従来どおり（cd_<id>）にして、古い控えを壊さない。
+  function actsOf(f) { return f.acts || (f.act ? [f.act] : []); }
+  function actKey(id, i) { return i ? id + '_' + (i + 1) : id; }
+  function canAct(Q, id, i) {
+    i = i || 0;
     var f = FIG[id];
     if (!f || gone(Q, id)) { return false; }
-    if ((Q['cd_' + id] || 0) > 0) { return false; }
-    if ((Q['uses_' + id] || 0) >= f.act.uses) { return false; }
-    var c = f.act.cost;
+    var a = actsOf(f)[i];
+    if (!a) { return false; }
+    var k = actKey(id, i);
+    if ((Q['cd_' + k] || 0) > 0) { return false; }
+    if ((Q['uses_' + k] || 0) >= a.uses) { return false; }
+    if (a.need && !a.need(Q)) { return false; }
+    var c = a.cost || {};
     if (c.capital && Q.capital < c.capital) { return false; }
     if (c.budget && Q.budget < c.budget) { return false; }
     return true;
@@ -526,18 +641,22 @@
     yamahana_h: 'org'
   };
 
-  function doAct(Q, id) {
+  function doAct(Q, id, i) {
+    i = i || 0;
     //  一手を使う行動は必ず何かの蓄積になる。ここが無いと、
     //  指導部に手を割いた幕では事象が一歩も進まない。
     if (window.JSP && window.JSP.tallyCounter) {
-      window.JSP.tallyCounter(Q, ACT_DOMAIN[id] || 'org');
+      var _a = FIG[id] && actsOf(FIG[id])[i];
+      window.JSP.tallyCounter(Q, (_a && _a.domain) || ACT_DOMAIN[id] || 'org');
     }
-    if (!canAct(Q, id)) { return false; }
-    var f = FIG[id], c = f.act.cost;
+    if (!canAct(Q, id, i)) { return false; }
+    var f = FIG[id], a = actsOf(f)[i], c = a.cost || {}, k = actKey(id, i);
     if (c.capital) { Q.capital -= c.capital; }
     if (c.budget) { Q.budget -= c.budget; }
-    Q['cd_' + id] = f.act.cd;
-    Q['uses_' + id] = (Q['uses_' + id] || 0) + 1;
+    Q['cd_' + k] = a.cd;
+    Q['uses_' + k] = (Q['uses_' + k] || 0) + 1;
+    //  データに効果を持つ行動（二つ目以降と、あとから足した人物）
+    if (a.fx) { a.fx(Q, J); return true; }
     switch (id) {
       case 'suzuki':
         ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) { Q['mood_' + g] -= 8; }); break;
@@ -608,10 +727,19 @@
         : '（空缺）';
       Q['note_' + post] = f ? f.note : '';
       Q['pass_' + post] = f ? f.passive : '';
-      Q['actname_' + post] = f ? f.act.name : '';
-      Q['actdesc_' + post] = f ? f.act.desc : '';
+      var _as = f ? actsOf(f) : [];
+      Q['actn_' + post] = _as.length;
+      [0, 1, 2].forEach(function (i) {
+        var sfx = i ? String(i + 1) : '';
+        var a = _as[i];
+        Q['actname' + sfx + '_' + post] = a ? a.name : '';
+        Q['actdesc' + sfx + '_' + post] = a ? a.desc : '';
+        Q['actok' + sfx + '_' + post] = (a && canAct(Q, Q['post_' + post], i)) ? 1 : 0;
+      });
+      Q['actname_' + post] = _as[0] ? _as[0].name : '';
+      Q['actdesc_' + post] = _as[0] ? _as[0].desc : '';
       Q['actok_' + post] = (f && canAct(Q, id)) ? 1 : 0;
-      Q['actleft_' + post] = f ? (f.act.uses - (Q['uses_' + id] || 0)) : 0;
+      Q['actleft_' + post] = _as[0] ? (_as[0].uses - (Q['uses_' + id] || 0)) : 0;
       Q['actcd_' + post] = f ? (Q['cd_' + id] || 0) : 0;
     });
     Q.board_lines = POSTS.map(function (p) {
@@ -624,9 +752,14 @@
       Q['inpost_' + id] = post ? 1 : 0;
       Q['avail_' + id] = gone(Q, id) ? 0 : 1;
       Q['postname_' + id] = post ? POST_NAME[post] : '';
-      Q['ok_' + id] = (post && canAct(Q, id)) ? 1 : 0;
-      Q['left_' + id] = FIG[id].act.uses - (Q['uses_' + id] || 0);
-      Q['cdleft_' + id] = Q['cd_' + id] || 0;
+      var as2 = actsOf(FIG[id]);
+      [0, 1, 2].forEach(function (i2) {
+        var sfx = i2 ? '_' + (i2 + 1) : '';
+        var a = as2[i2], k = i2 ? id + '_' + (i2 + 1) : id;
+        Q['ok_' + id + sfx] = (post && a && canAct(Q, id, i2)) ? 1 : 0;
+        Q['left_' + id + sfx] = a ? (a.uses - (Q['uses_' + k] || 0)) : 0;
+        Q['cdleft_' + id + sfx] = Q['cd_' + k] || 0;
+      });
     });
     return Q;
   }
