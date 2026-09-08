@@ -639,7 +639,14 @@
       //  0 は「共産党と完全に切れている」という意味の値なので、|| で 40 に
       //  読み替えてはいけない。切ったのに切った得が出ない不具合だった。
       var rk = (Q.rel_kyosan === undefined) ? 40 : Q.rel_kyosan;
-      var rT = this.ROSOKON_START + (rk - 40) * 0.30 - (grip - 50) * 0.16
+      //  統一労組懇は共産党系である。遠ざければ痩せる ── ここまでは前と同じ。
+      //  ただし以前は右肩上がりで、共産党と組むほど太る一方だった。
+      //  それだと社共共闘の線に乗ったまま左で労戦を統一する道が、数の上で
+      //  存在しない（監査で rT が 36 を下回らず、門の 26 に永久に届かない）。
+      //  深く組めば別の旗で出る理由のほうが無くなるので、共闘可能の線（五十）を
+      //  頂点にした山にする。切るか、抱き込むか、どちらでも痩せる。
+      var rkT = rk <= 50 ? (rk - 40) * 0.30 : 3 - (rk - 50) * 0.40;
+      var rT = this.ROSOKON_START + rkT - (grip - 50) * 0.16
              - Math.min(12, pts * 0.25);
       if (tT < 4) { tT = 4; }
       if (rT < 3) { rT = 3; }
@@ -3032,7 +3039,8 @@
         when: function (Q) { return Q.year >= 1972; } },
       // あさま山荘　1972年〜・史実
       { n: 3006, id: 'a3_asama', name: 'あさま山荘', acts: [3], need: { name: 0.2 }, year: 1972, fixed: true,
-        when: function (Q) { return Q.year >= 1972; } },
+        when: function (Q) { return Q.year >= 1972 &&
+                 !Q.evdone_sp_rengo_sekigun1972; } },
       // 日中国交正常化　1972年〜・史実
       { n: 3007, id: 'a3_nicchu', name: '日中国交正常化', acts: [3], need: { rel: 0.25 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
@@ -3263,7 +3271,8 @@
       // 社公合意　軸未定/社公民・1980年〜・史実
       { n: 4005, id: 'a4_shako_goi', name: '社公合意', acts: [4], need: { rel: 0.3 }, year: 1980, fixed: true,
         when: function (Q) { return Q.year >= 1980 &&
-                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.evdone_sp_shako1980; } },
       // ハプニング解散　1980年〜・史実
       { n: 4006, id: 'a4_happening', name: 'ハプニング解散', acts: [4], need: { diet: 0.3 }, year: 1980, fixed: true,
         when: function (Q) { return Q.year >= 1980; } },
@@ -3530,7 +3539,7 @@
       { n: 5009, id: 'a5_rengo_kessei', name: '連合結成', acts: [5], need: { labor: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0; } },
+                 ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0 && !Q.evdone_sp_rengo1989; } },
       // 昭和が終わる　1989年〜・史実
       { n: 5163, id: 'a5_showa_owari', name: '昭和が終わる', acts: [5], need: { name: 0.2 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3561,7 +3570,7 @@
       { n: 7605, id: 'rengo_kessei_sa', name: '連合結成', acts: [5], need: { labor: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0; } },
+                 ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0 && !Q.evdone_sp_rengo1989; } },
       // 労働戦線の帰結　1989年〜・史実
       { n: 8002, id: 'a5_roso_kiketsu', name: '労働戦線の帰結', acts: [5], need: { labor: 0.2 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989; } },
@@ -4284,7 +4293,8 @@
       { n: 2012, id: 'a2_michi_1', name: '「道」第一次草案', acts: [2], need: { koryo: 0.3 }, year: 1964,
         when: function (Q) { return Q.year >= 1964 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.3) &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_sp_michi1966; } },
       // 協会の理論誌　帯左
       { n: 2014, id: 'a2_kyokai_ron', name: '協会の理論誌', acts: [2], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
@@ -4412,7 +4422,7 @@
       { n: 5002, id: 'a5_shin_sengen', name: '新宣言', acts: [5], need: { koryo: 0.2 }, year: 1986,
         when: function (Q) { return Q.year >= 1986 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 Q.kyokai_grip >= 35; } },
+                 Q.kyokai_grip >= 35 && !Q.evdone_sp_shin_sengen1986; } },
       // 日本新党　1992年〜
       { n: 5015, id: 'a5_nihon_shinto', name: '日本新党', acts: [5], need: { hr: 0.2 }, year: 1992,
         when: function (Q) { return Q.year >= 1992 &&
@@ -4524,7 +4534,8 @@
       // 協会の反撃　帯左
       { n: 4102, id: 'a4_b1_kyokai_hansen', name: '協会の反撃', acts: [4], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
-                 [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.saha_independent && Q.kyokai_grip >= 40; } },
       // 軍縮の国際行動　帯左
       { n: 4103, id: 'a4_b1_gunshuku', name: '軍縮の国際行動', acts: [4], need: { rally: 0.2 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.2) &&
@@ -5111,11 +5122,11 @@
       { n: 9103, id: 'sp_year1964', name: '一九六四年', acts: [2], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1964, 11); } },
       { n: 9104, id: 'sp_michi1966', name: '日本における社会主義への道', acts: [2], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1966, 1); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1966, 1) && !Q.evdone_a2_michi_1; } },
       { n: 9105, id: 'sp_tokyo1967', name: '東京都知事選', acts: [2], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1967, 4); } },
       { n: 9111, id: 'sp_rengo_sekigun1972', name: 'あさま山荘', acts: [3], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1972, 2); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1972, 2) && !Q.evdone_a3_asama; } },
       { n: 9112, id: 'sp_oil1973', name: '石油危機', acts: [3], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1973, 10); } },
       { n: 9113, id: 'sp_nanin1974', name: '七人委員会', acts: [3], fixed: true,
@@ -5127,11 +5138,11 @@
       { n: 9121, id: 'sp_jichitai1979', name: '革新自治体の崩壊', acts: [4], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1979, 4); } },
       { n: 9122, id: 'sp_shako1980', name: '社公合意', acts: [4], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1980, 1); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1980, 1) && !Q.evdone_a4_shako_goi; } },
       { n: 9123, id: 'sp_hibuso1984', name: '非武装中立', acts: [4], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1984, 1); } },
       { n: 9131, id: 'sp_shin_sengen1986', name: '新宣言', acts: [5], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1986, 1); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1986, 1) && !Q.evdone_a5_shin_sengen; } },
       { n: 9132, id: 'sp_kokutetsu1987', name: '国鉄分割民営化', acts: [5], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1987, 4); } },
       //  消費税とマドンナは七月の参院選の結果を語る。参院選のあとに出す。
@@ -5139,7 +5150,8 @@
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 7) && !!Q.evdone_hc1989; } },
       //  連合の結成は十一月。参院選とマドンナのあと。
       { n: 9134, id: 'sp_rengo1989', name: '連合結成', acts: [5], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 11) && !!Q.evdone_sp_madonna1989; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 11) && !!Q.evdone_sp_madonna1989
+          && !Q.evdone_a5_rengo_kessei && !Q.evdone_rengo_kessei_sa; } },
       { n: 9135, id: 'sp_gulf1991', name: '湾岸戦争', acts: [5], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1991, 1); } },
       { n: 9136, id: 'sp_pko1992', name: 'PKO協力法', acts: [5], fixed: true,
