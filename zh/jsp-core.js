@@ -2059,20 +2059,22 @@
     GRAIN_FINE: 1,
     CRISIS_MAX_FINE: 4,
     GRAIN_COARSE: 3,
+    //  危機の理由は、名前だけでなく「何をすれば抜けるか」も持つ。
+    //  脇柱の危機の面がこの二つを並べて出す。
     crisisReasons: function (Q) {
-      var r = [], self = this, f;
+      var r = [], f;
       var fs = ['uha', 'chuu', 'chusa', 'saha'];
       var worst = 0;
       for (var i = 0; i < fs.length; i++) {
         f = fs[i];
         if (this.inParty(Q, f) && (Q['mood_' + f] || 0) > worst) { worst = Q['mood_' + f]; }
       }
-      if (worst >= 92) { r.push('有派阀站在出口跟前'); }
-      if (Q.in_power && Q.cab_kind !== 1 && (Q.coalition_rel || 0) <= 25) { r.push('联合快要垮了'); }
-      if (Q.act === 1 && Q.phase === 2) { r.push('安保国会'); }
-      if (Q.act === 5 && Q.phase === 3) { r.push('政界重编'); }
-      if (Q.in_power && (Q.national_budget || 0) < 0) { r.push('国家预算编不出来'); }
-      if ((Q.arrears || 0) >= 20 && (Q.budget || 0) <= 1) { r.push('党的金库空了'); }
+      if (worst >= 92) { r.push(['有派阀站在出口跟前', '去安抚火气最大的那个派阀']); }
+      if (Q.in_power && Q.cab_kind !== 1 && (Q.coalition_rel || 0) <= 25) { r.push(['联合快要垮了', '把执政党内部的关系拉回来']); }
+      if (Q.act === 1 && Q.phase === 2) { r.push(['安保国会', '一直持续到这个局面结束']); }
+      if (Q.act === 5 && Q.phase === 3) { r.push(['政界重编', '一直持续到这个局面结束']); }
+      if (Q.in_power && (Q.national_budget || 0) < 0) { r.push(['国家预算编不出来', '把国家预算拉回黑字']); }
+      if ((Q.arrears || 0) >= 20 && (Q.budget || 0) <= 1) { r.push(['党的金库空了', '补进资金，止住欠付']); }
       return r;
     },
     //  危機は「挿話」である。局面ごとに一度きり、続くのは
@@ -2093,13 +2095,22 @@
         if (!on || Q.crisis_turns_left <= 0) {
           Q.crisis_on = 0;
           Q.crisis_why = '';
+          Q.crisis_rows = '';
+          Q.crisis_n = 0;
           Q.crisis_turns_left = 0;
         }
       } else if (on && !Q.crisis_used) {
         //  局面ごとに一度だけ。crisis_used は局面の境で戻る
         Q.crisis_used = 1;
         Q.crisis_on = 1;
-        Q.crisis_why = r.join('・');
+        //  帯は横に短く畳む。脇柱の面は理由ごとに一行ずつ立てる ──
+        //  理由が三つ重なったとき、点で繋いだ一行は読めない。
+        Q.crisis_why = r.map(function (x) { return x[0]; }).join('・');
+        Q.crisis_rows = r.map(function (x) {
+          return '<span class="jsp-cr-item">' + x[0] + '</span>'
+            + '<span class="jsp-cr-way">' + '脱出的路' + '　' + x[1] + '</span>';
+        }).join('');
+        Q.crisis_n = r.length;
         //  「暦は同じで手数が三倍」を素直にやると、第Ⅱ幕の12手局面で
         //  +24手になってしまう。危機として細かく刻むのは先の四手ぶんまで。
         Q.crisis_gain = Math.min(Q.turns_left, this.CRISIS_MAX_FINE) * (this.GRAIN_COARSE - 1);
@@ -2145,6 +2156,28 @@
       5: 'bg/act5.jpg',
       crisis: 'bg/crisis.jpg'
     },
+    //  危機の脇柱。原ゲームの emergency_tab と同じ置き方で、
+    //  危機のあいだだけ脇柱の頭に一枚増える。開いた手で一度だけそこへ移り、
+    //  そのあとは読み手が好きな面に戻ってよい（勝手に引き戻さない）。
+    crisisTab: function (Q) {
+      try {
+        var d = (typeof document !== 'undefined') && document;
+        if (!d) { return; }
+        var btn = d.getElementById('crisis_tab');
+        if (!btn) { return; }
+        btn.style.display = Q.crisis_on ? 'block' : 'none';
+        if (Q.crisis_on) {
+          if (!Q.crisis_shown && window.changeTab) {
+            Q.crisis_shown = 1;
+            window.changeTab('status.crisis', 'crisis_tab');
+          }
+        } else if (window.statusTab === 'status.crisis' && window.changeTab) {
+          //  危機が明けたら、その面は空になるので状況へ戻す
+          window.changeTab('status', 'main_tab');
+        }
+      } catch (e) { /* 脇柱が出ないだけなので、盤面は止めない */ }
+    },
+
     scenery: function (Q) {
       var art = window.JSP_ART || 'art/';
       var url = art + (Q.crisis_on ? this.BG.crisis : (this.BG[Q.act] || this.BG[1]));
@@ -2155,6 +2188,7 @@
           var c = b.className.replace(/\s*jsp-crisis\b/g, '');
           b.className = Q.crisis_on ? (c + ' jsp-crisis') : c;
         }
+        this.crisisTab(Q);
         var ui = (typeof window !== 'undefined') && window.dendryUI;
         if (!ui) { return url; }
         var st = ui.dendryEngine && ui.dendryEngine.state;
