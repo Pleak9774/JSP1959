@@ -3150,7 +3150,7 @@
       // 社会市民連合　1977年〜・史実
       { n: 3210, id: 'a3_shakai_shiminren', name: '社会市民連合', acts: [3], need: { split: 0.35 }, year: 1977, fixed: true,
         when: function (Q) { return Q.year >= 1977 &&
-                 Q.gone_chuu || Q.sp_shaminren; } },
+                 Q.gone_chuu || Q.shamin_exists; } },
       // 一九七七年参院選　1977年〜・史実
       { n: 3211, id: 'a3_1977_sanin', name: '一九七七年参院選', acts: [3], need: { hc: 0.35 }, year: 1977, fixed: true,
         when: function (Q) { return Q.year >= 1977 &&
@@ -4278,8 +4278,8 @@
       { n: 2026, id: 'a2_kokutetsu', name: '国鉄の組合', acts: [2], need: { labor: 0.35 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.35); } },
       // 保革伯仲の予感
-      { n: 2028, id: 'a2_hokakuhaku', name: '保革伯仲の予感', acts: [2], need: { hr: 0.4 },
-        when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.4) &&
+      { n: 2028, id: 'a2_hokakuhaku', name: '保革伯仲の予感', acts: [2], need: { hr: 0.2 },
+        when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
                  Q.minsha_exists && Q.seats_hr >= 130; } },
       // 「道」第二次草案　帯左・1966年〜
       { n: 2029, id: 'a2_michi_2', name: '「道」第二次草案', acts: [2], need: { koryo: 0.4 }, year: 1966,
@@ -4384,9 +4384,9 @@
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
                  Q.kyokai_grip >= 35; } },
       // 日本新党　1992年〜
-      { n: 5015, id: 'a5_nihon_shinto', name: '日本新党', acts: [5], need: { hr: 0.4 }, year: 1992,
+      { n: 5015, id: 'a5_nihon_shinto', name: '日本新党', acts: [5], need: { hr: 0.2 }, year: 1992,
         when: function (Q) { return Q.year >= 1992 &&
-                 Q.c_hr >= window.JSP.needOf(Q, 0.4) &&
+                 Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
                  Q.komei_exists; } },
       // 職場の学習会　帯左
       { n: 3101, id: 'a3_b1_roudou_gakushu', name: '職場の学習会', acts: [3], need: { org: 0.2 },
@@ -4454,8 +4454,8 @@
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 共産党の伸長　軸社共
-      { n: 3142, id: 'a3_c1_kyosan_nobiru', name: '共産党の伸長', acts: [3], need: { hr: 0.25 },
-        when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.25) &&
+      { n: 3142, id: 'a3_c1_kyosan_nobiru', name: '共産党の伸長', acts: [3], need: { hr: 0.14 },
+        when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.14) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 革新統一の政策協定　軸社共
       { n: 3143, id: 'a3_c1_kakushin_kyotei', name: '革新統一の政策協定', acts: [3], need: { rel: 0.3 },
@@ -4567,8 +4567,8 @@
       { n: 4171, id: 'a4_gakureki', name: '党の顔ぶれ', acts: [4], need: { mem: 0.3 },
         when: function (Q) { return Q.c_mem >= window.JSP.needOf(Q, 0.3); } },
       // 参院の存在感
-      { n: 4172, id: 'a4_sanin_giin', name: '参院の存在感', acts: [4], need: { hc: 0.3 },
-        when: function (Q) { return Q.c_hc >= window.JSP.needOf(Q, 0.3); } },
+      { n: 4172, id: 'a4_sanin_giin', name: '参院の存在感', acts: [4], need: { hc: 0.14 },
+        when: function (Q) { return Q.c_hc >= window.JSP.needOf(Q, 0.14); } },
       // 老いていく国
       { n: 4173, id: 'a4_kaigo', name: '老いていく国', acts: [4], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3); } },
@@ -4638,8 +4638,8 @@
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
                  !Q.evdone_a5_sakyo_saigo; } },
       // 革新票の行方　軸社共
-      { n: 5142, id: 'a5_c1_kaku_hyo', name: '革新票の行方', acts: [5], need: { hr: 0.3 },
-        when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.3) &&
+      { n: 5142, id: 'a5_c1_kaku_hyo', name: '革新票の行方', acts: [5], need: { hr: 0.2 },
+        when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 非自民の枠　軸社公民
       { n: 5151, id: 'a5_c2_hijimin', name: '非自民の枠', acts: [5], need: { rel: 0.3 },
@@ -4650,9 +4650,9 @@
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.35) &&
                  [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 新党さきがけ　1993年〜
-      { n: 5171, id: 'a5_sakigake', name: '新党さきがけ', acts: [5], need: { hr: 0.35 }, year: 1993,
+      { n: 5171, id: 'a5_sakigake', name: '新党さきがけ', acts: [5], need: { hr: 0.2 }, year: 1993,
         when: function (Q) { return Q.year >= 1993 &&
-                 Q.c_hr >= window.JSP.needOf(Q, 0.35) &&
+                 Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
                  Q.cab_kind > 0; } },
       // 政権に入るという仕事
       { n: 5174, id: 'a5_kanryo_naikaku', name: '政権に入るという仕事', acts: [5], need: { cab: 0.2 },
@@ -7473,17 +7473,28 @@
       sone:      { name: '曽禰益',     faction: 'uha',   note: '西尾派' },
       sakisaka:  { name: '向坂逸郎',   faction: 'saha',  note: '社会主義協会' }
     },
+    //  人物は jsp-leaders.js の FIG が正本で、FIGURES は第Ⅰ〜Ⅱ幕ぶんの
+    //  控えでしかない。三十六人のうち二十五人が FIGURES に無く、
+    //  factionOf が null を返していた ── 派閥の受動効果も、分裂後の
+    //  人事の後始末も、民主リベラル新党の門も、そこで外れていた。
+    //  正本を先に見て、無ければ控えを見る。
+    figOf: function (id) {
+      if (!id) { return null; }
+      var L = this.LEADERS;
+      if (L && L.FIG && L.FIG[id]) { return L.FIG[id]; }
+      return this.FIGURES[id] || null;
+    },
     factionOf: function (id) {
-      var f = this.FIGURES[id];
+      var f = this.figOf(id);
       return f ? f.faction : null;
     },
     nameOf: function (id) {
-      var f = this.FIGURES[id];
+      var f = this.figOf(id);
       return f ? f.name : '（空席）';
     },
     postLine: function (Q, post) {
       var id = Q['post_' + post];
-      var f = this.FIGURES[id];
+      var f = this.figOf(id);
       if (!f) { return '（空席）'; }
       return f.name + ' <span style="opacity:.65;font-size:.9em">' + FNAME[f.faction] + '</span>';
     },
