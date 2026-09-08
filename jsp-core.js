@@ -88,6 +88,32 @@
     //   共産 = 全国に薄く散っている
     PARTY_EFF: { jimin: 1.0, shakai: 1.0, minsha: 1.0, komei: 1.30, kyosan: 0.80, other: 1.0 },
 
+    // ══════════════════════════════════════════════════════════
+    //  選挙制度
+    //
+    //  senkyoku_seido は長らくどこからも読まれていなかった ──
+    //  憲法で比例代表にしても、政治改革で小選挙区を通しても、
+    //  議席の出方は中選挙区のままだった。事象の本文は「小選挙区に
+    //  なれば第二党は議席を大きく減らす」と書いているのに、
+    //  盤がそれを実装していなかった。
+    //
+    //  k は得票から議席への写像の傾き。1 より大きいと大きい党へ寄り、
+    //  小さいと得票率どおりに近づく。thr は足切り（％）。
+    //  0（中選挙区）は k=1.00 / thr=3.0 で、これまでの校正と同じ値である。
+    // ══════════════════════════════════════════════════════════
+    SEIDO: {
+      0: { name: '中選挙区', k: 1.00, thr: 3.0 },
+      1: { name: '小選挙区比例代表並立制', k: 1.35, thr: 4.0 },
+      2: { name: '比例中心', k: 0.92, thr: 1.5 },
+      3: { name: '比例代表', k: 0.85, thr: 1.0 },
+      4: { name: '小選挙区比例代表併用制', k: 0.88, thr: 1.5 },
+      5: { name: '小選挙区比例代表連用制', k: 0.90, thr: 1.5 },
+      6: { name: '単純小選挙区', k: 1.90, thr: 8.0 }
+    },
+    seidoOf: function (Q) {
+      return this.SEIDO[Q.senkyoku_seido || 0] || this.SEIDO[0];
+    },
+
     allocate: function (Q) {
       var share = this.tally(Q);
       var pts = {}, tot = 0, i, j, l, p, sum, v;
@@ -104,10 +130,14 @@
         }
       }
       for (j = 0; j < PARTIES.length; j++) { tot += pts[PARTIES[j]]; }
+      //  制度で足切りと傾きが変わる。中選挙区（既定）は従来と同じ値。
+      var sd = this.seidoOf(Q);
       var adj = {}, t2 = 0;
       for (j = 0; j < PARTIES.length; j++) {
         p = PARTIES[j];
-        adj[p] = Math.max(0, pts[p] / tot * 100 - this.SEAT_THRESHOLD);
+        adj[p] = Math.max(0, pts[p] / tot * 100 - sd.thr);
+        //  k>1 は小選挙区の増幅、k<1 は比例の平坦化。
+        if (adj[p] > 0 && sd.k !== 1) { adj[p] = Math.pow(adj[p], sd.k); }
         t2 += adj[p];
       }
       //  党ごとに別々に丸めると、合計が定数にならない
@@ -2916,11 +2946,11 @@
       // 日中国交正常化　1972年〜・史実
       { n: 133, id: 'nicchu', name: '日中国交正常化', acts: [3], need: { rel: 0.14 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
-                 !Q.evdone_a3_nicchu; } },
+                 !Q.evdone_a3_nicchu && !Q.gov_ours; } },
       // 金脈問題　1972年〜・史実
       { n: 135, id: 'kinmyaku', name: '金脈問題', acts: [3], need: { diet: 0.2 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
-                 !Q.evdone_a3_kaneda; } },
+                 !Q.evdone_a3_kaneda && !Q.gov_ours; } },
       // ニクソン訪中　1972年〜・史実
       { n: 322, id: 'a3_bei_chugoku', name: 'ニクソン訪中', acts: [3], need: { rel: 0.14 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972; } },
@@ -2933,7 +2963,7 @@
       // 日中国交正常化　1972年〜・史実
       { n: 3007, id: 'a3_nicchu', name: '日中国交正常化', acts: [3], need: { rel: 0.25 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
-                 !Q.evdone_nicchu; } },
+                 !Q.evdone_nicchu && !Q.gov_ours; } },
       // 一九七二年十二月　1972年〜・史実
       { n: 3008, id: 'a3_1972', name: '一九七二年十二月', acts: [3], need: { hr: 0.3 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
@@ -3029,7 +3059,7 @@
       // ロッキードのあと　1976年〜・史実
       { n: 432, id: 'a3_lockheed_ato', name: 'ロッキードのあと', acts: [3], need: { diet: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 Q.komei_exists; } },
+                 Q.komei_exists && !Q.gov_ours; } },
       // 革新自治体の敗北　1976年〜・史実
       { n: 433, id: 'a3_kakushin_haiboku', name: '革新自治体の敗北', acts: [3], need: { rel: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -3132,7 +3162,8 @@
                  !Q.evdone_gengo; } },
       // 一九七九年十月　1979年〜・史実
       { n: 4163, id: 'a4_1979_senkyo', name: '一九七九年十月', acts: [4], need: { hr: 0.25 }, year: 1979, fixed: true,
-        when: function (Q) { return Q.year >= 1979; } },
+        when: function (Q) { return Q.year >= 1979 &&
+                 !Q.gov_ours; } },
       // 革新自治体の崩落　帯左/中間左・1979年〜・史実
       { n: 7402, id: 'jichitai_hokai_sa', name: '革新自治体の崩落', acts: [4], need: { org: 0.3 }, year: 1979, fixed: true,
         when: function (Q) { return Q.year >= 1979 &&
@@ -3201,7 +3232,8 @@
       // 中曽根内閣　帯中間右/右・1982年〜・史実
       { n: 4009, id: 'a4_nakasone', name: '中曽根内閣', acts: [4], need: { name: 0.25 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.gov_ours; } },
       // 教科書問題　1982年〜・史実
       { n: 4010, id: 'a4_kyokashu', name: '教科書問題', acts: [4], need: { rally: 0.2 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
@@ -3214,14 +3246,16 @@
       // 中曽根内閣　帯左/中間左・1982年〜・史実
       { n: 7405, id: 'nakasone_sa', name: '中曽根内閣', acts: [4], need: { name: 0.25 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.gov_ours; } },
       // 共産党の綱領改定　1982年〜・史実
       { n: 4805, id: 'a4_kyosan_koryo', name: '共産党の綱領改定', acts: [4], need: { rel: 0.14 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
                  Q.kyosan_kaikaku; } },
       // 「不沈空母」発言　1983年〜・史実
       { n: 154, id: 'fuchinkubo', name: '「不沈空母」発言', acts: [4], need: { rally: 0.14 }, year: 1983, fixed: true,
-        when: function (Q) { return Q.year >= 1983; } },
+        when: function (Q) { return Q.year >= 1983 &&
+                 !Q.gov_ours; } },
       // 男女雇用機会均等法　1983年〜・史実
       { n: 155, id: 'kintou_ho', name: '男女雇用機会均等法', acts: [4], need: { diet: 0.2 }, year: 1983, fixed: true,
         when: function (Q) { return Q.year >= 1983 &&
@@ -3242,7 +3276,8 @@
                  Q.minsha_exists; } },
       // 臨教審　1983年〜・史実
       { n: 526, id: 'a4_kyoiku_rinkyoshin', name: '臨教審', acts: [4], need: { org: 0.3 }, year: 1983, fixed: true,
-        when: function (Q) { return Q.year >= 1983; } },
+        when: function (Q) { return Q.year >= 1983 &&
+                 !Q.gov_ours; } },
       // 田中判決　帯中間右/右・1983年〜・史実
       { n: 4011, id: 'a4_tanaka_hanketsu', name: '田中判決', acts: [4], need: { diet: 0.3 }, year: 1983, fixed: true,
         when: function (Q) { return Q.year >= 1983 &&
@@ -3381,7 +3416,8 @@
         when: function (Q) { return Q.year >= 1987; } },
       // 竹下内閣　1987年〜・史実
       { n: 5162, id: 'a5_takeshita', name: '竹下内閣', acts: [5], need: { name: 0.2 }, year: 1987, fixed: true,
-        when: function (Q) { return Q.year >= 1987; } },
+        when: function (Q) { return Q.year >= 1987 &&
+                 !Q.gov_ours; } },
       // 統一地方選（一九八七年）　1987年〜・史実
       { n: 8032, id: 'a5_touitsu_87', name: '統一地方選（一九八七年）', acts: [5], need: { org: 0.2 }, year: 1987, fixed: true,
         when: function (Q) { return Q.year >= 1987 &&
@@ -3410,7 +3446,8 @@
         when: function (Q) { return Q.year >= 1988; } },
       // 宇野内閣　1989年〜・史実
       { n: 5007, id: 'a5_uno', name: '宇野内閣', acts: [5], need: { name: 0.3 }, year: 1989, fixed: true,
-        when: function (Q) { return Q.year >= 1989; } },
+        when: function (Q) { return Q.year >= 1989 &&
+                 !Q.gov_ours; } },
       // 山が動いた　帯中間右/右・1989年〜・史実
       { n: 5008, id: 'a5_yama_ga_ugoita', name: '山が動いた', acts: [5], need: { hc: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3433,7 +3470,8 @@
         when: function (Q) { return Q.year >= 1989; } },
       // 海部内閣　1989年〜・史実
       { n: 5166, id: 'a5_kaifu', name: '海部内閣', acts: [5], need: { name: 0.25 }, year: 1989, fixed: true,
-        when: function (Q) { return Q.year >= 1989; } },
+        when: function (Q) { return Q.year >= 1989 &&
+                 !Q.gov_ours; } },
       // 総評解散　1989年〜・史実
       { n: 5169, id: 'a5_sohyo_kaisan', name: '総評解散', acts: [5], need: { labor: 0.3 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3701,7 +3739,7 @@
       // 売上税
       { n: 171, id: 'uriagezei', name: '売上税', acts: [5], need: { diet: 0.14 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
-                 !Q.evdone_a5_baiagezei; } },
+                 !Q.evdone_a5_baiagezei && !Q.gov_ours; } },
       // 土井委員長の登場　帯中間右/右
       { n: 172, id: 'doi_shunin', name: '土井委員長の登場', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
@@ -4007,7 +4045,8 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 一般消費税の挫折
       { n: 521, id: 'a4_shohizei_zen', name: '一般消費税の挫折', acts: [4], need: { diet: 0.3 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
+                 !Q.gov_ours; } },
       // 軍縮の国際世論
       { n: 522, id: 'a4_kaku_gunshuku', name: '軍縮の国際世論', acts: [4], need: { rally: 0.3 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.3); } },
@@ -5226,6 +5265,7 @@
       'shako_goi', 'hibuso_churitsu', 'zenyato', 'kokutetsu_debate', 'kokutetsu_guard',
       'shin_sengen', 'rengo_formed', 'madonna', 'pko_stance', 'gulf_stance',
       'won_majority_ever', 'left_unity', 'senkyoku_seido', 'zenrokyo',
+      'gov_ours', 'gov_ldp',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
       //  労働戦線。五九年の春闘の形、六六年と八三年の総評人事、
       //  総評の中の左右比と二つの塊。ここは幕をまたいで効き続ける。
@@ -7352,6 +7392,13 @@
       Q.month_name = this.MONTH_JA[Q.month - 1];
       Q.route_band = this.bandOf(Q);
       Q.band_name = this.ROUTE_BANDS[Q.route_band - 1].name;
+      //  いま国を動かしているのは誰か。
+      //   gov_ours   我々の内閣（単独・非自民の連立）。自民党は野に居る
+      //   gov_ldp    自民党の政権。三十四年の既定の側
+      //   自社連立（cab_kind 4）はどちらでもない ── 両方が与党である
+      Q.gov_ours = (Q.in_power && Q.cab_kind !== 4) ? 1 : 0;
+      Q.gov_ldp = (!Q.in_power) ? 1 : 0;
+      Q.seido_name = this.seidoOf(Q).name;
       //  大会の線と、中央との差。脇柱で見せる。
       this.congressRoute(Q);
       Q.del_total = this.delegates(Q).total;
