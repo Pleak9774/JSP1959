@@ -2663,7 +2663,7 @@
       { n: 22, id: 'lockheed', name: 'ロッキード事件', acts: [3], need: { diet: 0.17 },
         // 一九七六年二月
         when: function (Q) { return Q.year >= 1972 && Q.c_diet >= window.JSP.needOf(Q, 0.17); } },
-      { n: 23, id: 'shinjiyu', name: '新自由クラブ', acts: [3], need: { rel: 0.17 },
+      { n: 23, id: 'shinjiyu', name: '新自由俱乐部', acts: [3], need: { rel: 0.17 },
         // 一九七六年六月
         when: function (Q) { return Q.year >= 1972 && Q.c_rel >= window.JSP.needOf(Q, 0.17); } },
       { n: 24, id: 'narita_sangensoku', name: '野党共闘の三原則', acts: [3], need: { koryo: 0.17 },
@@ -3142,7 +3142,7 @@
         when: function (Q) { return Q.year >= 1976 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 新自由クラブ　1976年〜・史実
-      { n: 3016, id: 'a3_shinjiyu', name: '新自由クラブ', acts: [3], need: { hr: 0.35 }, year: 1976, fixed: true,
+      { n: 3016, id: 'a3_shinjiyu', name: '新自由俱乐部', acts: [3], need: { hr: 0.35 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976; } },
       // 保革伯仲　帯中間右/右・1976年〜・史実
       { n: 3017, id: 'a3_hakuchu', name: '保革伯仲', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
@@ -4680,7 +4680,7 @@
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.35) &&
                  [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 新党さきがけ　1993年〜
-      { n: 5171, id: 'a5_sakigake', name: '新党さきがけ', acts: [5], need: { hr: 0.2 }, year: 1993,
+      { n: 5171, id: 'a5_sakigake', name: '新党先驱', acts: [5], need: { hr: 0.2 }, year: 1993,
         when: function (Q) { return Q.year >= 1993 &&
                  Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
                  Q.cab_kind > 0; } },
@@ -5817,16 +5817,18 @@
     SPLINTER: {
       //  一九七六、ロッキードのあと河野洋平ら六人が離党。史実 17 議席。
       //  一九八六年に自民へ復党して解党する ── 分裂して戻る唯一の例。
-      shinjiyu: { parent: 'jimin', name: '新自由クラブ', born: 1976, back: 1986 },
+      //  ally は「自民を降ろす側に立つか」。新自由クラブは一九八三年に
+      //  自民と連立を組み、八六年には復党しているので、受け皿には数えない。
+      shinjiyu: { parent: 'jimin', name: '新自由俱乐部', born: 1976, back: 1986, ally: false },
       //  一九九二、細川護熙。史実は一九九三年に 35 議席。
       //  母党は自民にする。史実の三十五議席は都市の無党派と
       //  自民から来ていて、「その他」の四十議席からはその大きさが出ない
       //  （実測で中央値 9 議席にしかならなかった）。
-      nihonshin: { parent: 'jimin', name: '日本新党', born: 1992 },
+      nihonshin: { parent: 'jimin', name: '日本新党', born: 1992, ally: true },
       //  一九九三、羽田・小沢。史実 55 議席。
-      shinsei: { parent: 'jimin', name: '新生党', born: 1993 },
+      shinsei: { parent: 'jimin', name: '新生党', born: 1993, ally: true },
       //  一九九三、武村正義。史実 13 議席。
-      sakigake: { parent: 'jimin', name: '新党さきがけ', born: 1993 }
+      sakigake: { parent: 'jimin', name: '新党先驱', born: 1993, ally: true }
     },
     //  切り出す順。一九九三年の自民の分裂を先に正確に取り、
     //  日本新党はその残りから取る。逆にすると ldp_split と
@@ -5891,6 +5893,55 @@
         n += Q['res_sp_' + this.SPLINTER_KEYS[i]] || 0;
       }
       return n;
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  組閣の受け皿
+    //
+    //  非自民の議席をぜんぶ足しても内閣にはならない。数のうしろに
+    //  「一緒に組める」という関係が要る。関係の目盛りは relation の
+    //  qdisplay と同じ切り方をする ── 五十以上が「共闘可能」である。
+    //
+    //  数えるのは
+    //    ・我々の議席
+    //    ・共闘可能まで来ている党（公明・民社・共産）
+    //    ・自民から割れて出た新党のうち、自民を降ろす側に立つもの
+    //  「その他」は名簿ではなく残余なので数えない。
+    //  自民党とだけは、この道では組まない（自社連立は jisha_pact の別道）。
+    KYOTOU_LINE: 50,
+    coalitionBloc: function (Q) {
+      var line = this.KYOTOU_LINE;
+      var rows = [], seats = Q.seats_hr || 0, i, k, s, n;
+      var add = function (name, num, rel) {
+        if (!(num > 0) || (rel || 0) < line) { return; }
+        rows.push({ name: name, seats: num, rel: rel });
+        seats += num;
+      };
+      if (Q.komei_exists) { add('公明党', Q.res_komei || 0, Q.rel_komei); }
+      if (Q.minsha_exists) { add('民社党', Q.res_minsha || 0, Q.rel_minsha); }
+      if (!Q.kyosan_merged) { add('共产党', Q.res_kyosan || 0, Q.rel_kyosan); }
+      for (i = 0; i < this.SPLINTER_KEYS.length; i += 1) {
+        k = this.SPLINTER_KEYS[i];
+        s = this.SPLINTER[k];
+        if (!s || !s.ally) { continue; }
+        n = Q['res_sp_' + k] || 0;
+        if (n <= 0) { continue; }
+        //  自民から割れて出た党は、割れた理由がそのまま「組める」根拠になる。
+        //  関係の目盛りを持っていないので、ここは議席だけで数える。
+        rows.push({ name: s.name, seats: n, rel: null });
+        seats += n;
+      }
+      return { seats: seats, parties: rows };
+    },
+
+    //  受け皿を頁に出すための控え。行が無ければ「我々だけ」と書く。
+    blocLine: function (Q, bloc) {
+      var b = bloc || this.coalitionBloc(Q);
+      var out = ['<b>' + (Q.party_name || '社会党') + '</b>　' + (Q.seats_hr || 0)];
+      for (var i = 0; i < b.parties.length; i++) {
+        out.push(b.parties[i].name + '　' + b.parties[i].seats);
+      }
+      return out.join('<br>');
     },
 
     //  一九九三年、自民党はどれだけ割れるか。
@@ -7189,7 +7240,11 @@
     //    route 2  非自民が過半、かつ相手との関係が足りている（主導）
     //    route 3  過半はあるが担がれない（参加のみ）
     //    route 0  受け皿が無い
-    cabinetCheck: function (Q) {
+    //  commit を立てて呼ぶと、その場で政権に入る／保つところまでやる。
+    //  立てずに呼ぶと数えるだけで、入るかどうかは組閣の頁が決める
+    //  （＝プレイヤーが決める）。数を失って落ちるほうは選べないので、
+    //  commit の有無にかかわらずその場で降りる。
+    cabinetCheck: function (Q, commit) {
       var maj = Math.floor((Q.hr_total || 511) / 2) + 1;
       Q.cab_majority_line = maj;
       var C = this.CAB;
@@ -7197,11 +7252,24 @@
       //  それは「保った」ということで、全局勝利の一つ目の道になる。
       var wasIn = !!Q.in_power;
       Q.was_in_power = wasIn ? 1 : 0;
+      Q.jisha_lost = 0;
+      //  受け皿は route によらず数えて頁に出す
+      var bloc = this.coalitionBloc(Q);
+      Q.cab_bloc = bloc.seats;
+      Q.cab_bloc_n = bloc.parties.length;
+      Q.cab_bloc_list = this.blocLine(Q, bloc);
+      Q.cab_nonldp = this.nonLdpSeats(Q);
+      //  受け皿の中でいちばん大きいのが我々か。首班を出せるかがこれで決まる。
+      var top = 0, i;
+      for (i = 0; i < bloc.parties.length; i++) {
+        if (bloc.parties[i].seats > top) { top = bloc.parties[i].seats; }
+      }
+      Q.cab_lead = (Q.seats_hr || 0) >= top ? 1 : 0;
+
       if (Q.seats_hr >= maj) {
         Q.cab_route = 1; Q.cab_nonldp = Q.seats_hr;
-        if (C) { C.enterPower(Q, 1); }
-        if (wasIn) { Q.power_elections = (Q.power_elections || 0) + 1; }
-        Q.act_power = 1;
+        Q.cab_offer = 1;
+        if (commit) { this.takeCabinet(Q, 1); }
         return 1;
       }
       //  自社連立。民社党化した党が自民党と組んでいるとき、自民と我々の
@@ -7210,30 +7278,81 @@
         var js = (Q.seats_hr || 0) + (Q.res_jimin || 0);
         if (js >= maj) {
           Q.cab_route = 4; Q.cab_nonldp = js;
-          if (C) { C.enterPower(Q, 4); }
-          if (wasIn) { Q.power_elections = (Q.power_elections || 0) + 1; }
-          Q.act_power = 1;
+          Q.cab_offer = 1;
+          if (commit) { this.takeCabinet(Q, 4); }
           return 4;
         }
         Q.jisha_pact = 0;
         Q.jisha_lost = 1;
         if (C && Q.in_power) { C.leavePower(Q); }
-        Q.cab_route = 0; Q.cab_nonldp = this.nonLdpSeats(Q);
+        Q.cab_route = 0; Q.cab_offer = 0;
         return 0;
       }
-      //  分裂した新党を含めて数える（nonLdpSeats に一本化）。
-      //  以前は ldp_split を直に足していたので、新党を入れると二重になる。
-      var nonLDP = this.nonLdpSeats(Q);
-      Q.cab_nonldp = nonLDP;
-      if (nonLDP < maj) { Q.cab_route = 0; if (C && Q.in_power) { C.leavePower(Q); } return 0; }
-      // 共産は連立に入らない。公明と民社の窓口が開いているかで決まる
-      var ok = (Q.rel_komei >= 10) && (Q.rel_minsha >= -10);
-      if (!ok) { Q.cab_route = 3; if (C && Q.in_power) { C.leavePower(Q); } return 0; }
-      Q.cab_route = 2;
-      if (C) { C.enterPower(Q, 2); }
-      if (wasIn) { Q.power_elections = (Q.power_elections || 0) + 1; }
+      //  共闘可能まで来ている党の議席を足して過半に届くか。
+      //  届かなければ、非自民の合計がいくらあっても内閣にはならない。
+      if (bloc.seats < maj) {
+        Q.cab_route = 0; Q.cab_offer = 0;
+        if (C && Q.in_power) { C.leavePower(Q); }
+        return 0;
+      }
+      //  届いている。いちばん大きければ主導（首班を出せる）、
+      //  そうでなければ参加のみ（首班は相手が出す）。
+      Q.cab_route = Q.cab_lead ? 2 : 3;
+      Q.cab_offer = 1;
+      if (commit) { this.takeCabinet(Q, Q.cab_route); }
+      return Q.cab_route;
+    },
+
+    //  組閣を決めたときに呼ぶ。政権に入り、保ったなら一つ数える。
+    takeCabinet: function (Q, route) {
+      var C = this.CAB;
+      //  形が変わったまま居座らせない。主導していた党が参加のみに落ちたら、
+      //  持ち点も省も割り直しになる。
+      if (C && Q.in_power && Q.cab_kind !== route) { C.leavePower(Q); }
+      if (C) { C.enterPower(Q, route); }
+      if (Q.was_in_power) { Q.power_elections = (Q.power_elections || 0) + 1; }
       Q.act_power = 1;
-      return 2;
+      Q.cab_declined = 0;
+      return Q;
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  解散
+    //
+    //  衆議院を解散できるのは総理を出しているときだけである。
+    //  やることは「この局面をここで畳んで、局面の終わりに置いてある
+    //  総選挙を前へ持ってくる」こと ── 予定の総選挙を増やしも減らしもしない。
+    //  残っている手はそのまま捨てることになる。
+    //
+    //  第Ⅰ幕だけは外す。あの幕の局面の切れ目は党大会と安保で、
+    //  総選挙ではないので、前へ持ってくる先が無い。
+    canDissolve: function (Q) {
+      if (!Q.in_power || !Q.has_souri) { return 0; }
+      if ((Q.act || 1) < 2) { return 0; }
+      if ((Q.turns_left || 0) < 2) { return 0; }
+      return this.nextElection(Q) > 0 ? 1 : 0;
+    },
+
+    dissolve: function (Q) {
+      Q.kaisan_n = (Q.kaisan_n || 0) + 1;
+      Q.kaisan_turns_lost = Q.turns_left || 0;
+      Q.turns_left = 0;
+      //  解散は党の中では歓迎されない。数を賭ける判断である。
+      Q.capital = Math.max(0, (Q.capital || 0) - 3);
+      Q.mood_chusa = (Q.mood_chusa || 0) + 5;
+      this.refresh(Q);
+      return Q;
+    },
+
+    //  組まないと決めたときに呼ぶ。政権にいたのなら、そこで降りる。
+    declineCabinet: function (Q) {
+      var C = this.CAB;
+      if (C && Q.in_power) { C.leavePower(Q); }
+      Q.cab_declined = 1;
+      //  野党に留まった判断は左派には歓迎される
+      Q.mood_saha = (Q.mood_saha || 0) + 6;
+      Q.mood_chuu = (Q.mood_chuu || 0) - 6;
+      return Q;
     },
 
     // ── 傾向を押す。上限の手前25%に入ってから鈍る ──────────────
@@ -7786,6 +7905,14 @@
       Q.fac_youth     = FNAME[this.factionOf(Q.post_youth)] || '';
       if (this.LEADERS) { this.LEADERS.sync(Q); }
       if (this.CAB) { this.CAB.sync(Q); }
+      //  解散できるか。札の choose-if は式しか書けないので、ここで数にしておく。
+      Q.can_dissolve = this.canDissolve(Q);
+      //  受け皿の数は選挙を跨がなくても脇柱に出したいので、毎手数え直す。
+      var kb = this.coalitionBloc(Q);
+      Q.cab_bloc = kb.seats;
+      Q.cab_bloc_n = kb.parties.length;
+      Q.cab_bloc_list = this.blocLine(Q, kb);
+      Q.cab_bloc_short = (Q.cab_bloc || 0) - (Q.seats_hr || 0);
       //  政権の札の門。以前は一つの省に紐付けていたので、その省を
       //  取れなかった局では札が丸ごと死んだ ── 監査で「外交の実務」と
       //  「労働行政」は四十局で 0 回であった。副題は「大蔵か通産」と
