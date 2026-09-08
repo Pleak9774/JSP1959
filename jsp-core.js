@@ -428,7 +428,10 @@
       if (t >= 3) {
         Q.sutoken_won = 1;
         this.push(Q, ['kokorou'], 10); this.push(Q, ['minrou'], 4);
-        Q.rel_sohyo += 18; Q.kyokai_grip = Math.min(100, (Q.kyokai_grip || 50) + 10);
+        //  掌握度は 0 まで落ちる値なので || で 50 に読み替えない。
+        //  協会を潰し切った盤でスト権を取ると、掌握が 10 ではなく 60 に跳ねていた。
+        Q.rel_sohyo += 18;
+        Q.kyokai_grip = Math.min(100, ((Q.kyokai_grip === undefined) ? 50 : Q.kyokai_grip) + 10);
         Q.lr_sohyo = Math.min(100, (Q.lr_sohyo === undefined ? 34 : Q.lr_sohyo) + 8);
         Q.members += 6000; this.push(Q, ['shinchukan'], -4);
       } else if (t === 2) {
@@ -2315,11 +2318,17 @@
       { id: 3, key: 'chuu',  name: '中間右（江田）',       lo: -0.5, hi: 1.5 },
       { id: 4, key: 'uha',   name: '右（民主社会主義）',   lo: 1.5,  hi: 5.1 }
     ],
+    //  境目は「以下」で取る。qdisplay（route.qdisplay.dry）の区間は
+    //  dendry の getUserQDisplay が max >= value で見る閉区間なので、
+    //  こちらを r < hi にしておくと、路線がちょうど −2.5 のとき
+    //  脇柱は「左（協会）」と出るのに札は中間左が配られていた。
+    //  路線は 0.5 刻みで動くので、この境目は普通に踏む。
+    //  帯は端を共有しているから、先に当たった側（左寄り）が勝つ。
     bandOf: function (Q) {
       var r = Q.route || 0, i, b;
       for (i = 0; i < this.ROUTE_BANDS.length; i++) {
         b = this.ROUTE_BANDS[i];
-        if (r >= b.lo && r < b.hi) { return b.id; }
+        if (r >= b.lo && r <= b.hi) { return b.id; }
       }
       return r < 0 ? 1 : 4;
     },
