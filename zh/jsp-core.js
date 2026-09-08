@@ -2002,8 +2002,12 @@
       if (Q.shamin_exists) {
         var s = Math.min(4, Q.res_other || 0);
         Q.seats_hr += s; Q.res_shakai = Q.seats_hr; Q.res_other -= s;
-        this.transfer(Q, 'shinchukan', 'other', 'shakai', 5);
-        this.transfer(Q, 'mishoshiki', 'other', 'shakai', 3);
+        //  畳んだ票は基線にも積む。ここを積まないと、押して積んだ分と
+        //  同じ扱いになって erode が毎手削り、合流した意味が消える。
+        Q.merged_shinchukan = (Q.merged_shinchukan || 0)
+          + this.transfer(Q, 'shinchukan', 'other', 'shakai', 5);
+        Q.merged_mishoshiki = (Q.merged_mishoshiki || 0)
+          + this.transfer(Q, 'mishoshiki', 'other', 'shakai', 3);
         Q.seat_chuu = (Q.seat_chuu || 0) + s;
         Q.shamin_exists = 0;
         Q.shamin_merged = 1;
@@ -6980,6 +6984,12 @@
     //  ORG_LEAN_PULL が 22 なので、捨てられるはずだった 8 が
     //  基線（＝天井）を約一つ上げる。
     PUSH_SPILL: 0.001,
+    //  天井から上での効き。伸ばす札が何も返さない状態を無くすためだけの値で、
+    //  大きくすると天井そのものが意味を失う。
+    PUSH_OVER: 0.15,
+    //  天井の上に積める余地。ここまでは乗るが、基線には入らないので
+    //  erode が毎手引き戻す。
+    LEAN_OVER_ROOM: 4,
     push: function (Q, layers, amt) {
       var i, l, cap, cur, gain, next, spill;
       for (i = 0; i < layers.length; i++) {
@@ -6987,14 +6997,22 @@
         cap = Math.min(this.capOf(Q, l), this.baselineLean(Q, l) + this.LEAN_HEADROOM);
         cur = Q['lean_' + l + '_shakai'];
         if (amt >= 0) {
-          //  天井の手前25%に入ってから鈐る。これを (cap-cur)/cap にすると
-          //  実効係数が 0.11〜0.26 まで落ち、九手打っても議席が五しか
-          //  動かなくなる（戦略差が消える）のでこの形を保つ。
-          gain = Math.round(amt * Math.min(1, Math.max(0, (cap - cur) / (0.25 * cap))) * 10) / 10;
-          //  伸ばす札で数が減ってはいけない。合同で天井より上に乗った層は
-          //  cur > cap になり、Math.min(cap, …) がそのまま天井まで叩き落として
-          //  いた ── 社共合同のあと「何をしても元の支持率に戻る」のはこれ。
-          next = (cur >= cap) ? cur : Math.min(cap, cur + gain);
+          if (cur >= cap) {
+            //  天井から上は柔らかくする。ここが硬いと、天井に貼り付いた層で
+            //  「官公労 +3、新中間層 −2」の札が新中間層 −2 だけになり、
+            //  伸ばすつもりで選んだ札が正味の損になっていた（監査で 633 件）。
+            //  上に乗る分は基線へは入らないので、erode が毎手引き戻す ──
+            //  天井を本当に上げる道は組織化だけ、という筋は変えていない。
+            gain = Math.round(amt * this.PUSH_OVER * 10) / 10;
+            next = Math.min(cap + this.LEAN_OVER_ROOM, cur + gain);
+            if (next < cur) { next = cur; }
+          } else {
+            //  天井の手前25%に入ってから鈐る。これを (cap-cur)/cap にすると
+            //  実効係数が 0.11〜0.26 まで落ち、九手打っても議席が五しか
+            //  動かなくなる（戦略差が消える）のでこの形を保つ。
+            gain = Math.round(amt * Math.min(1, Math.max(0, (cap - cur) / (0.25 * cap))) * 10) / 10;
+            next = Math.min(cap, cur + gain);
+          }
           //  削られた分を捨てない。天井に貼り付いた層では「＋8」の札を
           //  選んでも数が動かず、同じ札の「−2」だけが効いていた。
           //  押した手は基線に残る ── 天井を上げる道は組織化だけ、を保つ。
