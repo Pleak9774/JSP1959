@@ -1460,6 +1460,9 @@
       //  怒りが 85（開幕の右派）で約六割、100 を超えると五割五分で底を打つ
       var unity = 1 - Math.min(0.45, anger / 220);
       var inc = (fit / this.CAPITAL_PER_FIT) * unity * this.seatScale(Q) * this.diff(Q).income;
+      //  研修機関・政策集団からの定常の入り。0.5 で「二手に一つ」。
+      //  人事の当たり外れに関わらず入るので、線を保つ側の札になる。
+      inc += (Q.capital_extra || 0);
       Q.capital_in = Math.round(inc * 100) / 100;
       Q.capital_acc = (Q.capital_acc || 0) + inc;
       var pay = Math.floor(Q.capital_acc);
@@ -2494,8 +2497,26 @@
     //  失う分が浅くなる。三段そろえば、失う分は消える。
     //  これを持たないと、民社化の線は労働の層の天井が下がったまま伸びず、
     //  組織を上限まで積んでも二三九議席（過半は二五七）で止まる。
-    KYOTEI_STEPS: 3,
-    KYOTEI_LAYERS: { kokorou: 1, minrou: 1, mishoshiki: 1 },
+    //  ── 層ごとの基線の上積み（capb） ──────────────────────
+    //  組織率（orgb）とは別の口。研修機関や政策集団のように、
+    //  組織の頭数を増やすのではなく「その層が党を選ぶ理由」を
+    //  作る札はここに入る。baselineLean に直に足すので、
+    //  その層の天井（cap）がそのぶん上がる。
+    //
+    //  路線の損（RIGHT_LOSE / LEFT_LOSE）を打ち消す形にはしない。
+    //  打ち消す形にすると、右へ寄っても官公労を丸ごと保てることになり、
+    //  取引そのものが消える。上積みは別勘定で乗せ、
+    //  官公労のように路線の損が重い層は、上積みを足しても
+    //  損のほうが勝つ ── そこは埋まらないままにしてある。
+    CAPB_MAX: 14,
+    capBonus: function (Q, layers, pts) {
+      var i, k;
+      for (i = 0; i < layers.length; i++) {
+        k = 'capb_' + layers[i];
+        Q[k] = Math.min(this.CAPB_MAX, Math.max(0, (Q[k] || 0) + pts));
+      }
+      return Q;
+    },
 
 
     baselineLean: function (Q, l) {
@@ -2507,6 +2528,8 @@
       //  ここに足さないと erode が毎手それを基線まで削り、合同したのに
       //  何をしても合同前の支持率へ戻る（遊びの報告）。
       b += (Q['merged_' + l] || 0);
+      //  研修機関・政策集団で積んだぶん。組織率とは別に天井を上げる。
+      b += (Q['capb_' + l] || 0);
       //「日本における社会主義への道」を綱領にすると、都市の浮動層から
       //  見て党は理解不能になる。1969年の崩壊はここから来る。
       if (Q.michi_adopted && (l === 'shinchukan' || l === 'mishoshiki')) { b -= 7; }
@@ -2524,13 +2547,7 @@
       //  左へ寄ると都市からは遠くなるが、労働の側が選ぶ理由は残る。
       var rr = Q.route || 0;
       if (rr > 0) {
-        var rloss = (this.RIGHT_LOSE[l] || 0) * rr;
-        //  組合との政策協定を積んだ段数だけ、労働の側を失う分が浅くなる。
-        if (Q.seisaku_kyotei && this.KYOTEI_LAYERS[l]) {
-          var qq = Math.min(this.KYOTEI_STEPS, Q.seisaku_kyotei);
-          rloss -= rloss * (qq / this.KYOTEI_STEPS);
-        }
-        b -= rloss;
+        b -= (this.RIGHT_LOSE[l] || 0) * rr;
         b += (this.RIGHT_GAIN[l] || 0) * rr;
       } else if (rr < 0) {
         var loss = (this.LEFT_LOSE[l] || 0) * (-rr);
@@ -5026,21 +5043,51 @@
       { n: 9208, id: 'gov_minsha_seiiki', name: '聖域なき政治改革', acts: [4, 5], need: { cab: 0.2 },
         when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
                  Q.in_power && Q.cab_kind === 4 && Q.minsha_ka; } },
-      // 同盟との政策協定　帯中間右/右
-      { n: 9209, id: 'a4_domei_kyotei', name: '同盟との政策協定', acts: [4], need: { labor: 0.24 },
+      // 富士社会教育センター　帯中間右/右
+      { n: 9209, id: 'a3_fuji_center', name: '富士社会教育センター', acts: [3, 4], need: { labor: 0.24 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.24) &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.evdone_a4_domei_kyotei; } },
+                 Q.minsha_ka && !Q.evdone_a3_fuji_center; } },
+      // 富士政治大学校　帯中間右/右
+      { n: 9210, id: 'a4_fuji_daigaku', name: '富士政治大学校', acts: [4], need: { org: 0.3 },
+        when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.minsha_ka && Q.fuji && !Q.evdone_a4_fuji_daigaku; } },
       // 政策推進労組会議　帯中間右/右
-      { n: 9210, id: 'a4_seisui_kaigi', name: '政策推進労組会議', acts: [4, 5], need: { labor: 0.32 },
-        when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.32) &&
+      { n: 9211, id: 'a4_seisui_kaigi', name: '政策推進労組会議', acts: [4, 5], need: { rel: 0.3 },
+        when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.3) &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 Q.seisaku_kyotei >= 1 && !Q.evdone_a4_seisui_kaigi; } },
-      // 協定の網　帯中間右/右
-      { n: 9211, id: 'a5_kyotei_mou', name: '協定の網', acts: [5], need: { labor: 0.38 },
-        when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.38) &&
+                 Q.minsha_ka && Q.fuji_daigaku && !Q.evdone_a4_seisui_kaigi; } },
+      // 地方議員団の政策室　帯中間左
+      { n: 9212, id: 'a3_jichitai_seisakushitsu', name: '地方議員団の政策室', acts: [3], need: { org: 0.24 },
+        when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.24) &&
+                 [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a3_jichitai_seisakushitsu; } },
+      // 自治体学校　帯中間左
+      { n: 9213, id: 'a4_jichitai_gakko', name: '自治体学校', acts: [4], need: { org: 0.3 },
+        when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
+                 [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.jichitai_shitsu && !Q.evdone_a4_jichitai_gakko; } },
+      // 全国革新市長会　帯中間左
+      { n: 9214, id: 'a5_kakushin_shichokai', name: '全国革新市長会', acts: [4, 5], need: { rel: 0.28 },
+        when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.28) &&
+                 [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.jichitai_gakko && !Q.evdone_a5_kakushin_shichokai; } },
+      // 『現代の理論』の編集部　帯中間右
+      { n: 9215, id: 'a3_gendai_riron', name: '『現代の理論』の編集部', acts: [3], need: { koryo: 0.24 },
+        when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.24) &&
+                 [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a3_gendai_riron; } },
+      // 構造改革の研究会　帯中間右
+      { n: 9216, id: 'a4_kozo_kenkyukai', name: '構造改革の研究会', acts: [4], need: { koryo: 0.3 },
+        when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.3) &&
+                 [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.gendai_riron && !Q.evdone_a4_kozo_kenkyukai; } },
+      // 政策の研究所　帯中間右/右
+      { n: 9217, id: 'a5_seisaku_kenkyujo', name: '政策の研究所', acts: [4, 5], need: { koryo: 0.34 },
+        when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.34) &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 Q.seisaku_kyotei >= 2 && !Q.evdone_a5_kyotei_mou; } },
+                 Q.kozo_kenkyu && !Q.minsha_ka && !Q.evdone_a5_seisaku_kenkyujo; } },
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
@@ -5379,7 +5426,9 @@
       'gov_ours', 'gov_ldp',
       'reorg_force', 'roso_hidari', 'sandbox',
       'keimou_open', 'keimou_seinen', 'keimou_kakudai',
-      'seisaku_kyotei',
+      'capital_extra',
+      'capb_kokorou', 'capb_minrou', 'capb_mishoshiki',
+      'capb_jieigyo', 'capb_noson', 'capb_shinchukan',
       'jimin_kiban',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
       //  労働戦線。五九年の春闘の形、六六年と八三年の総評人事、
@@ -7598,7 +7647,11 @@
       Q.seido_name = this.seidoOf(Q).name;
       //  勤労者教育がいま何回ぶん効いているか（脇柱に出す）
       Q.keimou_n = Math.min(this.KEIMOU_STEPS, Q.keimou_open || 0);
-      Q.kyotei_n = Math.min(this.KYOTEI_STEPS, Q.seisaku_kyotei || 0);
+      //  上積みの合計。脇柱に「研修・政策」の一行で出す。
+      var cb = 0, ci;
+      for (ci = 0; ci < LAYERS.length; ci++) { cb += (Q['capb_' + LAYERS[ci]] || 0); }
+      Q.capb_total = Math.round(cb);
+      Q.capital_extra_n = Math.round((Q.capital_extra || 0) * 10) / 10;
       Q.keimou_stage = (Q.keimou_open || 0) + (Q.keimou_seinen || 0) + (Q.keimou_kakudai || 0);
       //  大会の線と、中央との差。脇柱で見せる。
       this.congressRoute(Q);
