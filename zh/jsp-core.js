@@ -2771,7 +2771,7 @@
       // 社青同解放派　1968年〜・史実
       { n: 2034, id: 'a2_seinen_bunretsu', name: '社青同解放派', acts: [2], need: { youth: 0.35 }, year: 1968, fixed: true,
         when: function (Q) { return Q.year >= 1968 &&
-                 Q.kyokai_grip >= 35; } },
+                 Q.kyokai_grip >= 35 && !Q.evdone_a2_seiseido_kaiho; } },
       // プラハ　1968年〜・史実
       { n: 2037, id: 'a2_praha', name: 'プラハ', acts: [2], need: { rel: 0.4 }, year: 1968, fixed: true,
         when: function (Q) { return Q.year >= 1968 &&
@@ -3279,7 +3279,8 @@
                  (Q.local_n >= 1) && !Q.evdone_a5_showa_owari; } },
       // マドンナたち　1986年〜・史実
       { n: 341, id: 'a5_madonna', name: 'マドンナたち', acts: [5], need: { org: 0.14 }, year: 1986, fixed: true,
-        when: function (Q) { return Q.year >= 1986; } },
+        when: function (Q) { return Q.year >= 1986 &&
+                 !Q.evdone_a5_b2_josei_koho; } },
       // 地価と株価　1986年〜・史実
       { n: 342, id: 'a5_baburu', name: '地価と株価', acts: [5], need: { diet: 0.14 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986 &&
@@ -3484,7 +3485,8 @@
       // 小選挙区制　帯中間右/右・1992年〜・史実
       { n: 5016, id: 'a5_shosenkyoku', name: '小選挙区制', acts: [5], need: { koryo: 0.35 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.senkyoku_seido; } },
       // 一九九二年参院選　1992年〜・史実
       { n: 5170, id: 'a5_1992_sanin', name: '一九九二年参院選', acts: [5], need: { hc: 0.3 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992; } },
@@ -3495,7 +3497,8 @@
       // 小選挙区制　帯左/中間左・1992年〜・史実
       { n: 7609, id: 'shosenkyoku_sa', name: '小選挙区制', acts: [5], need: { koryo: 0.35 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.senkyoku_seido; } },
       // 東京佐川急便　1992年〜・史実
       { n: 8115, id: 'a5_sagawa', name: '东京佐川急便', acts: [5], need: { name: 0.16 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992; } },
@@ -3514,7 +3517,7 @@
       // 政治改革関連法　1993年〜・史実
       { n: 5172, id: 'a5_seiji_kaikaku_ho', name: '政治改革関連法', acts: [5], need: { diet: 0.35 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
-                 Q.komei_exists; } },
+                 Q.komei_exists && !Q.senkyoku_seido; } },
       // 米の開放　1993年〜・史実
       { n: 5173, id: 'a5_kome', name: '米の開放', acts: [5], need: { org: 0.3 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
@@ -3712,11 +3715,13 @@
       { n: 242, id: 'a5_uha_shinto', name: '新党構想', acts: [5], need: { koryo: 0.2 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a5_uha_kaisan; } },
       // 社共共闘の最後　軸社共
       { n: 243, id: 'a5_sakyo_saigo', name: '社共共闘の最後', acts: [5], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
-                 [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.evdone_a5_c1_kyodo_saigo; } },
       // 一六六議席のあと　asanumaが在席
       { n: 301, id: 'a1_1958_senkyo', name: '一六六議席のあと', acts: [1], need: { koryo: 0.12 },
         when: function (Q) { return Q.year <= 1959 &&
@@ -3784,11 +3789,12 @@
       { n: 344, id: 'a5_seiji_kaikaku_kyogi', name: '政治改革の協議会', acts: [5], need: { rel: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
                  Q.c_rel >= window.JSP.needOf(Q, 0.14) &&
-                 Q.minsha_exists; } },
+                 Q.minsha_exists && !Q.senkyoku_seido; } },
       // 党の名前　1990年〜
       { n: 345, id: 'a5_shakaito_saigo', name: '党の名前', acts: [5], need: { koryo: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
-                 Q.c_koryo >= window.JSP.needOf(Q, 0.14); } },
+                 Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
+                 !Q.evdone_a5_shakai_minshu; } },
       // 西尾除名の前夜
       { n: 401, id: 'a1_nishio_choubatsu', name: '西尾除名の前夜', acts: [1], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
@@ -3843,7 +3849,8 @@
       // 社青同の分裂　1963年〜
       { n: 422, id: 'a2_seiseido_kaiho', name: '社青同の分裂', acts: [2], need: { rally: 0.25 }, year: 1963,
         when: function (Q) { return Q.year >= 1963 &&
-                 Q.c_rally >= window.JSP.needOf(Q, 0.25); } },
+                 Q.c_rally >= window.JSP.needOf(Q, 0.25) &&
+                 !Q.evdone_a2_seinen_bunretsu; } },
       // 社会保障の設計
       { n: 423, id: 'a2_shakai_hosho', name: '社会保障の設計', acts: [2], need: { diet: 0.25 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25) &&
@@ -3892,7 +3899,8 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 新宣言のあと
       { n: 451, id: 'a5_shinsengen_go', name: '新宣言のあと', acts: [5], need: { koryo: 0.25 },
-        when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25); } },
+        when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25) &&
+                 Q.shin_sengen; } },
       // 日本新党ブーム　1990年〜
       { n: 455, id: 'a5_hosokawa_boom', name: '日本新党ブーム', acts: [5], need: { rally: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
@@ -3980,7 +3988,8 @@
       { n: 547, id: 'a5_uha_kaisan', name: '解党論', acts: [5], need: { koryo: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
-                 [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a5_uha_shinto; } },
       // 革新という語　軸社共
       { n: 548, id: 'a5_sakyo_owaru', name: '革新という語', acts: [5], need: { rel: 0.3 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.3) &&
@@ -4036,7 +4045,8 @@
       // 共闘の縮小　軸社共
       { n: 622, id: 'c1_a4_kyodo_shukusho', name: '共闘の縮小', acts: [4], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
-                 [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.evdone_a4_sakyo_saigo; } },
       // 中道という場所　軸社公民
       { n: 631, id: 'c2_a1_chudo_tanjo', name: '中道という場所', acts: [1], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
@@ -4214,7 +4224,8 @@
       // 社共の最後の枠　軸社共
       { n: 4018, id: 'a4_sakyo_saigo', name: '社共の最後の枠', acts: [4], need: { rel: 0.3 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.3) &&
-                 [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.evdone_c1_a4_kyodo_shukusho; } },
       // 協会の後退　帯中間右/右
       { n: 4019, id: 'a4_kyokai_taisei', name: '協会の後退', acts: [4], need: { org: 0.35 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35) &&
@@ -4428,7 +4439,8 @@
       // 新宣言への抵抗　帯左
       { n: 5101, id: 'a5_b1_shin_sengen_hantai', name: '新宣言への抵抗', acts: [5], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.shin_sengen; } },
       // 非武装中立を守る　帯左
       { n: 5103, id: 'a5_b1_hibuso_shishu', name: '非武装中立を守る', acts: [5], need: { koryo: 0.25 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25) &&
@@ -4445,7 +4457,8 @@
       // 女性候補の擁立　帯中間左
       { n: 5112, id: 'a5_b2_josei_koho', name: '女性候補の擁立', acts: [5], need: { mem: 0.25 },
         when: function (Q) { return Q.c_mem >= window.JSP.needOf(Q, 0.25) &&
-                 [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_a5_madonna; } },
       // 生活クラブとネットワーク　帯中間左
       { n: 5113, id: 'a5_b2_netto', name: '生活クラブとネットワーク', acts: [5], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
@@ -4475,7 +4488,8 @@
       // 共闘の最後の枠　軸社共
       { n: 5141, id: 'a5_c1_kyodo_saigo', name: '共闘の最後の枠', acts: [5], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
-                 [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.evdone_a5_sakyo_saigo; } },
       // 革新票の行方　軸社共
       { n: 5142, id: 'a5_c1_kaku_hyo', name: '革新票の行方', acts: [5], need: { hr: 0.3 },
         when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.3) &&
@@ -4689,7 +4703,7 @@
       // 党名の議論
       { n: 5214, id: 'a5_shakai_minshu', name: '党名の議論', acts: [5], need: { koryo: 0.35 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.35) &&
-                 Q.kyokai_grip >= 35; } },
+                 Q.kyokai_grip >= 35 && !Q.evdone_a5_shakaito_saigo; } },
       // 最後の党大会　1993年〜
       { n: 5215, id: 'a5_saigo_no_taikai', name: '最後の党大会', acts: [5], need: { koryo: 0.4 }, year: 1993,
         when: function (Q) { return Q.year >= 1993 &&
@@ -4951,6 +4965,18 @@
         if (this.EVENTS[i].n === n) { Q['evdone_' + this.EVENTS[i].id] = 1; }
       }
       Q.pending_event = 0;
+      return Q;
+    },
+
+    //  選挙の結果を「大勝／過半を守った／過半割れ」に畳む。
+    //  結果の頁がこれを見ずに大勝と書いていたので、自民が百六十六でも
+    //  大勝と出ていた。判定は議席そのものから取る。
+    //    2 = 全議席の 55% 以上　1 = 過半以上　0 = 過半割れ
+    jiminWin: function (Q) {
+      var total = Q.hr_total || 511;
+      var got = Q.res_jimin || 0;
+      Q.jimin_win = got >= Math.floor(total * 0.55) ? 2
+        : (got >= Math.floor(total / 2) + 1 ? 1 : 0);
       return Q;
     },
 
@@ -6889,8 +6915,12 @@
     //  自民が史実より多く見えていた。日共が正しく取るようにしたら
     //  社会党の膛らみが表に出たので、天井を一段下げている。
     LEAN_HEADROOM: 9,
+    //  天井で削られた押しを、基線の持ち上げに振り替える率。
+    //  ORG_LEAN_PULL が 22 なので、捨てられるはずだった 8 が
+    //  基線（＝天井）を約一つ上げる。
+    PUSH_SPILL: 0.001,
     push: function (Q, layers, amt) {
-      var i, l, cap, cur, gain, next;
+      var i, l, cap, cur, gain, next, spill;
       for (i = 0; i < layers.length; i++) {
         l = layers[i];
         cap = Math.min(this.capOf(Q, l), this.baselineLean(Q, l) + this.LEAN_HEADROOM);
@@ -6901,6 +6931,13 @@
           //  動かなくなる（戦略差が消える）のでこの形を保つ。
           gain = Math.round(amt * Math.min(1, Math.max(0, (cap - cur) / (0.25 * cap))) * 10) / 10;
           next = Math.min(cap, cur + gain);
+          //  削られた分を捨てない。天井に貼り付いた層では「＋8」の札を
+          //  選んでも数が動かず、同じ札の「−2」だけが効いていた。
+          //  押した手は基線に残る ── 天井を上げる道は組織化だけ、を保つ。
+          spill = amt - (next - cur);
+          if (spill > 0) {
+            Q['orgb_' + l] = Math.min(0.75, (Q['orgb_' + l] || 0) + spill * this.PUSH_SPILL);
+          }
         } else {
           //  下げるほうは鈐らせない。天井の近くで手が届かなくなる理由が無い
           //  （以前は同じ鈐りをかけていたので、下げる札が天井付近で効かなかった）。
