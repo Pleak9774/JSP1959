@@ -137,6 +137,8 @@
             J.push(Q, ['shinchukan'], 4);
             Q.mood_saha = Math.max(0, (Q.mood_saha || 0) - 6);
             Q.mood_uha = (Q.mood_uha || 0) + 8;
+            //  青年部の側で講座を回しているなら、そちらに一段積む
+            if (Q.keimou_seinen) { Q.keimou_seinen = Math.min(J.KEIMOU_STEPS, Q.keimou_seinen + 1); }
           } }
       ] },
     suzuki: { n: 1, name: '铃木茂三郎', faction: 'chusa', from: 1955, to: 1970,
@@ -670,7 +672,10 @@
       case 'wada':     Q.capital += 3; Q.rel_jimin += 8; Q.rel_sohyo -= 4; break;
       case 'nishio':   Q.route += 1; Q.mood_uha -= 20; Q.mood_saha += 18; break;
       case 'sone':     Q.capital += 4; Q.rel_sohyo -= 6; break;
-      case 'sakisaka': J.push(Q, ['kokorou'], 4); Q.kyokai_grip = Math.min(100, Q.kyokai_grip + 6); break;
+      case 'sakisaka': J.push(Q, ['kokorou'], 4); Q.kyokai_grip = Math.min(100, Q.kyokai_grip + 6);
+        //  組合の外へ講座が開いているなら、労働学校の回はそちらにも積む
+        if (Q.keimou_open) { Q.keimou_open = Math.min(J.KEIMOU_STEPS, Q.keimou_open + 1); }
+        break;
       case 'ishibashi': J.push(Q, ['shinchukan'], 4); Q.mood_saha -= 6; break;
       //  飛鳥田は全国革新市長会長である。会を動かしたのなら会は立っている。
       //  ここで旗を立てないと、自治体の札の「首長会を通じて資金を回す」だけが

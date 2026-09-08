@@ -2482,6 +2482,14 @@
     //  重すぎるので 1.2 にする。取引そのものは残す。
     LEFT_LOSE:  { shinchukan: 1.2, jieigyo: 1.2, noson: 1.0, mishoshiki: 0.5, minrou: 0.3 },
     LEFT_GAIN:  { kokorou: 1.2, minrou: 0.6, mishoshiki: 0.4 },
+    //  勤労者教育協会。左へ寄ると都市の層は基線から離れていくが、
+    //  組合の外に講座を開いたぶんだけ、その離れ方を押し戻す。
+    //  一回ぶんが路線一目盛りあたり 0.45、左の損の六割までしか戻せない ──
+    //  取引そのものは残す。ここを持たないと、事象の効き目は一手で消えた。
+    //  三段（協会 → 拡張 → 網）で、左へ寄ったぶん都市の層が離れる分を
+    //  三分の一ずつ打ち消す。三段そろえば打ち消し切る。
+    KEIMOU_STEPS: 3,
+
 
     baselineLean: function (Q, l) {
       var t = Math.min(1, Math.max(0, (this.yearOf(Q) - 1959) / 34));
@@ -2512,7 +2520,14 @@
         b -= (this.RIGHT_LOSE[l] || 0) * rr;
         b += (this.RIGHT_GAIN[l] || 0) * rr;
       } else if (rr < 0) {
-        b -= (this.LEFT_LOSE[l] || 0) * (-rr);
+        var loss = (this.LEFT_LOSE[l] || 0) * (-rr);
+        //  組合の外へ講座を開いた段数だけ、新中間層の離れ方が浅くなる。
+        //  三段そろうと、左へ寄ったぶんの損は消える（組織化の見返り）。
+        if (Q.keimou_open && l === 'shinchukan') {
+          var kk = Math.min(this.KEIMOU_STEPS, Q.keimou_open);
+          loss -= loss * (kk / this.KEIMOU_STEPS);
+        }
+        b -= loss;
         b += (this.LEFT_GAIN[l] || 0) * (-rr);
       }
       return Math.min(92, Math.max(2, b));
@@ -4986,6 +5001,14 @@
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.22) &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  !Q.evdone_a3_shinchukan_keimou; } },
+      // 労働大学の拡張
+      { n: 9206, id: 'a3_rodo_daigaku', name: '労働大学の拡張', acts: [3, 4], need: { org: 0.3 },
+        when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
+                 Q.evdone_a3_shinchukan_keimou && !Q.evdone_a3_rodo_daigaku; } },
+      // 労働大学の網
+      { n: 9207, id: 'a4_rodo_daigaku_mou', name: '労働大学の網', acts: [4], need: { org: 0.35 },
+        when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35) &&
+                 Q.evdone_a3_rodo_daigaku && !Q.evdone_a4_rodo_daigaku_mou; } },
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
@@ -5323,6 +5346,7 @@
       'won_majority_ever', 'left_unity', 'senkyoku_seido', 'zenrokyo',
       'gov_ours', 'gov_ldp',
       'reorg_force', 'roso_hidari',
+      'keimou_open', 'keimou_seinen', 'keimou_kakudai',
       'jimin_kiban',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
       //  労働戦線。五九年の春闘の形、六六年と八三年の総評人事、
@@ -7457,6 +7481,9 @@
       Q.gov_ours = (Q.in_power && Q.cab_kind !== 4) ? 1 : 0;
       Q.gov_ldp = (!Q.in_power) ? 1 : 0;
       Q.seido_name = this.seidoOf(Q).name;
+      //  勤労者教育がいま何回ぶん効いているか（脇柱に出す）
+      Q.keimou_n = Math.min(this.KEIMOU_STEPS, Q.keimou_open || 0);
+      Q.keimou_stage = (Q.keimou_open || 0) + (Q.keimou_seinen || 0) + (Q.keimou_kakudai || 0);
       //  大会の線と、中央との差。脇柱で見せる。
       this.congressRoute(Q);
       Q.del_total = this.delegates(Q).total;
