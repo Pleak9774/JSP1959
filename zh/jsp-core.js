@@ -296,7 +296,7 @@
         cur = (Q['lr_' + k] === undefined) ? this.LR_START[k] : Q['lr_' + k];
         //  路線 −5〜+5 が ±22、協会の掌握が ±14、積み上げが最大 +16
         target = this.LR_START[k] - (Q.route || 0) * 4.4
-               + ((Q.kyokai_grip || 50) - 50) * 0.28
+               + (((Q.kyokai_grip === undefined) ? 50 : Q.kyokai_grip) - 50) * 0.28
                + Math.min(16, (Q.left_unity_pts || 0) * 0.5);
         if (target < 0) { target = 0; }
         if (target > 92) { target = 92; }
@@ -578,7 +578,10 @@
       var grip = (Q.kyokai_grip === undefined) ? 50 : Q.kyokai_grip;
       var r = Q.route || 0;
       var tT = this.TEKKO_START + r * 5.2 - (grip - 50) * 0.22 - Math.min(24, pts * 0.6);
-      var rT = this.ROSOKON_START + ((Q.rel_kyosan || 40) - 40) * 0.30 - (grip - 50) * 0.16
+      //  0 は「共産党と完全に切れている」という意味の値なので、|| で 40 に
+      //  読み替えてはいけない。切ったのに切った得が出ない不具合だった。
+      var rk = (Q.rel_kyosan === undefined) ? 40 : Q.rel_kyosan;
+      var rT = this.ROSOKON_START + (rk - 40) * 0.30 - (grip - 50) * 0.16
              - Math.min(12, pts * 0.25);
       if (tT < 4) { tT = 4; }
       if (rT < 3) { rT = 3; }
@@ -650,9 +653,16 @@
           + label + '　<b>' + (Math.round(now * 10) / 10) + '</b> 万人'
           + ' <span style="opacity:.6">（要 ' + need + '）</span>';
       };
+      //  二役は四つの門と並ぶ第五の条件である。印を付けずに並べていたので、
+      //  門が四つとも通っているのに左で統一されない理由が読めなかった。
       var rows = [
-        '总评　议长 <b>' + (FAC[o.chair] || o.chair) + '</b>　事务局长 <b>'
-          + (FAC[o.secgen] || o.secgen) + '</b>',
+        (o.lefts === 2 ? '<span style="color:#3E6E8C;">✓</span> '
+                       : '<span style="color:#B23A34;">✗</span> ')
+          + '总评的两个位子' + '　' + '议长' + ' <b>' + (FAC[o.chair] || o.chair) + '</b>　'
+          + '事务局长' + ' <b>' + (FAC[o.secgen] || o.secgen) + '</b>'
+          + ' <span style="opacity:.6">'
+          + '要在左边统一，两个位子都得是左派。1983年的总评大会上定'
+          + '</span>',
         g(o.g_left, '总评的左', o.sohyoLeft, this.REORG_LEFT_NEED + ' 万人以上'),
         g(o.g_domei, '同盟里硬的右', o.domeiHard, this.REORG_DOMEI_MAX + ' 万人以下'),
         g(o.g_tekko, '钢铁劳连一系的右派', o.tekko, this.REORG_TEKKO_MAX + ' 万人以下'),
@@ -684,7 +694,7 @@
       var split = leftMass * this.SPLIT_RATE;
       //  抜けた分が共産系（全労連）と社会党左派（全労協）にどう割れるか。
       //  党が共産党に近いほど、左の塊は全労連の側へ行く。
-      var toKyosan = Math.min(0.8, Math.max(0.15, (Q.rel_kyosan || 40) / 80));
+      var toKyosan = Math.min(0.8, Math.max(0.15, ((Q.rel_kyosan === undefined) ? 40 : Q.rel_kyosan) / 80));
 
       //  ── 誰が総評を率いていたかで、統一の形が変わる ──────────
       //  議長と事務局長。二人とも左なら左へ、二人とも右なら右へ、
@@ -1899,6 +1909,9 @@
         Q['lean_' + l + '_shakai'] = (Q['lean_' + l + '_shakai'] || 0) + v * keep;
         Q['lean_' + l + '_other'] = (Q['lean_' + l + '_other'] || 0) + v * (1 - keep);
         Q['lean_' + l + '_kyosan'] = 0;
+        //  畳んだぶんは基線にも積む。押して積んだ分ではなく党の身体なので、
+        //  erode で溶けてはいけない（溶けると合同前の支持率へ戻る）。
+        Q['merged_' + l] = (Q['merged_' + l] || 0) + v * keep;
       }
       //  合同した議員は左派の席になる。大会の代議員も左へ寄る。
       Q.seat_saha = (Q.seat_saha || 0) + take;
@@ -1974,6 +1987,7 @@
           Q['lean_' + l + '_shakai'] = (Q['lean_' + l + '_shakai'] || 0) + v * keep;
           Q['lean_' + l + '_other'] = (Q['lean_' + l + '_other'] || 0) + v * (1 - keep);
           Q['lean_' + l + '_minsha'] = 0;
+          Q['merged_' + l] = (Q['merged_' + l] || 0) + v * keep;
         }
         Q.seat_uha = (Q.seat_uha || 0) + take;
         Q.del_uha = (Q.del_uha || 0) + Math.round(take * 0.6);
@@ -2403,6 +2417,10 @@
       var u = Math.pow(t, this.FRONT);
       var b = this.LEAN_1959[l] + (this.LEAN_1993[l] - this.LEAN_1959[l]) * u;
       b += this.ORG_LEAN_PULL * (Q['orgb_' + l] || 0);
+      //  畳んだ党の票は、押して積んだ分ではなく党の身体そのものである。
+      //  ここに足さないと erode が毎手それを基線まで削り、合同したのに
+      //  何をしても合同前の支持率へ戻る（遊びの報告）。
+      b += (Q['merged_' + l] || 0);
       //「日本における社会主義への道」を綱領にすると、都市の浮動層から
       //  見て党は理解不能になる。1969年の崩壊はここから来る。
       if (Q.michi_adopted && (l === 'shinchukan' || l === 'mishoshiki')) { b -= 7; }
@@ -6964,7 +6982,10 @@
           //  実効係数が 0.11〜0.26 まで落ち、九手打っても議席が五しか
           //  動かなくなる（戦略差が消える）のでこの形を保つ。
           gain = Math.round(amt * Math.min(1, Math.max(0, (cap - cur) / (0.25 * cap))) * 10) / 10;
-          next = Math.min(cap, cur + gain);
+          //  伸ばす札で数が減ってはいけない。合同で天井より上に乗った層は
+          //  cur > cap になり、Math.min(cap, …) がそのまま天井まで叩き落として
+          //  いた ── 社共合同のあと「何をしても元の支持率に戻る」のはこれ。
+          next = (cur >= cap) ? cur : Math.min(cap, cur + gain);
           //  削られた分を捨てない。天井に貼り付いた層では「＋8」の札を
           //  選んでも数が動かず、同じ札の「−2」だけが効いていた。
           //  押した手は基線に残る ── 天井を上げる道は組織化だけ、を保つ。
