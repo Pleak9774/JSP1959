@@ -114,6 +114,26 @@
       return this.SEIDO[Q.senkyoku_seido || 0] || this.SEIDO[0];
     },
 
+    //  自民党の組織基盤（族議員・農協・特定郵便局長会・業界団体）。
+    //  一〇〇が手つかず、〇まで削れる。ここは票そのものではなく、
+    //  票を議席へ変える効率である ── 自民党が中選挙区で強かったのは
+    //  「どこに票があるか」を組織で握っていたからで、その握りを外すと
+    //  同じ得票でも議席が減る。政権を取らないと手が届かない。
+    JIMIN_KIBAN_FLOOR: 0.65,
+    kibanOf: function (Q) {
+      var k = (Q.jimin_kiban === undefined) ? 100 : Q.jimin_kiban;
+      k = Math.max(0, Math.min(100, k));
+      return this.JIMIN_KIBAN_FLOOR + (1 - this.JIMIN_KIBAN_FLOOR) * (k / 100);
+    },
+    //  基盤を削る。政権にいるあいだしか効かない（法と人事が要る）。
+    kibanCut: function (Q, amt) {
+      if (!Q.in_power) { return 0; }
+      var before = (Q.jimin_kiban === undefined) ? 100 : Q.jimin_kiban;
+      Q.jimin_kiban = Math.max(0, before - amt);
+      Q.kiban_cut_last = before - Q.jimin_kiban;
+      return Q.kiban_cut_last;
+    },
+
     allocate: function (Q) {
       var share = this.tally(Q);
       var pts = {}, tot = 0, i, j, l, p, sum, v;
@@ -126,7 +146,12 @@
         var w = this.SEAT_W[l] * (1 + this.ORG_SEAT_BONUS * (Q['org_' + l] || 0));
         for (j = 0; j < PARTIES.length; j++) {
           p = PARTIES[j];
-          pts[p] += Q['pop_' + l] * w * ((Q['lean_' + l + '_' + p] || 0) / sum) * (this.PARTY_EFF[p] || 1);
+          //  自民党だけは組織基盤で効率が変わる（kibanOf）。
+          //  政権を取って族議員・農協・特定局長会を外した分だけ、
+          //  同じ票が議席に変わりにくくなる。
+          var eff = this.PARTY_EFF[p] || 1;
+          if (p === 'jimin') { eff *= this.kibanOf(Q); }
+          pts[p] += Q['pop_' + l] * w * ((Q['lean_' + l + '_' + p] || 0) / sum) * eff;
         }
       }
       for (j = 0; j < PARTIES.length; j++) { tot += pts[PARTIES[j]]; }
@@ -4930,6 +4955,29 @@
       { n: 4808, id: 'c4_jisha_yoto', name: '执政的社会党', acts: [4, 5], need: { diet: 0.2 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.2) &&
                  Q.in_power && Q.cab_kind === 4; } },
+      // 福祉国家の設計
+      { n: 9200, id: 'gov_minshu_fukushi', name: '福祉国家の設計', acts: [5], need: { cab: 0.2 },
+        when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
+                 Q.gov_ours && Q.minshu_shinto; } },
+      // 防衛と若い世代
+      { n: 9201, id: 'gov_minsha_boei', name: '防衛と若い世代', acts: [5], need: { cab: 0.2 },
+        when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
+                 Q.gov_ours && Q.minsha_ka; } },
+      // 再分配と経済　帯中間右
+      { n: 9202, id: 'gov_chuu_saibunpai', name: '再分配と経済', acts: [5], need: { cab: 0.2 },
+        when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
+                 [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
+      // 相手の足場　帯中間左
+      { n: 9203, id: 'gov_chusa_kaitai', name: '相手の足場', acts: [5], need: { cab: 0.2 },
+        when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
+                 [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
+      // 徹底してやる　帯左
+      { n: 9204, id: 'gov_saha_kaitai', name: '徹底してやる', acts: [5], need: { cab: 0.2 },
+        when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
+                 [1].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
       // ═══ generated:events end ═══
 
       // ── 幕を選ばない ────────────────────────────────────────
@@ -5266,6 +5314,7 @@
       'shin_sengen', 'rengo_formed', 'madonna', 'pko_stance', 'gulf_stance',
       'won_majority_ever', 'left_unity', 'senkyoku_seido', 'zenrokyo',
       'gov_ours', 'gov_ldp',
+      'jimin_kiban',
       'orgb_kokorou', 'orgb_minrou', 'orgb_mishoshiki', 'orgb_jieigyo', 'orgb_noson', 'orgb_shinchukan',
       //  労働戦線。五九年の春闘の形、六六年と八三年の総評人事、
       //  総評の中の左右比と二つの塊。ここは幕をまたいで効き続ける。
