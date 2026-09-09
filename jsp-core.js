@@ -6231,7 +6231,9 @@
         ? Math.max(fl, Math.round((Q.kouho || this.NOM_OPEN) * 0.94))
         : Math.min(fl, (Q.kouho || this.NOM_OPEN) + 6);
       Q.nomination = 0;
-      Q.next_election_idx = (Q.next_election_idx || 0) + 1;
+      //  解散で打った一回は別枠なので、予定の総選挙の番号は進めない。
+      //  進めると幕の中の総選挙が一回減る。
+      if (!Q.snap_election) { Q.next_election_idx = (Q.next_election_idx || 0) + 1; }
       this.refresh(Q);
       return r;
     },
@@ -7300,12 +7302,21 @@
         Q.cab_route = 0; Q.cab_offer = 0;
         return 0;
       }
+      //  こちらを外して過半を作れるか。作れるなら、我々の入らない
+      //  非自民政権もありうる。作れないなら「非自民の政権はできたが
+      //  我々は外」という結末は算術として成立しない ── 席が要るからである。
+      var without = Q.cab_nonldp - (Q.seats_hr || 0);
+      Q.cab_without = without;
+      Q.cab_needed = (Q.cab_nonldp >= maj && without < maj) ? 1 : 0;
       //  共闘可能まで来ている党の議席を足して過半に届くか。
-      //  届かなければ、非自民の合計がいくらあっても内閣にはならない。
+      //  届かなければ、非自民の合計がいくらあっても我々の内閣にはならない。
       if (bloc.seats < maj) {
-        Q.cab_route = 0; Q.cab_offer = 0;
+        //  相手だけで過半を作れるなら、我々抜きの非自民政権ができる。
+        //  作れないなら、政権は自民党に残る。
+        Q.cab_route = (without >= maj) ? 5 : 0;
+        Q.cab_offer = 0;
         if (C && Q.in_power) { C.leavePower(Q); }
-        return 0;
+        return Q.cab_route;
       }
       //  届いている。いちばん大きければ主導（首班を出せる）、
       //  そうでなければ参加のみ（首班は相手が出す）。
@@ -7338,20 +7349,37 @@
     //
     //  第Ⅰ幕だけは外す。あの幕の局面の切れ目は党大会と安保で、
     //  総選挙ではないので、前へ持ってくる先が無い。
+    //  解散して打つ総選挙は、予定の総選挙とは別枠である。
+    //  ここを「予定のものを前へ持ってくる」にしていたので、
+    //  一度解散すると幕の中の総選挙が一回減っていた。減らさない。
+    //
+    //  止めるのは回数ではなく、政治資源と民意である。打つたびに
+    //  資源が重くなり、選挙疲れが票に出る。何回でも打てるが、
+    //  打つほど高くつく。
+    KAISAN_COST: 6,
+    KAISAN_STEP: 3,
+    kaisanCost: function (Q) {
+      return this.KAISAN_COST + this.KAISAN_STEP * (Q.kaisan_n || 0);
+    },
     canDissolve: function (Q) {
       if (!Q.in_power || !Q.has_souri) { return 0; }
-      if ((Q.act || 1) < 2) { return 0; }
-      if ((Q.turns_left || 0) < 2) { return 0; }
-      return this.nextElection(Q) > 0 ? 1 : 0;
+      //  解散したその手で選挙になるので、手が残っていること
+      if ((Q.turns_left || 0) < 1) { return 0; }
+      return (Q.capital || 0) >= this.kaisanCost(Q) ? 1 : 0;
     },
 
     dissolve: function (Q) {
+      var cost = this.kaisanCost(Q);
       Q.kaisan_n = (Q.kaisan_n || 0) + 1;
-      Q.kaisan_turns_lost = Q.turns_left || 0;
-      Q.turns_left = 0;
-      //  解散は党の中では歓迎されない。数を賭ける判断である。
-      Q.capital = Math.max(0, (Q.capital || 0) - 3);
-      Q.mood_chusa = (Q.mood_chusa || 0) + 5;
+      Q.kaisan_cost_paid = cost;
+      Q.capital = Math.max(0, (Q.capital || 0) - cost);
+      //  予定の総選挙は動かさない。この一回は別枠で打つ
+      Q.snap_election = 1;
+      //  何度も投票所へ呼べば、呼ばれる側は飽きる。
+      //  二回目からは目に見えて重くなる。
+      var n = Q.kaisan_n;
+      Q.mood_chusa = (Q.mood_chusa || 0) + 4 + 2 * (n - 1);
+      this.push(Q, ['shinchukan', 'mishoshiki'], -(n - 1));
       this.refresh(Q);
       return Q;
     },
@@ -7919,6 +7947,7 @@
       if (this.CAB) { this.CAB.sync(Q); }
       //  解散できるか。札の choose-if は式しか書けないので、ここで数にしておく。
       Q.can_dissolve = this.canDissolve(Q);
+      Q.kaisan_cost = this.kaisanCost(Q);
       //  受け皿の数は選挙を跨がなくても脇柱に出したいので、毎手数え直す。
       var kb = this.coalitionBloc(Q);
       Q.cab_bloc = kb.seats;
