@@ -200,7 +200,6 @@
     if (!Q['has_' + key]) { return 0; }
     Q['who_' + key] = id;
     Q['cd_m_' + key] = 0;
-    Q['uses_m_' + key] = 3;
     //  その人の畑と、その省の仕事が合っているか。
     //  合っていれば役所は早く動くし、畑違いなら事務次官が判断する。
     var f = J.LEADERS && J.LEADERS.FIG[id];
@@ -319,10 +318,16 @@
         Q.national_budget -= 8; } }
   };
 
+  //  次に打てるまで何手空くか。重い省ほど長い。
+  //  格2 → 四手、格3 → 五手、格4 → 六手、格5（首班） → 七手。
+  function cdLen(key) {
+    var m = MIN[key];
+    return 2 + ((m && m.w) || 2);
+  }
+
   function canAct(Q, key) {
     if (!Q['has_' + key] || !Q['who_' + key]) { return false; }
     if ((Q['cd_m_' + key] || 0) > 0) { return false; }
-    if ((Q['uses_m_' + key] || 0) <= 0) { return false; }
     return true;
   }
 
@@ -331,8 +336,7 @@
     if (!canAct(Q, key)) { return 0; }
     var a = ACTS[key];
     a.run(Q, power(Q, key));
-    Q['cd_m_' + key] = 3;
-    Q['uses_m_' + key] = (Q['uses_m_' + key] || 0) - 1;
+    Q['cd_m_' + key] = cdLen(key);
     //  国の金を使えば与党内の風当たりが強くなる
     if (a.scope === 'state') { Q.coalition_rel -= 3; }
     if (Q.national_budget < 0) { Q.coalition_rel -= 5; }
@@ -411,6 +415,7 @@
       k = ORDER[i]; m = MIN[k];
       Q['can_' + k] = canTake(Q, k) ? 1 : 0;
       Q['ok_m_' + k] = canAct(Q, k) ? 1 : 0;
+      Q['cdlen_m_' + k] = cdLen(k);
       Q['empty_' + k] = (Q['has_' + k] && !Q['who_' + k]) ? 1 : 0;
       id = Q['who_' + k];
       Q['mname_' + k] = id ? J.LEADERS.FIG[id].name : '（空席）';
