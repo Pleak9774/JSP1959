@@ -187,7 +187,13 @@
       note: '元農相。官僚出身の政策家',
       fit: { chair: 2, secgen: 3, policy: 5, diet: 4, org: 3, youth: 1 },
       passive: '毎回、政治資源 +1（二回に一回）',
-      act: { name: '政策協議に応じる', desc: '政治資源 +3、自民 +8、総評 −4', cost: {}, cd: 3, uses: 3 } },
+      acts: [
+        { name: '政策協議に応じる', desc: '政治資源 +3、自民 +8、総評 −4', cost: {}, cd: 3, uses: 3 },
+        //  片山内閣の経済安定本部長官。省庁と与党に顔が利く。
+        { name: '自民党に回路を作る', desc: '自民 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 5; } }
+      ] },
 
     nishio: { n: 9, name: '西尾末広', faction: 'uha', from: 1955, to: 1981,
       note: '民主社会主義。党を割って出て行くことになる男',
@@ -199,7 +205,13 @@
       note: '西尾派。外交・安保の実務家',
       fit: { chair: 1, secgen: 2, policy: 4, diet: 4, org: 1, youth: 0 },
       passive: '毎回、右派の不満 −2',
-      act: { name: '安保の修正案を作る', desc: '政治資源 +4、総評 −6', cost: {}, cd: 3, uses: 3 } },
+      acts: [
+        { name: '安保の修正案を作る', desc: '政治資源 +4、総評 −6', cost: {}, cd: 3, uses: 3 },
+        //  安保の条文で与党と渡り合った側である。
+        { name: '自民党に回路を作る', desc: '自民 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 5; } }
+      ] },
 
     sakisaka: { n: 11, name: '向坂逸郎', faction: 'saha', from: 1955, to: 1985,
       note: '社会主義協会の理論的支柱。党の役職者ではないが、事実上の指導者',
@@ -214,18 +226,25 @@
       passive: '毎回、新中間層の傾向が少し上がる',
       acts: [
         { name: '非武装中立を説く', desc: '新中間層 +4、左派 −6', cost: { capital: 2 }, cd: 3, uses: 3 },
-        //  書記長として国会の共闘を回した人である。飛鳥田に置くと
-        //  横浜を取っていない盤でこの一本が出なくなるので、こちらに置く。
-        { name: '公明党に回路を作る', desc: '公明 +6、共産 −4、左派の不満 +5。一度だけ',
-          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
-          fx: function (Q) { Q.ch_komei = 1; Q.rel_komei += 6; Q.rel_kyosan -= 4; Q.mood_saha += 5; } }
+        //  書記長として国会の共闘を回した。
+        { name: '公明党に回路を作る', desc: '公明 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          need: function (Q) { return !!Q.komei_exists; },
+          fx: function (Q) { Q.ch_komei = 1; Q.rel_komei += 5; } }
       ] },
 
     asukata: { n: 13, name: '飛鳥田一雄', faction: 'chusa', from: 1963, to: 1990,
       note: '横浜市長。全国革新市長会長。市長のまま党委員長になる唯一の男',
       fit: { chair: 5, secgen: 2, policy: 2, diet: 2, org: 4, youth: 2 },
       passive: '毎回、資金 +1、無派閥の代議員 +2',
-      act: { name: '全国革新市長会を動かす', desc: '資金 +5、無派閥代議員 +30', cost: {}, cd: 4, uses: 2 } },
+      acts: [
+        { name: '全国革新市長会を動かす', desc: '資金 +5、無派閥代議員 +30', cost: {}, cd: 4, uses: 2 },
+        //  一九八〇年の社公合意は飛鳥田－竹入の線で成った。
+        { name: '公明党に回路を作る', desc: '公明 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          need: function (Q) { return !!Q.komei_exists; },
+          fx: function (Q) { Q.ch_komei = 1; Q.rel_komei += 5; } }
+      ] },
 
     doi: { n: 14, name: '土井たか子', faction: 'chusa', from: 1969, to: 1993,
       note: '憲法学者。一九六九年初当選。のちに「やるっきゃない」と言う',
@@ -252,10 +271,10 @@
       passive: '毎回、総評との関係 +2',
       acts: [
         { name: '労組と手を打つ', desc: '資金 +6、総評 +10', cost: {}, cd: 3, uses: 3 },
-        //  田辺－金丸の線。史実でも、この二人が与野党の裏の窓口だった。
-        { name: '自民党に回路を作る', desc: '自民 +6、左派の不満 +8。一度だけ',
-          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
-          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 6; Q.mood_saha += 8; } }
+        //  田辺－金丸の線。派閥は中間左派だが、駕駛員の指名でここに置く。
+        { name: '自民党に回路を作る', desc: '自民 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 5; } }
       ] },
 
     yamaguchi: { n: 18, name: '山口鶴男', faction: 'chusa', from: 1969, to: 1993,
@@ -264,17 +283,25 @@
       passive: '毎回、無派閥の代議員 +2',
       acts: [
         { name: '選挙態勢を締める', desc: '政治資源 +3、無派閥代議員 +20', cost: { budget: 2 }, cd: 3, uses: 3 },
-        //  書記長として社公民の実務を回した人である。
-        { name: '民社党に回路を作る', desc: '民社 +6、共産 −5、左派の不満 +8。一度だけ',
-          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
-          fx: function (Q) { Q.ch_minsha = 1; Q.rel_minsha += 6; Q.rel_kyosan -= 5; Q.mood_saha += 8; } }
+        //  書記長として社公民の実務を回した。
+        { name: '民社党に回路を作る', desc: '民社 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          need: function (Q) { return !!Q.minsha_exists; },
+          fx: function (Q) { Q.ch_minsha = 1; Q.rel_minsha += 5; } }
       ] },
 
     ueda: { n: 19, name: '上田哲', faction: 'saha', from: 1968, to: 1993,
       note: '元NHK記者。協会寄りだが、話し方は都市向けである',
       fit: { chair: 3, secgen: 2, policy: 4, diet: 3, org: 2, youth: 4 },
       passive: '毎回、新中間層の傾向が少し上がる',
-      act: { name: '街頭とテレビで押す', desc: '未組織・新中間層 +4', cost: { capital: 2 }, cd: 2, uses: 3 } },
+      acts: [
+        { name: '街頭とテレビで押す', desc: '未組織・新中間層 +4', cost: { capital: 2 }, cd: 2, uses: 3 },
+        //  革新共闘の街頭は、この人の側の仕事である。
+        { name: '共産党に回路を作る', desc: '共産 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          need: function (Q) { return !Q.kyosan_merged; },
+          fx: function (Q) { Q.ch_kyosan = 1; Q.rel_kyosan += 5; } }
+      ] },
 
     murayama: { n: 20, name: '村山富市', faction: 'chusa', from: 1972, to: 1993,
       note: '大分の自治労出身。目立たない。だが最後に首相になる',
@@ -289,7 +316,13 @@
       note: '江田派の現実路線を継いだ。政審会長・国対委員長。のち運輸大臣',
       fit: { chair: 3, secgen: 4, policy: 5, diet: 5, org: 2, youth: 1 },
       passive: '毎回、政治資源 +1',
-      act: { name: '与野党の調整に入る', desc: '政治資源 +5、公明 +8、自民 +6', cost: {}, cd: 3, uses: 3 } },
+      acts: [
+        { name: '与野党の調整に入る', desc: '政治資源 +5、公明 +8、自民 +6', cost: {}, cd: 3, uses: 3 },
+        //  国対の実務そのものである。
+        { name: '自民党に回路を作る', desc: '自民 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 5; } }
+      ] },
     yamahana: { n: 22, name: '山花貞夫', faction: 'chuu', from: 1976, to: 1993,
       note: '弁護士出身。ニューウェーブの旗。一九九三年に委員長',
       fit: { chair: 4, secgen: 3, policy: 4, diet: 3, org: 3, youth: 4 },
@@ -322,7 +355,14 @@
       note: '農民運動から。日中友好の窓口を長く務めた',
       fit: { chair: 2, secgen: 2, policy: 3, diet: 4, org: 3, youth: 1 },
       passive: '毎回、農村の傾向が少し上がる',
-      act: { name: '日中の窓口を回す', desc: '共産 +12、自営商工 +3、農村 +2', cost: { capital: 2 }, cd: 3, uses: 3 } },
+      acts: [
+        { name: '日中の窓口を回す', desc: '共産 +12、自営商工 +3、農村 +2', cost: { capital: 2 }, cd: 3, uses: 3 },
+        //  日中の窓口。同じ回路の先に共産党の側の人も居る。
+        { name: '共産党に回路を作る', desc: '共産 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          need: function (Q) { return !Q.kyosan_merged; },
+          fx: function (Q) { Q.ch_kyosan = 1; Q.rel_kyosan += 5; } }
+      ] },
     okada: { n: 28, name: '岡田春夫', faction: 'chusa', from: 1955, to: 1990,
       note: '国会論戦の名手。政府を追い詰める資料を出すので「爆弾男」と呼ばれた',
       fit: { chair: 2, secgen: 3, policy: 3, diet: 5, org: 2, youth: 2 },

@@ -3200,6 +3200,10 @@
       // 査問問題　1976年〜・史実
       { n: 3802, id: 'a3_miyamoto_samon', name: '查问问题', acts: [3], need: { rel: 0.2 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976; } },
+      // 大福の密約　1976年〜・史実
+      { n: 9233, id: 'jimin_sosai76', name: '大福の密約', acts: [3], need: { rel: 0.2 }, year: 1976, fixed: true,
+        when: function (Q) { return Q.year >= 1976 &&
+                 !Q.jimin_sosai76_done; } },
       // 飛鳥田一雄　1977年〜・史実
       { n: 3020, id: 'a3_asukata', name: '飛鳥田一雄', acts: [3], need: { chair: 0.3 }, year: 1977, fixed: true,
         when: function (Q) { return Q.year >= 1977 &&
@@ -3359,6 +3363,10 @@
       { n: 4805, id: 'a4_kyosan_koryo', name: '共产党改纲领', acts: [4], need: { rel: 0.14 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
                  Q.kyosan_kaikaku; } },
+      // 中曽根の登場　1982年〜・史実
+      { n: 9234, id: 'jimin_sosai82', name: '中曽根の登場', acts: [4], need: { rel: 0.2 }, year: 1982, fixed: true,
+        when: function (Q) { return Q.year >= 1982 &&
+                 !Q.jimin_sosai82_done; } },
       // 「不沈空母」発言　1983年〜・史実
       { n: 154, id: 'fuchinkubo', name: '「不沈空母」発言', acts: [4], need: { rally: 0.14 }, year: 1983, fixed: true,
         when: function (Q) { return Q.year >= 1983 &&
@@ -3538,6 +3546,10 @@
       { n: 9222, id: 'gov_kokutetsu', name: '国鉄改革（政権の側）', acts: [5], need: { labor: 0.3 }, year: 1987, fixed: true,
         when: function (Q) { return Q.year >= 1987 &&
                  Q.gov_ours && !Q.kokutetsu_kind; } },
+      // 安竹宮　1987年〜・史実
+      { n: 9235, id: 'jimin_sosai87', name: '安竹宮', acts: [5], need: { rel: 0.2 }, year: 1987, fixed: true,
+        when: function (Q) { return Q.year >= 1987 &&
+                 !Q.jimin_sosai87_done; } },
       // リクルート　帯中間右/右・1988年〜・史実
       { n: 5005, id: 'a5_recruit', name: 'リクルート', acts: [5], need: { name: 0.25 }, year: 1988, fixed: true,
         when: function (Q) { return Q.year >= 1988 &&
@@ -7436,7 +7448,9 @@
     ldpHead: function (Q) {
       //  党首選に介入して担いだ人は、その任期のあいだだけ残る。
       //  期限を切らないと、一度介入しただけで三十四年ぶん総裁が固まってしまう。
-      if (Q.jimin_head_name && (Q.year || 0) <= (Q.jimin_head_until || 0)) {
+      var y0 = Q.year || 0;
+      if (Q.jimin_head_name && y0 >= (Q.jimin_head_from || 0) &&
+          y0 <= (Q.jimin_head_until || 0)) {
         return Q.jimin_head_name;
       }
       var y = Q.year || 1959, i, name = this.LDP_HEADS[0][1];
