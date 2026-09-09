@@ -2666,17 +2666,17 @@
       // ── 第Ⅲ幕 ──────────────────────────────────────────────
       { n: 21, id: 'sutoken_suto', name: 'スト権スト', acts: [3], need: { labor: 0.17 },
         // 一九七五年の出来事。局面2（year >= 1972）に入ってから
-        when: function (Q) { return Q.year >= 1972 && Q.c_labor >= window.JSP.needOf(Q, 0.17); } },
+        when: function (Q) { return Q.year >= 1972 && Q.c_labor >= window.JSP.needOf(Q, 0.17) && !Q.evdone_a3_suto_ken && !Q.evdone_suto_ken_sa; } },
       { n: 22, id: 'lockheed', name: 'ロッキード事件', acts: [3], need: { diet: 0.17 },
         // 一九七六年二月
         when: function (Q) { return Q.year >= 1972 && Q.c_diet >= window.JSP.needOf(Q, 0.17); } },
       { n: 23, id: 'shinjiyu', name: '新自由クラブ', acts: [3], need: { rel: 0.17 },
         // 一九七六年六月
-        when: function (Q) { return Q.year >= 1972 && Q.c_rel >= window.JSP.needOf(Q, 0.17); } },
+        when: function (Q) { return Q.year >= 1972 && Q.c_rel >= window.JSP.needOf(Q, 0.17) && !Q.evdone_a3_shinjiyu; } },
       { n: 24, id: 'narita_sangensoku', name: '野党共闘の三原則', acts: [3], need: { koryo: 0.17 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.17); } },
       { n: 25, id: 'sanrizuka', name: '三里塚', acts: [3], need: { rally: 0.17 },
-        when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.17); } },
+        when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.17) && !Q.evdone_a3_sanrizuka; } },
 
       // ── 第Ⅳ幕 ──────────────────────────────────────────────
       { n: 31, id: 'kokutetsu', name: '国鉄再建論', acts: [4], need: { labor: 0.17 },
@@ -2706,10 +2706,10 @@
         when: function (Q) { return Q.phase >= 2 && Q.c_rally >= window.JSP.needOf(Q, 0.17); } },
       { n: 44, id: 'seiji_kaikaku', name: '政治改革', acts: [5], need: { koryo: 0.12 },
         // 小選挙区制が議題になるのは一九九一年以降。局面3から
-        when: function (Q) { return Q.phase >= 3 && Q.c_koryo >= window.JSP.needOf(Q, 0.12); } },
+        when: function (Q) { return Q.phase >= 3 && Q.c_koryo >= window.JSP.needOf(Q, 0.12) && !Q.evdone_a5_shosenkyoku; } },
       { n: 45, id: 'shinto_boom', name: '新党ブーム', acts: [5], need: { rel: 0.17 },
         // 日本新党は一九九二年。局面3から
-        when: function (Q) { return Q.phase >= 3 && Q.c_rel >= window.JSP.needOf(Q, 0.17); } },
+        when: function (Q) { return Q.phase >= 3 && Q.c_rel >= window.JSP.needOf(Q, 0.17) && !Q.evdone_a5_hosokawa_boom; } },
 
 
       // ── 自治体選挙（脚本に無い六都市） ──────────────────────
@@ -3006,7 +3006,8 @@
         when: function (Q) { return Q.year >= 1970; } },
       // 三里塚　1971年〜・史実
       { n: 3003, id: 'a3_sanrizuka', name: '三里塚', acts: [3], need: { rally: 0.25 }, year: 1971, fixed: true,
-        when: function (Q) { return Q.year >= 1971; } },
+        when: function (Q) { return Q.year >= 1971 &&
+                 !Q.evdone_sanrizuka; } },
       // 大阪府知事　軸未定/社共・1971年〜・史実
       { n: 3004, id: 'a3_kuroda', name: '大阪府知事', acts: [3], need: { org: 0.25 }, year: 1971, fixed: true,
         when: function (Q) { return Q.year >= 1971 &&
@@ -3097,7 +3098,8 @@
       // スト権スト　帯中間右/右・1975年〜・史実
       { n: 3013, id: 'a3_suto_ken', name: 'スト権スト', acts: [3], need: { labor: 0.35 }, year: 1975, fixed: true,
         when: function (Q) { return Q.year >= 1975 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_sutoken_suto; } },
       // サイゴン陥落　1975年〜・史実
       { n: 3166, id: 'a3_vietnam_owari', name: 'サイゴン陥落', acts: [3], need: { rally: 0.2 }, year: 1975, fixed: true,
         when: function (Q) { return Q.year >= 1975; } },
@@ -3115,7 +3117,8 @@
       // スト権スト　帯左/中間左・1975年〜・史実
       { n: 7513, id: 'suto_ken_sa', name: 'スト権スト', acts: [3], need: { labor: 0.35 }, year: 1975, fixed: true,
         when: function (Q) { return Q.year >= 1975 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.evdone_sutoken_suto; } },
       // 成長の終わり　帯左/中間左・1975年〜・史実
       { n: 7367, id: 'seicho_owari_sa', name: '成長の終わり', acts: [3], need: { org: 0.3 }, year: 1975, fixed: true,
         when: function (Q) { return Q.year >= 1975 &&
@@ -3151,7 +3154,8 @@
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 新自由クラブ　1976年〜・史実
       { n: 3016, id: 'a3_shinjiyu', name: '新自由クラブ', acts: [3], need: { hr: 0.35 }, year: 1976, fixed: true,
-        when: function (Q) { return Q.year >= 1976; } },
+        when: function (Q) { return Q.year >= 1976 &&
+                 !Q.evdone_shinjiyu; } },
       // 保革伯仲　帯中間右/右・1976年〜・史実
       { n: 3017, id: 'a3_hakuchu', name: '保革伯仲', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -3671,7 +3675,7 @@
       { n: 5016, id: 'a5_shosenkyoku', name: '小選挙区制', acts: [5], need: { koryo: 0.35 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.senkyoku_seido; } },
+                 !Q.senkyoku_seido && !Q.evdone_seiji_kaikaku; } },
       // 一九九二年参院選　1992年〜・史実
       { n: 5170, id: 'a5_1992_sanin', name: '一九九二年参院選', acts: [5], need: { hc: 0.3 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992; } },
@@ -4090,7 +4094,7 @@
       { n: 455, id: 'a5_hosokawa_boom', name: '日本新党ブーム', acts: [5], need: { rally: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
                  Q.c_rally >= window.JSP.needOf(Q, 0.14) &&
-                 Q.komei_exists; } },
+                 Q.komei_exists && !Q.evdone_shinto_boom; } },
       // 最後の組織化
       { n: 456, id: 'a5_soshiki_saigo', name: '最後の組織化', acts: [5], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25); } },
@@ -5144,10 +5148,10 @@
       { n: 9131, id: 'sp_shin_sengen1986', name: '新宣言', acts: [5], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1986, 1) && !Q.evdone_a5_shin_sengen; } },
       { n: 9132, id: 'sp_kokutetsu1987', name: '国鉄分割民営化', acts: [5], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1987, 4); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1987, 4) && !Q.gov_ours; } },
       //  消費税とマドンナは七月の参院選の結果を語る。参院選のあとに出す。
       { n: 9133, id: 'sp_madonna1989', name: '消費税とマドンナ', acts: [5], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 7) && !!Q.evdone_hc1989; } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 7) && !!Q.evdone_hc1989 && !Q.gov_ours; } },
       //  連合の結成は十一月。参院選とマドンナのあと。
       { n: 9134, id: 'sp_rengo1989', name: '連合結成', acts: [5], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 11) && !!Q.evdone_sp_madonna1989
@@ -5155,7 +5159,7 @@
       { n: 9135, id: 'sp_gulf1991', name: '湾岸戦争', acts: [5], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1991, 1); } },
       { n: 9136, id: 'sp_pko1992', name: 'PKO協力法', acts: [5], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1992, 6); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1992, 6) && !Q.gov_ours; } },
 
       //  参院選。三年ごとの半数改選。手を消費しない割り込みとして出す。
       //  中身は一つの頁（hc.election）を年ごとに使い回す。
@@ -5921,9 +5925,23 @@
     //  「その他」は名簿ではなく残余なので数えない。
     //  自民党とだけは、この道では組まない（自社連立は jisha_pact の別道）。
     KYOTOU_LINE: 50,
+    //  公明も民社も、共産党と同じ内閣には入らない（社公民の線はそのために引かれた）。
+    //  だから受け皿は二通りしか無い。
+    //    ・社共だけで過半に届く　→ 共産党と組む内閣
+    //    ・届かない　　　　　　 → 共産党を外し、公明・民社と組む内閣
+    //  両方を一度に足すと、史実にも算術にも無い「公明・民社・共産の内閣」ができる。
     coalitionBloc: function (Q) {
       var line = this.KYOTOU_LINE;
-      var rows = [], seats = Q.seats_hr || 0, i, k, s, n;
+      var maj = Math.floor((Q.hr_total || 511) / 2) + 1;
+      var mine = Q.seats_hr || 0, i, k, s, n;
+      //  まず社共だけで届くかを見る
+      var kyosanIn = !Q.kyosan_merged && (Q.rel_kyosan || 0) >= line && (Q.res_kyosan || 0) > 0;
+      if (kyosanIn && mine + (Q.res_kyosan || 0) >= maj) {
+        return { seats: mine + Q.res_kyosan, kind: 'sakyo',
+          parties: [{ name: '共産党', seats: Q.res_kyosan, rel: Q.rel_kyosan }] };
+      }
+      //  届かないなら共産党は外れる。中道と分裂新党で数える
+      var rows = [], seats = mine;
       var add = function (name, num, rel) {
         if (!(num > 0) || (rel || 0) < line) { return; }
         rows.push({ name: name, seats: num, rel: rel });
@@ -5931,7 +5949,6 @@
       };
       if (Q.komei_exists) { add('公明党', Q.res_komei || 0, Q.rel_komei); }
       if (Q.minsha_exists) { add('民社党', Q.res_minsha || 0, Q.rel_minsha); }
-      if (!Q.kyosan_merged) { add('共産党', Q.res_kyosan || 0, Q.rel_kyosan); }
       for (i = 0; i < this.SPLINTER_KEYS.length; i += 1) {
         k = this.SPLINTER_KEYS[i];
         s = this.SPLINTER[k];
@@ -5943,7 +5960,7 @@
         rows.push({ name: s.name, seats: n, rel: null });
         seats += n;
       }
-      return { seats: seats, parties: rows };
+      return { seats: seats, kind: 'chudo', parties: rows };
     },
 
     //  受け皿を頁に出すための控え。行が無ければ「我々だけ」と書く。
