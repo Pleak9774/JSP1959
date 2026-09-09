@@ -7600,6 +7600,137 @@
       return Q;
     },
 
+    // ── 派閥の勢力と不満をひとまとめにする ──────────────────
+    //  代議員票は四つの派閥に散っているが、左派（協会派）の票だけは
+    //  独立した派閥になるまで中間左派の中に「掌握度」として入っている。
+    //  札の view-if / choose-if は式しか書けないので、
+    //  誰が主流で誰が傍流かも、ここで数に焼いておく。
+    FAC_KEYS: ['uha', 'chuu', 'chusa', 'saha'],
+    //  不満度の「不穏」の入り口。ここから譲る相手として名前が出る
+    FAC_ANGRY: 45,
+    facPool: function (Q) {
+      var d = this.delegates(Q), ks = this.FAC_KEYS, i, k;
+      var p = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai + (Q.del_saha || 0) };
+      for (i = 0; i < ks.length; i++) {
+        k = ks[i];
+        p[k] = this.inParty(Q, k) ? Math.max(0, Math.round(p[k] || 0)) : 0;
+      }
+      return p;
+    },
+
+    //  派閥の代議員票を n だけ動かす。実際に動いた票を返す。
+    facMove: function (Q, key, n) {
+      n = Math.round(n);
+      if (!n || !this.inParty(Q, key)) { return 0; }
+      if (key === 'saha' && !(Q.del_saha > 0)) {
+        //  協会がまだ独立した派閥になっていない盤では、その票は
+        //  中間左派の中にある。動かすのは掌握度のほうである。
+        var base = Math.max(1, Q.del_chusa || 1);
+        var g0 = Q.kyokai_grip || 0;
+        var g1 = clamp(g0 + n / base * 100, 0, 100);
+        Q.kyokai_grip = Math.round(g1 * 10) / 10;
+        return Math.round((g1 - g0) / 100 * base);
+      }
+      var kk = 'del_' + key, v = Q[kk] || 0;
+      var got = n < 0 ? Math.max(n, -v) : n;
+      Q[kk] = v + got;
+      return got;
+    },
+
+    factionState: function (Q) {
+      var ks = this.FAC_KEYS, p = this.facPool(Q), i, k, tot = 0, best = null;
+      for (i = 0; i < ks.length; i++) { tot += p[ks[i]]; }
+      for (i = 0; i < ks.length; i++) {
+        k = ks[i];
+        if (!this.inParty(Q, k)) { continue; }
+        if (best === null || p[k] > p[best]) { best = k; }
+      }
+      //  委員長の席が空いていたり、その派閥が出て行っていたら、
+      //  委員長の派閥は無いものとして数える。
+      var chair = this.factionOf(Q.post_chair);
+      if (chair && !this.inParty(Q, chair)) { chair = null; }
+      Q.fac_main = best ? FNAME[best] : '';
+      Q.fac_main_pct = (best && tot) ? Math.round(p[best] / tot * 100) : 0;
+      var off = [], ang = [], rows = [], live, isOff, mood, pct;
+      for (i = 0; i < ks.length; i++) {
+        k = ks[i];
+        live = this.inParty(Q, k) ? 1 : 0;
+        isOff = (live && k !== best && k !== chair) ? 1 : 0;
+        mood = Math.round(Q['mood_' + k] || 0);
+        pct = tot ? Math.round(p[k] / tot * 100) : 0;
+        Q['fac_' + k + '_in'] = live;
+        Q['fac_' + k + '_off'] = isOff;
+        Q['fac_' + k + '_pct'] = pct;
+        Q['fac_' + k + '_mood'] = mood;
+        Q['fac_' + k + '_yield'] = (live && mood >= this.FAC_ANGRY) ? 1 : 0;
+        if (!live) { continue; }
+        if (isOff) { off.push(FNAME[k]); }
+        if (mood >= this.FAC_ANGRY) { ang.push(FNAME[k]); }
+        rows.push(FNAME[k] + '　' + p[k] + ' 票 <span style="opacity:.6">(' + pct + '%)</span>' +
+          '　不満 ' + mood +
+          (k === best ? '　<span style="opacity:.6">大会の主流</span>' : '') +
+          (k === chair ? '　<span style="opacity:.6">委員長の派閥</span>' : ''));
+      }
+      Q.fac_off_n = off.length;
+      Q.fac_off_list = off.join('、');
+      Q.fac_touki_cost = this.FAC_TOUKI_COST;
+      Q.fac_angry_n = ang.length;
+      Q.fac_angry_list = ang.join('、');
+      Q.fac_block = rows.join('<br>');
+      return Q;
+    },
+
+    //  党紀を締める。委員長の派閥と大会の主流を除いた派閥から票を剥がし、
+    //  無派閥へ回す。剥がされた側は当然怒る。
+    FAC_TOUKI_COST: 5,
+    facDiscipline: function (Q) {
+      var ks = this.FAC_KEYS, i, k, moved = 0;
+      this.factionState(Q);
+      var p = this.facPool(Q);
+      for (i = 0; i < ks.length; i++) {
+        k = ks[i];
+        if (!Q['fac_' + k + '_off']) { continue; }
+        moved += -this.facMove(Q, k, -Math.max(8, Math.round(p[k] * 0.12)));
+      }
+      Q.del_muha = (Q.del_muha || 0) + moved;
+      for (i = 0; i < ks.length; i++) {
+        k = ks[i];
+        if (!this.inParty(Q, k)) { continue; }
+        Q['mood_' + k] = (Q['mood_' + k] || 0) + (Q['fac_' + k + '_off'] ? 14 : 6);
+      }
+      Q.fac_moved = moved;
+      return moved;
+    },
+
+    //  棚上げ。何も決めないと、決めない側が少しずつ痩せる。
+    facShelve: function (Q) {
+      var ks = this.FAC_KEYS, i, k, moved = 0;
+      this.factionState(Q);
+      var p = this.facPool(Q);
+      for (i = 0; i < ks.length; i++) {
+        k = ks[i];
+        if (!this.inParty(Q, k)) { continue; }
+        if (Q['fac_' + k + '_off']) {
+          moved += -this.facMove(Q, k, -Math.max(3, Math.round(p[k] * 0.04)));
+        }
+        Q['mood_' + k] = (Q['mood_' + k] || 0) + 3;
+      }
+      Q.del_muha = (Q.del_muha || 0) + moved;
+      Q.fac_moved = moved;
+      return moved;
+    },
+
+    //  譲る。不満を落として、そのぶん票を積む。
+    FAC_YIELD_MOOD: 18,
+    FAC_YIELD_DEL: 30,
+    facYield: function (Q, key) {
+      Q['mood_' + key] = Math.max(0, (Q['mood_' + key] || 0) - this.FAC_YIELD_MOOD);
+      Q.fac_moved = this.facMove(Q, key, this.FAC_YIELD_DEL);
+      Q.fac_yield_name = FNAME[key] || '';
+      this.factionState(Q);
+      return Q.fac_moved;
+    },
+
     growMembers: function (Q, n) {
       Q.members = Math.min(this.MEMBER_CAP, Q.members + n);
       Q.budget += Math.round(n / 10000);
@@ -7896,6 +8027,8 @@
       //  脱党した派閥に積まれた不満は、席を継いだ派閥へ繰り上げてから
       //  0 に潰す。カードや指導部や事象が加算したぶんは、ここで拾われる。
       this.moodInherit(Q);
+      //  派閥の勢力・不満・主流／傍流。党務の札がここを読む。
+      this.factionState(Q);
       //  難度。見送りの無料枠と、控えを取れるかどうか。
       var D = this.diff(Q);
       Q.diff_name = D.name;
