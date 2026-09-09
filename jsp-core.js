@@ -956,6 +956,8 @@
     // ── 1行動回ぶんの不満度ドリフト ───────────────────────────
     //  その派閥がまだ党の中にいるか。出て行った派閥に不満は無い。
     inParty: function (Q, f) {
+      //  向こうの党へ移った派閥は、こちらにはもう居ない。
+      if (Q['defect_' + f]) { return false; }
       if (f === 'uha') { return !Q.minsha_exists; }
       if (f === 'chuu') { return !Q.shamin_exists; }
       if (f === 'saha') { return !Q.shinsha_exists; }
@@ -2030,6 +2032,137 @@
       this.push(Q, ['shinchukan'], neu ? -3 : -4);
       this.push(Q, ['jieigyo'], -2);
       Q.gassho_take = take;
+      return Q;
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  野党再編
+    //
+    //  こちらが結集の側に回らないまま、自民が割れ、選挙制度が小選挙区に
+    //  寄ると、向こうの党が一つになる。小さい党のまま小選挙区に入れば
+    //  全部落ちるからである ── 史実の新進党（一九九四年）と
+    //  民主党（一九九六年）は、どちらもこの理屈で出来ている。
+    //
+    //  枠は新しく作らない。民社党の列をそのまま作り直して名前を変える。
+    //  原ゲームが中央党の列を CVP に作り直したのと同じ形である。
+    // ══════════════════════════════════════════════════════════
+
+    //  この線より小さければ、単独では小選挙区に耐えられない
+    OPP_MERGE_SHARE: 0.20,
+
+    //  新党を一つ畳んで、行き先の党へ移す。議席だけでなく、
+    //  母党から借りている票もその割合ぶん移さないと、次の総選挙で
+    //  票が母党へ戻ってしまい、畳んだ党が消える。
+    foldSplinter: function (Q, k, to) {
+      var sp = this.SPLINTER[k];
+      var n = Q['res_sp_' + k] || 0;
+      Q['res_sp_' + k] = 0;
+      Q['sp_' + k] = 0;
+      Q['spseed_' + k] = 1;
+      Q['spmerged_' + k] = 1;
+      if (n <= 0 || !sp) { return 0; }
+      Q['res_' + to] = (Q['res_' + to] || 0) + n;
+      //  母党の票のうち、この党が持って出た割合ぶんを移す
+      var share = n / Math.max(1, (Q['res_' + sp.parent] || 0) + n);
+      var i, l;
+      for (i = 0; i < LAYERS.length; i++) {
+        l = LAYERS[i];
+        this.transfer(Q, l, sp.parent, to, (Q['lean_' + l + '_' + sp.parent] || 0) * share);
+      }
+      return n;
+    },
+
+    //  向こうが一つになる条件。どちらか一つで足りる。
+    oppMergeReady: function (Q) {
+      //  こちらが先に結集していれば、向こうにまとまる相手が残らない
+      if (Q.opp_merged || Q.minshu_shinto || Q.kyosan_merged) { return 0; }
+      if (!Q.minsha_exists) { return 0; }
+      var sp = this.allySplinterSeats(Q);
+      if (sp <= 0) { return 0; }                //  自民がまだ割れていない
+      var n = sp + (Q.res_minsha || 0) + (Q.shamin_exists ? 4 : 0);
+      var small = n < Math.round((Q.hr_total || 511) * this.OPP_MERGE_SHARE);
+      //  小選挙区（単純）か、小選挙区比例代表並立制
+      var seido = (Q.senkyoku_seido === 1 || Q.senkyoku_seido === 6);
+      return (small || seido) ? 1 : 0;
+    },
+
+    //  どちらが主導するか。保守の側が大きければ新進党になる。
+    oppMergeKind: function (Q) {
+      var hoshu = (Q.res_sp_shinsei || 0) + (Q.res_minsha || 0);
+      var jiyu = (Q.res_sp_nihonshin || 0) + (Q.res_sp_sakigake || 0);
+      return hoshu > jiyu ? 'shinshin' : 'minshuto';
+    },
+
+    //  こちらの派閥が、出来た党へ移る。
+    //  中間右派と右派が、不満を抱えたまま自由派主導の党を見れば動く。
+    OPP_DEFECT_LINE: 55,
+    defectToOpp: function (Q, f) {
+      var seat = Q['seat_' + f] || 0;
+      var take = Math.round(seat * this.followRate(Q, f));
+      if (take > 0) {
+        Q['seat_' + f] = seat - take;
+        Q.seats_hr = Math.max(0, (Q.seats_hr || 0) - take);
+        Q.res_shakai = Q.seats_hr;
+        Q.res_minsha = (Q.res_minsha || 0) + take;
+      }
+      Q['del_' + f] = 0;
+      Q['mood_' + f] = 0;
+      Q['defect_' + f] = 1;
+      Q.opp_defect = (Q.opp_defect || 0) + take;
+      Q.splits = (Q.splits || 0) + 1;
+      //  票も持って行く。都市の新中間層が中心である。
+      this.transfer(Q, 'shinchukan', 'shakai', 'minsha', 5);
+      this.transfer(Q, 'mishoshiki', 'shakai', 'minsha', 3);
+      return take;
+    },
+
+    mergeOpposition: function (Q) {
+      var kind = this.oppMergeKind(Q);
+      var i, k, n = 0;
+      for (i = 0; i < this.SPLINTER_KEYS.length; i += 1) {
+        k = this.SPLINTER_KEYS[i];
+        if (!this.SPLINTER[k] || !this.SPLINTER[k].ally) { continue; }
+        n += this.foldSplinter(Q, k, 'minsha');
+      }
+      //  社民連は「その他」の中の四議席である。向こうへ行く。
+      if (Q.shamin_exists) {
+        var sm = Math.min(4, Q.res_other || 0);
+        Q.res_other -= sm;
+        Q.res_minsha = (Q.res_minsha || 0) + sm;
+        n += sm;
+        Q.shamin_exists = 0;
+        Q.shamin_gone = 1;          //  こちらへは戻らない
+        this.transfer(Q, 'shinchukan', 'other', 'minsha', 4);
+      }
+      Q.opp_merged = 1;
+      Q.opp_kind = kind;
+      Q.opp_take = n;
+      Q.opp_year = Q.year || 1993;
+      Q.minsha_name = kind === 'shinshin' ? '新進党' : '民主党';
+      Q.minsha_short = kind === 'shinshin' ? '新進' : '民主';
+      //  事象の門は式しか書けない。文字ではなく数で持つ。
+      Q.opp_shinshin = kind === 'shinshin' ? 1 : 0;
+      Q.opp_minshuto = kind === 'shinshin' ? 0 : 1;
+      //  保守が主導する党は、こちらから遠い。自由派の党は近い。
+      if (kind === 'shinshin') {
+        Q.rel_minsha = Math.min(Q.rel_minsha || 0, 10);
+        Q.rel_komei = (Q.rel_komei || 0) - 10;
+        Q.mood_uha = (Q.mood_uha || 0) + 8;
+        Q.mood_chuu = (Q.mood_chuu || 0) + 8;
+      } else {
+        Q.rel_minsha = Math.max(Q.rel_minsha || 0, 40);
+        Q.mood_chuu = (Q.mood_chuu || 0) + 14;
+        Q.mood_uha = (Q.mood_uha || 0) + 14;
+        //  自由派が主導する党には、こちらの右の側が乗れてしまう。
+        //  不満が線を越えていれば、そのまま出て行く。
+        var fs = ['chuu', 'uha'], j, g;
+        for (j = 0; j < fs.length; j++) {
+          g = fs[j];
+          if (!this.inParty(Q, g)) { continue; }
+          if ((Q['mood_' + g] || 0) <= this.OPP_DEFECT_LINE) { continue; }
+          this.defectToOpp(Q, g);
+        }
+      }
       return Q;
     },
 
@@ -3528,6 +3661,12 @@
       // 国民民主党　史実
       { n: 5808, id: 'a5_kokumin_minshu', name: '国民民主党', acts: [5], need: { koryo: 0.2 }, fixed: true,
         when: function (Q) { return Q.jisha_cabinet && Q.in_power && Q.cab_kind === 4 && Q.reorg_done && !Q.kokumin_minshu && !Q.kyosan_merged && !Q.minshu_shinto; } },
+      // 野党再編　史実
+      { n: 9236, id: 'opp_saihen', name: '野党再編', acts: [5], need: { rel: 0.2 }, fixed: true,
+        when: function (Q) { return window.JSP.oppMergeReady(Q); } },
+      // 向こうの党の党首選　史実
+      { n: 9237, id: 'opp_toshu', name: '向こうの党の党首選', acts: [5], need: { rel: 0.2 }, fixed: true,
+        when: function (Q) { return Q.opp_merged && !Q.opp_head_done; } },
       // 昭和が終わる　1986年〜・史実
       { n: 173, id: 'tenno', name: '昭和が終わる', acts: [5], need: { rel: 0.2 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986 &&
@@ -7618,7 +7757,7 @@
     },
 
     //  総選挙の直後に走る。ここでは政権に入りも出もしない ──
-    //  どの組み合わせで組むかは、組閣の頁で駕駛員が決める。
+    //  どの組み合わせで組むかは、組閣の頁で作り手が決める。
     //  cabinetCheck（自動で決める版）は、一九九三年の判定と検査が使う。
     cabinetPre: function (Q) {
       Q.was_in_power = Q.in_power ? 1 : 0;
@@ -7633,6 +7772,37 @@
       Q.cab_bloc_list = this.blocLine(Q, bloc);
       Q.cab_nonldp = this.nonLdpSeats(Q);
       Q.cab_without = Q.cab_nonldp - (Q.seats_hr || 0);
+      return Q;
+    },
+
+    //  連立から降りる。内閣は倒れる。
+    //
+    //  首班を譲っていれば、改造も解散も手元に無い ── どちらも総理の
+    //  権限だからである。内閣を終わらせる手は、これ一つだけになる。
+    //  一緒に座っていた相手との関係は、そのぶん大きく傷む。
+    walkOut: function (Q) {
+      var C = this.CAB;
+      if (!Q.in_power) { return Q; }
+      var kind = Q.cab_kind || 0;
+      Q.cab_walked = 1;
+      Q.walk_year = Q.year || 0;
+      Q.walk_n = (Q.walk_n || 0) + 1;
+      if (kind === 4) {
+        //  自社連立を降りる。自民との関係が切れる。
+        Q.rel_jimin = (Q.rel_jimin || 0) - 40;
+        Q.rel_sohyo = (Q.rel_sohyo || 0) + 12;
+      } else {
+        if (Q.komei_exists) { Q.rel_komei = (Q.rel_komei || 0) - 25; }
+        if (Q.minsha_exists) { Q.rel_minsha = (Q.rel_minsha || 0) - 25; }
+        //  共産党は閣内に居ないことが多い。降りた側には近づく。
+        Q.rel_kyosan = (Q.rel_kyosan || 0) + 8;
+      }
+      //  左派は喜ぶ。数を取りに行った側は惜しがる。
+      Q.mood_saha = Math.max(0, (Q.mood_saha || 0) - 10);
+      Q.mood_chuu = (Q.mood_chuu || 0) + 12;
+      Q.mood_uha = (Q.mood_uha || 0) + 12;
+      Q.souri_yuzuru = 0;
+      if (C) { C.leavePower(Q); }
       return Q;
     },
 
@@ -8461,7 +8631,8 @@
         p = PARTIES[j];
         if (p === 'minsha' && !Q.minsha_exists) { continue; }
         if (p === 'komei' && !Q.komei_exists) { continue; }
-        out.push('<span style="color:' + PCOLOR[p] + ';font-weight:bold">' + PNAME[p] + '</span> ' + this.pct(v[p]) + '%');
+        var pn = (p === 'minsha' && Q.minsha_short) ? Q.minsha_short : PNAME[p];
+        out.push('<span style="color:' + PCOLOR[p] + ';font-weight:bold">' + pn + '</span> ' + this.pct(v[p]) + '%');
       }
       return out.join('　');
     },

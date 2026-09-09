@@ -101,9 +101,36 @@
     return Math.min(1, (Q.seats_hr || 0) / tot);
   }
 
+  //  首班を譲ったときに戻ってくる持ち点。
+  //  重い省二つ（大蔵 4・外務 4）と軽い省一つ（格 2）に当たる。
+  var SOURI_TRADE = 10;
+
   function points(Q) {
     if (!Q.in_power) { return 0; }
-    return Math.max(2, Math.round(POINT_SCALE * share(Q)));
+    var p = Math.max(2, Math.round(POINT_SCALE * share(Q)));
+    if (Q.souri_yuzuru) { p += SOURI_TRADE; }
+    return p;
+  }
+
+  //  首班を譲れるのは、連立を主導していて、まだ総理を取っていないとき。
+  //  単独政権に譲る相手は居ない。
+  function canYield(Q) {
+    if (!Q.in_power || Q.souri_yuzuru) { return false; }
+    if (Q.cab_kind !== 2) { return false; }
+    if (Q.has_souri) { return false; }
+    return true;
+  }
+
+  function yieldSouri(Q) {
+    if (!canYield(Q)) { return 0; }
+    Q.souri_yuzuru = 1;
+    //  首班を渡した相手は、そのぶん腰を据える。
+    Q.coalition_rel = (Q.coalition_rel || 0) + 12;
+    //  取れる椅子を数で取りに行く判断である。現実派ほど惜しがる。
+    Q.mood_chuu = (Q.mood_chuu || 0) + 8;
+    Q.mood_saha = Math.max(0, (Q.mood_saha || 0) - 6);
+    sync(Q);
+    return SOURI_TRADE;
   }
 
   function used(Q) {
@@ -121,6 +148,7 @@
     var m = MIN[key];
     if (!m || Q['has_' + key]) { return false; }
     if (key === 'souri' && (Q.cab_kind === 3 || Q.cab_kind === 4)) { return false; }   // 参加だけでは首班は取れない（自社連立も）
+    if (key === 'souri' && Q.souri_yuzuru) { return false; }                             // 譲ったあとは取れない
     return left(Q) >= m.w;
   }
 
@@ -142,6 +170,8 @@
   //  内閣改造。持ち点を全部戻し、省も人も手放す。
   function clearAll(Q) {
     var i, k;
+    //  改造で全部返すなら、首班を譲った約束も一度解ける
+    Q.souri_yuzuru = 0;
     for (i = 0; i < ORDER.length; i++) {
       k = ORDER[i];
       Q['has_' + k] = 0; Q['who_' + k] = '';
@@ -188,7 +218,7 @@
   //  按分し、格の高い省から、取り分がいちばん残っている派閥へ渡す。
   //  同じ派閥の中では、その省への適性がいちばん高い人を入れる。
   //
-  //  単独政権でも連立でも同じ表を使う。省を選ぶのは駕駛員、
+  //  単独政権でも連立でも同じ表を使う。省を選ぶのは作り手、
   //  その椅子に誰が座るかは派閥が決める ── というのが党の実際である。
   function autoFill(Q) {
     var keys = ORDER.filter(function (k) { return Q['has_' + k] && !Q['who_' + k]; });
@@ -392,6 +422,8 @@
     }
     Q.cab_block = rows.length ? rows.join('<br>') : '<span style="opacity:.6">一个也还没拿到</span>';
     Q.cab_empty_n = ORDER.filter(function (k2) { return Q['has_' + k2] && !Q['who_' + k2]; }).length;
+    Q.can_yuzuru = canYield(Q) ? 1 : 0;
+    Q.souri_trade = SOURI_TRADE;
     return Q;
   }
 
@@ -400,6 +432,7 @@
     points: points, used: used, left: left, canTake: canTake, take: take,
     clearAll: clearAll, candidates: candidates, assign: assign, power: power,
     canAct: canAct, doAct: doAct, tick: tick, checkRelation: checkRelation,
+    canYield: canYield, yieldSouri: yieldSouri, SOURI_TRADE: SOURI_TRADE,
     autoFill: autoFill,
     enterPower: enterPower, leavePower: leavePower, sync: sync
   };

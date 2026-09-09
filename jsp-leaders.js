@@ -275,7 +275,7 @@
       passive: '毎回、総評との関係 +2',
       acts: [
         { name: '労組と手を打つ', desc: '資金 +6、総評 +10', cost: {}, cd: 3, uses: 3 },
-        //  田辺－金丸の線。派閥は中間左派だが、駕駛員の指名でここに置く。
+        //  田辺－金丸の線。派閥は中間左派だが、作り手の指名でここに置く。
         { name: '自民党に回路を作る', desc: '自民 +5',
           cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
           fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 5; } }
@@ -331,7 +331,15 @@
       note: '弁護士出身。ニューウェーブの旗。一九九三年に委員長',
       fit: { chair: 4, secgen: 3, policy: 4, diet: 3, org: 3, youth: 4 },
       passive: '毎回、新中間層の傾向が少し上がる',
-      act: { name: '政治改革を掲げる', desc: '新中間層・未組織 +5、公明 +10。左派 +10', cost: { capital: 2 }, cd: 3, uses: 3 } },
+      acts: [
+        { name: '政治改革を掲げる', desc: '新中間層・未組織 +5、公明 +10。左派 +10', cost: { capital: 2 }, cd: 3, uses: 3 },
+        //  中間右派の側から民社へ通す線。党首選に手を出せるのは
+        //  中間の二つと右派だけ、という作り手の指名による。
+        { name: '民社党に回路を作る', desc: '民社 +5',
+          cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rel',
+          need: function (Q) { return !!Q.minsha_exists; },
+          fx: function (Q) { Q.ch_minsha = 1; Q.rel_minsha += 5; } }
+      ] },
     kubo: { n: 23, name: '久保亘', faction: 'chuu', from: 1974, to: 1993,
       note: '鹿児島の教組出身だが党務では現実派。書記長。のち副総理・大蔵大臣',
       fit: { chair: 3, secgen: 5, policy: 4, diet: 4, org: 4, youth: 1 },
@@ -504,7 +512,10 @@
     if (f.faction === 'jiyu' && !Q.minshu_jiyu) { return true; }
     //  社民連へ出て行った二人。分裂しなければずっと党内に居たので、
     //  割れていない盤では最初から居る。割れたら、合流するまで戻らない。
-    if ((id === 'edagogatsu' || id === 'kan') && Q.shamin_exists && !Q.shamin_merged) { return true; }
+    //  社民連の二人。割れたままなら居ない。向こうの党へ行ってしまえば、
+    //  こちらへはもう戻らない。
+    if ((id === 'edagogatsu' || id === 'kan') &&
+        (Q.shamin_gone || (Q.shamin_exists && !Q.shamin_merged))) { return true; }
     return false;
   }
 
