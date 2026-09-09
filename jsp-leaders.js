@@ -500,7 +500,8 @@
     if (id === 'asukata' && !Q.local_yokohama && !Q.asukata_resigned) { return true; }
     //  合同で入ってきた側は、合同するまで盤に出ない。
     if (f.faction === 'kyosan' && !Q.kyosan_merged) { return true; }
-    if ((f.faction === 'hoshu' || f.faction === 'jiyu') && !Q.minshu_wide) { return true; }
+    if (f.faction === 'hoshu' && !Q.minshu_hoshu) { return true; }
+    if (f.faction === 'jiyu' && !Q.minshu_jiyu) { return true; }
     //  社民連へ出て行った二人。分裂しなければずっと党内に居たので、
     //  割れていない盤では最初から居る。割れたら、合流するまで戻らない。
     if ((id === 'edagogatsu' || id === 'kan') && Q.shamin_exists && !Q.shamin_merged) { return true; }

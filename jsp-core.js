@@ -961,7 +961,8 @@
       if (f === 'saha') { return !Q.shinsha_exists; }
       //  合同で入ってきた側は、合同したあとにだけ居る。
       if (f === 'kyosan') { return !!Q.kyosan_merged; }
-      if (f === 'hoshu' || f === 'jiyu') { return !!Q.minshu_wide; }
+      if (f === 'hoshu') { return !!Q.minshu_hoshu; }
+      if (f === 'jiyu') { return !!Q.minshu_jiyu; }
       return true;
     },
 
@@ -2059,7 +2060,9 @@
     mergeMinshu: function (Q, name) {
       var wide = (name !== '社会民主党');
       var i, l, v, k, take = 0, keep = wide ? 0.85 : 0.65;
-      if (Q.minsha_exists) {
+      //  民社党が乗るかどうかは関係で決まる。乗らなければ外に残る
+      //  ── 右派の系譜もそのまま党の外である。
+      if (Q.minsha_exists && this.cabRelOk(Q, 'minsha')) {
         k = Q.res_minsha || 0; take = Math.round(k * keep);
         Q.seats_hr = (Q.seats_hr || 0) + take;
         Q.res_shakai = Q.seats_hr;
@@ -2117,13 +2120,24 @@
       Q.seiken_junbi = (Q.seiken_junbi || 0) + 3;
       Q.minshu_shinto = 1;
       Q.minshu_wide = wide ? 1 : 0;
-      //  広い側の結集では、自民を出てきた保守系と、地方の首長から来た
-      //  自由系が入る。議席を持って来るわけではないので、代議員だけが増える。
-      //  民社は右派、社民連は中間右派の系譜なので、そちらへ戻す（復帰）。
-      if (wide) {
-        Q.del_hoshu = (Q.del_hoshu || 0) + 70;
-        Q.del_jiyu = (Q.del_jiyu || 0) + 70;
+      //  ── 自由派 ──────────────────────────────────────
+      //  細川の日本新党と新党さきがけの系譜。地方の首長と改革派である。
+      //  党名がどちらでも入る ── 社会民主党という名でも、この人たちの
+      //  居場所は作れる。新党が既に立っていれば、その議席も畳む。
+      var sj = this.absorbSplinter(Q, 'nihonshin') + this.absorbSplinter(Q, 'sakigake');
+      Q.minshu_jiyu = 1;
+      Q.del_jiyu = (Q.del_jiyu || 0) + 70 + Math.round(sj * 0.6);
+      Q.seat_jiyu = (Q.seat_jiyu || 0) + sj;
+      //  ── 保守派 ──────────────────────────────────────
+      //  自民を出てきた側。乗るかどうかは向こうとの関係で決まる。
+      //  新生党が既に立っていれば、その議席も畳む。
+      if (this.cabRelOk(Q, 'jimin')) {
+        var sh = this.absorbSplinter(Q, 'shinsei');
+        Q.minshu_hoshu = 1;
+        Q.del_hoshu = (Q.del_hoshu || 0) + 70 + Math.round(sh * 0.6);
+        Q.seat_hoshu = (Q.seat_hoshu || 0) + sh;
       }
+      //  民社は右派、社民連は中間右派の系譜なので、そちらへ戻す（復帰）。
       Q.minshu_kind = wide ? 'minshu' : 'shamin';
       Q.minshu_year = Q.year || 1991;
       Q.party_name = name;
@@ -5969,6 +5983,21 @@
       }
       Q.splinter_seats = tot;
       return tot;
+    },
+
+    //  分裂して出た新党を、こちらへ畳む。議席を移すだけでなく
+    //  切り出しの割合そのものを消さないと、次の総選挙でまた生えてくる。
+    absorbSplinter: function (Q, k) {
+      var n = Q['res_sp_' + k] || 0;
+      Q['res_sp_' + k] = 0;
+      Q['sp_' + k] = 0;
+      Q['spseed_' + k] = 1;
+      Q['spmerged_' + k] = 1;
+      if (n > 0) {
+        Q.seats_hr = (Q.seats_hr || 0) + n;
+        Q.res_shakai = Q.seats_hr;
+      }
+      return n;
     },
 
     //  非自民の合計。分裂した新党はすべて非自民の側に立つ。
