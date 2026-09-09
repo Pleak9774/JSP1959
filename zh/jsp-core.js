@@ -106,7 +106,7 @@
       1: { name: '小选区比例代表并立制', k: 1.35, thr: 4.0 },
       2: { name: '比例为主', k: 0.92, thr: 1.5 },
       3: { name: '比例代表', k: 0.85, thr: 1.0 },
-      4: { name: '小选区比例代表併用制', k: 0.88, thr: 1.5 },
+      4: { name: '小选区比例代表并用制', k: 0.88, thr: 1.5 },
       5: { name: '小选区比例代表连用制', k: 0.90, thr: 1.5 },
       6: { name: '单纯小选区', k: 1.90, thr: 8.0 }
     },
@@ -6357,7 +6357,7 @@
     CAND: {
       tandoku:  { off: -0.45, kyosan: 0.00, komei: 0.00, minsha: 0.00, self: 0.62,
                   budget: 9, capital: 7, bonus: 1.45, mult: 1.35, dir: '',
-                  label: '社会党単独推薦' },
+                  label: '社会党单独推荐' },
       sakyo:    { off: 0.00, kyosan: 0.62, komei: -0.22, minsha: -0.40, self: 0.10,
                   budget: 6, capital: 5, bonus: 1.00, mult: 1.10, dir: 'saha',
                   label: '社共推薦' },
@@ -6366,7 +6366,7 @@
                   label: '社公民推薦' },
       hounin:   { off: -0.06, kyosan: 0.22, komei: 0.18, minsha: 0.16, self: -0.10,
                   budget: 0, capital: 0, bonus: 0.30, mult: 0.45, dir: '',
-                  label: '放任（推薦を出さない）' }
+                  label: '撒手不管（不出推荐）' }
     },
 
     //  保有している自治体の、倍率の平均。
@@ -8211,7 +8211,7 @@
         //  「毎手、全層の支持が下がる」という報告は、六十年代の潮流が
         //  この線を毎年引き下げていることで、線が見えていなかった。
         var tide = sum > 0 ? (this.baselineLean(Q, l) / sum * 100) : 0;
-        rows.push('<b>' + LNAME[l] + '</b>　人口 ' + Q['pop_' + l] + '%　組織率 ' +
+        rows.push('<b>' + LNAME[l] + '</b>　人口 ' + Q['pop_' + l] + '%　组织率 ' +
           Math.round(Q['org_' + l] * 100) + '%　社会党 ' + this.pct(sh) +
           '%　<span style="opacity:.6">' + '潮流的线 ' + this.pct(tide) + '%　' + '上限 ' + Math.round(this.capOf(Q, l)) + '%</span>');
       }

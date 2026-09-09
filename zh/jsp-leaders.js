@@ -39,11 +39,11 @@
     //  役員に入れることもできる。組合の力は直に引き出せる代わりに、
     //  党の外から見れば「組合の党」という印がその分だけ濃くなる。
     ohta: { n: 41, name: '太田薰', faction: 'saha', from: 1958, to: 1985,
-      note: '総評議長。春闘を組み立てた男。「ヨーロッパ並みの賃金」',
+      note: '总评议长。春斗是他一手搭起来的。「要拿欧洲那样的工资」',
       fit: { chair: 2, secgen: 3, policy: 1, diet: 0, org: 5, youth: 1 },
-      passive: '毎回、総評との関係を 2 引き上げる',
+      passive: '每回合与总评的关系 +2',
       acts: [
-        { name: '春闘を組み立て直す', desc: '総評 +12、官公労・民間労組 +4、資金 +5',
+        { name: '重新搭起春斗', desc: '总评 +12、官公劳与民间工会 +4、资金 +5',
           cost: { capital: 2 }, cd: 3, uses: 3, domain: 'labor',
           fx: function (Q, J) {
             Q.rel_sohyo = (Q.rel_sohyo || 0) + 12;
@@ -51,7 +51,7 @@
             Q.budget = (Q.budget || 0) + 5;
             J.push(Q, ['shinchukan'], -2);
           } },
-        { name: '労働戦線を左でまとめる', desc: 'スト権ストに勝っているときだけ。積み上げ +14、総評の左 +10。四つの門が開いていれば、その場で左の統一が決まる',
+        { name: '把劳动战线在左边归拢', desc: '只有打赢了罢工权斗争才能用。累计 +14、总评的左 +10。四道闸门都开着的话，左翼统一当场就定下来',
           cost: { capital: 5, budget: 4 }, cd: 4, uses: 1, domain: 'labor',
           need: function (Q) { return !!Q.sutoken_won && !Q.reorg_done; },
           fx: function (Q, J) {
@@ -67,7 +67,7 @@
               Q.roso_hidari = 1;
             }
           } },
-        { name: '職場から党員を入れる', desc: '党員 +9000、官公労 +3',
+        { name: '从职场吸收党员', desc: '党员 +9000、官公劳 +3',
           cost: { budget: 4 }, cd: 3, uses: 2, domain: 'org',
           fx: function (Q, J) {
             Q.new_del = J.growMembers(Q, 9000);
@@ -76,17 +76,17 @@
           } }
       ] },
     iwai: { n: 42, name: '岩井章', faction: 'saha', from: 1955, to: 1980,
-      note: '総評事務局長。太田＝岩井体制の片方。組織の実務を握った',
+      note: '总评事务局长。太田・岩井体制的另一半，组织实务握在他手里',
       fit: { chair: 0, secgen: 4, policy: 1, diet: 2, org: 5, youth: 1 },
-      passive: '毎回、官公労の組織率をわずかに上げる',
+      passive: '每回合官公劳的组织率略微提升',
       acts: [
-        { name: '単産を横に束ねる', desc: '官公労と民間労組を組織する',
+        { name: '把各产别横向拢起来', desc: '组织官公劳与民间工会',
           cost: { budget: 5, capital: 2 }, cd: 3, uses: 3, domain: 'org',
           fx: function (Q, J) {
             J.organise(Q, ['kokorou', 'minrou'], 0.04);
             Q.rel_sohyo = (Q.rel_sohyo || 0) + 6;
           } },
-        { name: '政治スト方針を通す', desc: '闘争力 +、官公労 +5、左派 −8。新中間層 −4、自民 −10',
+        { name: '通过政治罢工的方针', desc: '斗争力 +、官公劳 +5、左派 −8。新中间层 −4、自民 −10',
           cost: { capital: 4 }, cd: 4, uses: 2, domain: 'rally',
           fx: function (Q, J) {
             J.push(Q, ['kokorou'], 5);
@@ -97,11 +97,11 @@
           } }
       ] },
     tomizuka: { n: 43, name: '富冢三夫', faction: 'chusa', from: 1965, to: 1993,
-      note: '国労書記長のち総評事務局長。スト権ストを現場で回した',
+      note: '国劳书记长，后任总评事务局长。罢工权斗争是他在现场调度的',
       fit: { chair: 1, secgen: 4, policy: 2, diet: 3, org: 4, youth: 1 },
-      passive: '毎回、官公労との関係をわずかに保つ',
+      passive: '每回合与官公劳的关系略微维持',
       acts: [
-        { name: '国鉄の職場を固める', desc: '官公労 +6、総評 +8、闘争力 +。新中間層 −3',
+        { name: '稳住国铁的职场', desc: '官公劳 +6、总评 +8、斗争力 +。新中间层 −3',
           cost: { capital: 3 }, cd: 3, uses: 3, domain: 'labor',
           fx: function (Q, J) {
             J.push(Q, ['kokorou'], 6);
@@ -109,7 +109,7 @@
             J.push(Q, ['shinchukan'], -3);
             Q.force_bonus = (Q.force_bonus || 0) + 1;
           } },
-        { name: '分割民営化に対案を出す', desc: '国鉄の軸 +1、無派閥代議員 +14、新中間層 +4',
+        { name: '对分割民营化提出对案', desc: '国铁的轴 +1、无派阀代议员 +14、新中间层 +4',
           cost: { capital: 5 }, cd: 4, uses: 2, domain: 'diet',
           fx: function (Q, J) {
             J.enact(Q, 'kokutetsu', 1);
@@ -118,11 +118,11 @@
           } }
       ] },
     makieda: { n: 44, name: '槇枝元文', faction: 'saha', from: 1970, to: 1993,
-      note: '日教組委員長のち総評議長。教育と平和を一本で語った',
+      note: '日教组委员长，后任总评议长。教育与和平，他当作一件事来讲',
       fit: { chair: 3, secgen: 3, policy: 3, diet: 1, org: 4, youth: 3 },
-      passive: '毎回、青年部の側の不満をわずかに抑える',
+      passive: '每回合青年部方面的不满略微平抑',
       acts: [
-        { name: '教育の現場から組み直す', desc: '教育の軸 +1、官公労 +5、新中間層 +3。農村 −2',
+        { name: '从教育现场重新组织', desc: '教育的轴 +1、官公劳 +5、新中间层 +3。农村 −2',
           cost: { capital: 3 }, cd: 3, uses: 3, domain: 'org',
           fx: function (Q, J) {
             J.enact(Q, 'kyoiku', 1);
@@ -130,7 +130,7 @@
             J.push(Q, ['shinchukan'], 3);
             J.push(Q, ['noson'], -2);
           } },
-        { name: '平和教育を全国に敷く', desc: '未組織 +5、新中間層 +4、左派 −6。右派 +8',
+        { name: '把和平教育推向全国', desc: '未组织 +5、新中间层 +4、左派 −6。右派 +8',
           cost: { budget: 4 }, cd: 3, uses: 2, domain: 'rally',
           fx: function (Q, J) {
             J.push(Q, ['mishoshiki'], 5);
