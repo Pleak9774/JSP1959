@@ -20,12 +20,26 @@
 
   // 派閥間の親和。負 = その派閥の不満が下がる（＝好感度が上がる）
   // 行 = 起用した派閥、列 = 影響を受ける派閥
+  //  左から　共産党系 － 左派 － 中間左派 － 中間右派・自由派 － 右派 － 保守派。
+  //  自由派（日本新党・さきがけの流れ）は中道の右あたり、保守派（新生党の
+  //  流れ）は右派のさらに外側に置く。値は対称である。
   var AFFINITY = {
-    uha:   { uha: -1.00, chuu: -0.40, chusa: +0.45, saha: +0.80 },
-    chuu:  { uha: -0.40, chuu: -1.00, chusa: +0.25, saha: +0.50 },
-    chusa: { uha: +0.45, chuu: +0.25, chusa: -1.00, saha: -0.40 },
-    saha:  { uha: +0.80, chuu: +0.50, chusa: -0.40, saha: -1.00 }
+    uha:    { uha: -1.00, chuu: -0.40, chusa: +0.45, saha: +0.80, kyosan: +0.95, jiyu: -0.10, hoshu: -0.45 },
+    chuu:   { uha: -0.40, chuu: -1.00, chusa: +0.25, saha: +0.50, kyosan: +0.70, jiyu: -0.35, hoshu: -0.15 },
+    chusa:  { uha: +0.45, chuu: +0.25, chusa: -1.00, saha: -0.40, kyosan: -0.05, jiyu: +0.35, hoshu: +0.60 },
+    saha:   { uha: +0.80, chuu: +0.50, chusa: -0.40, saha: -1.00, kyosan: -0.55, jiyu: +0.70, hoshu: +0.90 },
+    kyosan: { uha: +0.95, chuu: +0.70, chusa: -0.05, saha: -0.55, kyosan: -1.00, jiyu: +0.70, hoshu: +0.95 },
+    jiyu:   { uha: -0.10, chuu: -0.35, chusa: +0.35, saha: +0.70, kyosan: +0.70, jiyu: -1.00, hoshu: -0.20 },
+    hoshu:  { uha: -0.45, chuu: -0.15, chusa: +0.60, saha: +0.90, kyosan: +0.95, jiyu: -0.20, hoshu: -1.00 }
   };
+  //  表に無い組み合わせは「関わりが無い」＝ 0 として扱う。
+  //  表と FAC_KEYS がずれたときに NaN を撒かないための受け皿である。
+  function aff(a, b) {
+    var row = AFFINITY[a];
+    if (!row) { return 0; }
+    var v = row[b];
+    return (typeof v === 'number') ? v : 0;
+  }
 
   // ── 人物 ────────────────────────────────────────────────────
   //  n     : .dry の view-if で使う数値ID
@@ -501,7 +515,12 @@
     var f = FIG[id];
     if (!f) { return true; }
     if (Q.year > f.to) { return true; }
-    if (Q.minsha_exists && f.faction === 'uha') { return true; }
+    //  派閥ごと党を出ていれば、その派の人物は盤に居ない。
+    //  以前は右派（民社党）しか見ていなかったので、社民連や新社会党で
+    //  割れたあとも中間右派・左派の人物が名簿に残り、委員長にもなれた。
+    //  在籍の判定は盤面の側（inParty）が持っているので、そこへ揃える ──
+    //  不満も代議員の表も閣僚の割り当ても、すでにそちらを見ている。
+    if (J.inParty && !J.inParty(Q, f.faction)) { return true; }
     if (Q.asanuma_dead && id === 'asanuma') { return true; }
     // 飛鳥田は横浜市長である。市を取っていなければ党内に登場しない ──
     // 地方の実績が党内人事に還流する、その入口。
@@ -537,7 +556,13 @@
   // ── 党大会での自動選出。代議員数に応じた均衡人事 ──────────────
   function elect(Q) {
     var d = J.delegates(Q);
-    var strength = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai };
+    var strength = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai,
+                     kyosan: d.kyosan, hoshu: d.hoshu, jiyu: d.jiyu };
+    //  党を出た派の代議員は大会に居ない。数に入れると、居ない派が
+    //  役職を取ってしまう（中間右派が社民連で割れた盤で起きていた）。
+    Object.keys(strength).forEach(function (g) {
+      if (!J.inParty(Q, g)) { strength[g] = 0; }
+    });
     if (!Q.saha_independent) { strength.chusa += strength.saha; strength.saha = 0; }
     var avail = roster(Q);
     var byFaction = {};
@@ -588,15 +613,15 @@
     var f = FIG[id] && FIG[id].faction;
     if (!f) { return { pct: 0, by: {} }; }
     var d = J.delegates(Q);
-    var row = AFFINITY[f];
-    //  協会は左派の塊として別に数える
-    var block = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai };
+    //  協会は左派の塊として別に数える。合同で入ってきた三派もそのまま数える。
+    var block = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai,
+                  kyosan: d.kyosan, hoshu: d.hoshu, jiyu: d.jiyu };
     var yes = 0, tot = 0, by = {};
     J.FAC_KEYS.forEach(function (g) {
       var n = block[g] || 0;
       tot += n;
       //  親和 -1.00（自派）で全部、+0.80（正面から敵）でほぼ 0
-      var rate = (1 - (row[g] + 1) / 2);
+      var rate = (1 - (aff(f, g) + 1) / 2);
       if (rate < 0) { rate = 0; }
       if (rate > 1) { rate = 1; }
       var v = n * rate;
@@ -612,6 +637,18 @@
     return { pct: tot ? Math.round(yes / tot * 1000) / 10 : 0, by: by, total: tot };
   }
 
+  //  その人物が「前へ出てくる」札を出してよいか。
+  //
+  //  人事は委員長が決めるものではなく、党大会の代議員が決める。だから
+  //    ・派閥ごと党を出ていれば、その人はもう居ない（here）
+  //    ・大会の多数が別の側にあれば、その人事は通らない（support）
+  //  の二つを見る。山花貞夫は中間右派なので社民連で割れた盤には居ないし、
+  //  田辺誠は中間左派なので、大会が左に寄り切った盤では前に出てこない。
+  function likely(Q, id, line) {
+    if (!here(Q, id)) { return false; }
+    return support(Q, id).pct >= (line === undefined ? 50 : line);
+  }
+
   //  推した人物が大会を通るか。通らなければ、代わりに
   //  いちばん大きい派の候補が座る（大会はそういう場所である）。
   function nominate(Q, post, id) {
@@ -623,8 +660,9 @@
     Q.capital = Math.max(0, (Q.capital || 0) - 2);
     var d = J.delegates(Q);
     var big = 'chusa', bn = -1;
-    [['uha', d.uha], ['chuu', d.chuu], ['chusa', d.chusa], ['saha', d.kyokai]].forEach(function (r) {
-      if (r[1] > bn) { bn = r[1]; big = r[0]; }
+    [['uha', d.uha], ['chuu', d.chuu], ['chusa', d.chusa], ['saha', d.kyokai],
+     ['kyosan', d.kyosan], ['hoshu', d.hoshu], ['jiyu', d.jiyu]].forEach(function (r) {
+      if ((r[1] || 0) > bn && J.inParty(Q, r[0])) { bn = r[1] || 0; big = r[0]; }
     });
     //  主流派から、いま党にいて空いている人を立てる
     var alt = null, y = J.yearOf(Q);
@@ -653,9 +691,8 @@
     }
     var f = FIG[id].faction;
     var w = POST_WEIGHT[post] || 6;
-    var row = AFFINITY[f];
     J.FAC_KEYS.forEach(function (g) {
-      var v = Q['mood_' + g] + row[g] * w;
+      var v = (Q['mood_' + g] || 0) + aff(f, g) * w;
       Q['mood_' + g] = Math.max(0, Math.min(160, Math.round(v * 10) / 10));
     });
     Q['post_' + post] = id;
@@ -962,6 +999,6 @@
     elect: elect, appoint: appoint, nominate: nominate, support: support, passives: passives,
     canAct: canAct, doAct: doAct, tick: tickCooldowns,
     sync: syncIds, roster: roster, candidates: candidates, candidateLines: candidateLines,
-    gone: gone, here: here
+    gone: gone, here: here, likely: likely
   };
 }());

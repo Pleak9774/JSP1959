@@ -2777,6 +2777,12 @@
       }
       if (this.HR_TOTAL[year]) { Q.hr_total = this.HR_TOTAL[year]; }
       Q.year = year;
+      //  一九九三年六月、宮沢内閣の不信任案が可決されて自民党が割れる。
+      //  総選挙はその翌月である。割れを選挙の中でやると、選挙より前に引く
+      //  札が「自民党が割れた」と書けない。年が来た時点で割る。
+      if (year >= 1993 && !Q.ldp_split_done && (Q.res_jimin || 0) > 0) {
+        this.splitLDPNow(Q, false);
+      }
       this.applyKomei(Q, year);
       this.applyKyosan(Q, year);
       return Q;
@@ -2981,7 +2987,8 @@
       { n: 2002, id: 'a2_kawakami', name: '河上委員長', acts: [2], need: { chair: 0.15 }, year: 1961, fixed: true,
         when: function (Q) { return Q.year >= 1961 &&
                  window.JSP.LEADERS.here(Q, 'kawakami') &&
-                 !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+                 !window.JSP.LEADERS.here(Q, 'asanuma') &&
+                 window.JSP.LEADERS.likely(Q, "kawakami"); } },
       // 国民皆保険　1961年〜・史実
       { n: 2165, id: 'a2_kokumin_kenko', name: '国民皆保険', acts: [2], need: { diet: 0.2 }, year: 1961, fixed: true,
         when: function (Q) { return Q.year >= 1961; } },
@@ -3062,7 +3069,8 @@
         when: function (Q) { return Q.year >= 1964; } },
       // 佐々木更三　1965年〜・史実
       { n: 2008, id: 'a2_sasaki', name: '佐々木更三', acts: [2], need: { chair: 0.2 }, year: 1965, fixed: true,
-        when: function (Q) { return Q.year >= 1965; } },
+        when: function (Q) { return Q.year >= 1965 &&
+                 window.JSP.LEADERS.likely(Q, "sasaki"); } },
       // 日韓基本条約　1965年〜・史実
       { n: 2009, id: 'a2_nikkan', name: '日韓基本条約', acts: [2], need: { diet: 0.3 }, year: 1965, fixed: true,
         when: function (Q) { return Q.year >= 1965 &&
@@ -3132,7 +3140,8 @@
                  Q.kyokai_grip >= 35; } },
       // 成田知巳　1968年〜・史実
       { n: 2042, id: 'a2_naritachi', name: '成田知巳', acts: [2], need: { chair: 0.35 }, year: 1968, fixed: true,
-        when: function (Q) { return Q.year >= 1968; } },
+        when: function (Q) { return Q.year >= 1968 &&
+                 window.JSP.LEADERS.likely(Q, "narita"); } },
       // 水俣　1968年〜・史実
       { n: 2166, id: 'a2_suigai', name: '水俣', acts: [2], need: { org: 0.25 }, year: 1968, fixed: true,
         when: function (Q) { return Q.year >= 1968; } },
@@ -3778,7 +3787,8 @@
         when: function (Q) { return Q.year >= 1989; } },
       // 「やるっきゃない」　1989年〜・史実
       { n: 5165, id: 'a5_doi_ninki', name: '「やるっきゃない」', acts: [5], need: { name: 0.3 }, year: 1989, fixed: true,
-        when: function (Q) { return Q.year >= 1989; } },
+        when: function (Q) { return Q.year >= 1989 &&
+                 Q.post_chair === "doi"; } },
       // 海部内閣　1989年〜・史実
       { n: 5166, id: 'a5_kaifu', name: '海部内閣', acts: [5], need: { name: 0.25 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3873,7 +3883,8 @@
                  Q.local_n >= 1; } },
       // 田辺委員長　1991年〜・史実
       { n: 5017, id: 'a5_tanabe', name: '田辺委員長', acts: [5], need: { chair: 0.3 }, year: 1991, fixed: true,
-        when: function (Q) { return Q.year >= 1991; } },
+        when: function (Q) { return Q.year >= 1991 &&
+                 window.JSP.LEADERS.likely(Q, "tanabe"); } },
       // 九十億ドル　1991年〜・史実
       { n: 5168, id: 'a5_wangan_kikin', name: '九十億ドル', acts: [5], need: { diet: 0.3 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
@@ -3891,7 +3902,7 @@
       // 民主リベラル新党　1991年〜・史実
       { n: 5806, id: 'a5_minshu_kessei', name: '民主リベラル新党', acts: [5], need: { rel: 0.2 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
-                 Q.rengo_formed && Q.reorg_done && !Q.minshu_shinto && !Q.kyosan_merged && !Q.jisha_pact && !Q.jisha_cabinet && window.JSP.bandOf(Q) === 4 && (window.JSP.factionOf(Q.post_chair) === "uha" || window.JSP.factionOf(Q.post_chair) === "chuu"); } },
+                 Q.rengo_formed && Q.reorg_done && !Q.minshu_shinto && !Q.kyosan_merged && !Q.jisha_pact && !Q.jisha_cabinet && window.JSP.bandOf(Q) === 4 && Q.ldp_split_done && (window.JSP.factionOf(Q.post_chair) === "uha" || window.JSP.factionOf(Q.post_chair) === "chuu"); } },
       // 湾岸戦争（政権の側）　1991年〜・史実
       { n: 9220, id: 'gov_gulf', name: '湾岸戦争（政権の側）', acts: [5], need: { diet: 0.2 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
@@ -3931,7 +3942,7 @@
       // 山花委員長　1993年〜・史実
       { n: 5020, id: 'a5_yamahana', name: '山花委員長', acts: [5], need: { chair: 0.35 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
-                 Q.cab_kind > 0; } },
+                 Q.cab_kind > 0 && window.JSP.LEADERS.likely(Q, "yamahana"); } },
       // 政治改革関連法　1993年〜・史実
       { n: 5172, id: 'a5_seiji_kaikaku_ho', name: '政治改革関連法', acts: [5], need: { diet: 0.35 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
@@ -4058,7 +4069,8 @@
       // 土井委員長の登場　帯中間右/右
       { n: 172, id: 'doi_shunin', name: '土井委員長の登場', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, "doi"); } },
       // 連合の政権構想　軸未定/社公民・1990年〜
       { n: 177, id: 'rengo_seiken', name: '連合の政権構想', acts: [5], need: { labor: 0.25 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
@@ -4402,7 +4414,8 @@
       // 協会の最後の抵抗　帯左
       { n: 546, id: 'a5_saha_shinsha', name: '協会の最後の抵抗', acts: [5], need: { koryo: 0.3 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.3) &&
-                 [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 Q.shin_sengen; } },
       // 解党論　帯右・1990年〜
       { n: 547, id: 'a5_uha_kaisan', name: '解党論', acts: [5], need: { koryo: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
@@ -4422,7 +4435,7 @@
       { n: 550, id: 'a5_saigo_no_toki', name: '最後の総選挙の前に', acts: [5], need: { diet: 0.35 },
         when: function (Q) { return Q.phase >= 3 &&
                  Q.c_diet >= window.JSP.needOf(Q, 0.35) &&
-                 Q.minsha_exists; } },
+                 Q.minsha_exists && Q.ldp_split_done; } },
       // 協会の位置　帯左
       { n: 601, id: 'b1_a1_kyokai_saiken', name: '協会の位置', acts: [1], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
@@ -4821,7 +4834,8 @@
       // 共産党からの批判　軸社共
       { n: 4142, id: 'a4_c1_kyosan_hihan', name: '共産党からの批判', acts: [4], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
-                 [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 Q.shako_goi; } },
       // 三党の実務者会議　軸社公民
       { n: 4151, id: 'a4_c2_santo_jimu', name: '三党の実務者会議', acts: [4], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
@@ -5228,7 +5242,8 @@
       // 土井委員長の登場　帯左/中間左
       { n: 7601, id: 'doi_shunin_sa', name: '土井委員長の登場', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 window.JSP.LEADERS.here(Q, "doi"); } },
       // 党大会の主導権　帯中間右
       { n: 8021, id: 'c3_taikai_shudo', name: '党大会の主導権', acts: [2, 3, 4], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
@@ -6276,7 +6291,7 @@
 
     //  割れをその場で起こす。総選挙を待たない ── 出て行った議員は
     //  現有の議席を持って出る。史実の一九九三年六月もそうだった。
-    splitLDPNow: function (Q) {
+    splitLDPNow: function (Q, early) {
       var total = this.ldpSplitSize(Q);
       var jimin = Q.res_jimin || 0;
       var take = Math.max(0, Math.min(jimin, total));
@@ -6298,7 +6313,9 @@
       Q.splinter_seats = this.allySplinterSeats(Q) + (Q.res_sp_shinjiyu || 0);
       Q.ldp_split = take;
       Q.ldp_split_done = 1;
-      Q.ldp_wareme = 1;
+      //  早く割れた盤の印。史実の年に割れたときは立てない ──
+      //  立てると一九九三年の札（内閣不信任・新党さきがけ）が出なくなる。
+      if (early) { Q.ldp_wareme = 1; }
       Q.ldp_ware_year = y;
       //  総裁が出て行く盤もある。海部俊樹は改革の側に立っていた。
       Q.ware_kaifu = (this.ldpHead(Q) === '海部俊樹') ? 1 : 0;
@@ -6312,18 +6329,8 @@
       return take;
     },
 
-    //  一九九三年の分裂を実行する。新生党と さきがけ に配る（史実の比 55:13）。
-    splitLDP1993: function (Q) {
-      var total = this.ldpSplitSize(Q);
-      Q.ldp_split = total;
-      var jimin = Q.res_jimin || 1;
-      var frac = Math.max(0, Math.min(0.9, total / jimin));
-      //  羽田・小沢が大きく、武村が小さい
-      Q.sp_shinsei = frac * 0.81;
-      Q.sp_sakigake = frac * 0.19;
-      Q.ldp_split_done = 1;
-      return total;
-    },
+    //  一九九三年の分裂。中身は早い割れと同じで、印だけ立てない。
+    splitLDP1993: function (Q) { return this.splitLDPNow(Q, false); },
 
     //  参院の各党の議席。衛院の得票率から作る。
     //  社会党だけは全国区と名士票の分を乗せる（seats_hc と揃える）。
