@@ -7013,13 +7013,13 @@
         name: '一九九三年', desc: '恭喜你走到了最后。',
         end: true, when: function (Q) { return !!Q.ran_full; } },
       { id: 'shori_no_shori', art: 'motif/akushu55.jpg',
-        name: '胜利的胜利', desc: '达成了目标，党在各方面都取得了完全的胜利。' },
+        name: '夺取政权', desc: '我党推进到了组阁，三项目标与累计记录均达到了上一档。' },
       { id: 'shori_no_shippai', art: 'motif/saitouitsu55.jpg',
-        name: '胜利的失败', desc: '达成了目标，但党的问题没有得到解决。' },
+        name: '执政经验', desc: '我党推进到了组阁，目标或累计记录中有一项越过了基准线。' },
       { id: 'shippai_no_shori', art: 'motif/mayday49.png',
-        name: '失败的胜利', desc: '没有达成目标，但党的问题已经得到了解决。' },
+        name: '维持在野', desc: '我党从未进入政权，或者目标与累计记录中有一项略低于基准线。' },
       { id: 'shippai_no_shippai', art: 'motif/hahaoya55.png',
-        name: '失败的失败', desc: '输了，只留下了社会党议员们在议会战斗的记录。' },
+        name: '失去阵地', desc: '我党在组阁、单独过半、党的统一三项上均处于低位，累计记录也未达到基准线。' },
       { id: 'zenkyoku_shori', art: 'motif/saitouitsu_taikai.png',
         name: '全局胜利', desc: '在贯穿三十四年的判定中获胜。',
         end: true, when: function (Q) { return !!Q.global_win; } },
@@ -7466,6 +7466,12 @@
         : (held || everCab || (org && above))) ? 1 : 0;
       //  見出しは起きたことを言う。勝ったかどうかは global_win が言う。
       Q.gv_kind = held ? 3 : (everCab ? 2 : (org && above ? 1 : 0));
+      //  全局も四段で出す。民社党化の線では、保つことに議席の条件が付く。
+      Q.gr_global = mk
+        ? ((held && Q.gv_seat_ok === 1) ? 3 : (held ? 2 : (everCab ? 1 : 0)))
+        : Q.gv_kind;
+      Q.gr_global_t = this.GRADE_NAME[Q.gr_global];
+      Q.gr_global_d = this.GRADE_TEXT.global[Q.gr_global];
       this.verdicts(Q);
       return Q.global_win;
     },
@@ -7504,12 +7510,83 @@
       return v >= c ? 3 : (v >= b ? 2 : (v >= a ? 1 : 0));
     },
 
+    //  ── 終局の評語。四段で出す ─────────────────────────────
+    //  達成／未達の二値だと「あと一歩」と「まるで届かなかった」が
+    //  同じ顔になる。四段に割る。
+    //  四段の評語の文面。0 失敗 / 1 略失敗 / 2 略成功 / 3 成功 の順。
+    //  中文は tools/i18n/zh/js/jsp-core.js.json が差し替える。
+    GRADE_TEXT: {
+      title: [
+        '失去阵地',
+        '维持在野',
+        '执政经验',
+        '夺取政权'
+      ],
+      lead_full: [
+        '一九九三年夏，国会内我党议席的那一排大幅缩短。<br>地方组织里，支持团体的选票不得不与他党候选人平分。<br>三宅坂本部闲置的会议室变多了。',
+        '一九九三年，我党在国会的席位缩水，未能掌握主动权。<br>支持团体的集票能力下滑，选区协调中向他党让步的场面屡见不鲜。<br>我党守着残存的人手，就此转入关于往后路线的商议。',
+        '步入一九九三年时，在围绕首班指名的角逐中，我党处在中轴位置。<br>依托支持组织的票盘维持了院内发言权，在同他党的交涉中贯彻了一定要求。<br>我党保有足以主导法案修正磋商的议席，止住了断崖式下滑。',
+        '一九九三年，三宅坂党本部带着大幅增长的议席迎来大选。<br>我党拓宽支持基础，稳固了自身势力。<br>在宪法问题与日美安全保障条约的辩论中，我党占据了主导国会的地位，走完了这三十四年的历程。'
+      ],
+      lead_early: [
+        '地方组织遭到削弱，各地专职骨干陷入枯竭。<br>能够推荐公认候选人的选区屈指可数，连排开街头活动的人手也凑不齐了。',
+        '议席遭到削减，我党失去了国会对策委员会的发言权。<br>素来倚重的工会步调打乱，难以继续支撑下一次选战。',
+        '我党维持了一定的会派规模，保留了地方组织的集票功能。<br>尽管止步于此，我党仍为后继者留下了能够交接的组织基础。',
+        '我党在众院与参院确立了足以左右法案走势的地位，夯实了政策立案能力。<br>在排开问鼎政权的阵容之际，本阶段的任务告一段落。'
+      ],
+      cabinet: [
+        '我党仅保住议院运营委员会的理事席位，始终无缘登上阁僚名单。',
+        '我党加入了少数派联合政权并派出大臣，核心职位却全数让给对方。',
+        '我党整合他党推举出首相，锁定了数个关键职位。',
+        '我党历经大选依然维持住内阁，重要法案由我党阁僚亲手促成通过。'
+      ],
+      reform: [
+        '我党未能整合中选区的公认候选人，跌破了阻止修宪所需的三分之一底线。',
+        '我党维持了在野第一大党的地位，距单独过半依然遥远。',
+        '我党在各地选区累积议席，直逼过半数，阻击了执政党单独强行表决。',
+        '我党在各地选区接连当选，达成单独过半，凭自身力量完成了首班指名。'
+      ],
+      unity: [
+        '派阀对立导致退党者不断，地方组织与单产卷入其中，发生了两次以上的分裂。',
+        '每逢纲领论争，各派阀便召开批判中央执行部的集会，部分议员怀揣退党申请坐进会场。',
+        '面对激烈的派阀纷争，我党遏制了组建新党的动向，退党者仅局限在少数个别人士。',
+        '我党平息了左右两派的纲领对立，维持了团结各大主力单产的统一执行部。'
+      ],
+      global: [
+        '议席持续缩水，我党在众院与参院全体会议的发言时间遭到削减，支持组织的动员人数下滑，基底彻底松动。',
+        '虽未能触及执政地位，我党靠稳固组织票盘守住了一定席位。',
+        '我党加入联合政权框架，从三宅坂党本部向总理大臣官邸送出了阁僚。',
+        '大选过后我党依然掌管政权，将政策决定权从官僚与他党手中收归己方。'
+      ]
+    },
+
+    GRADE_NAME: ['失败', '略失败', '略成功', '成功'],
+    GRADE_COLOR: ['#B23A34', '#C2703A', '#5B7FA8', '#3E6E8C'],
+
+    //  評語が盤面と食い違わないようにする床。
+    //  画面には数がそのまま出ているので、その数から言えないことは言わない。
+    floor: function (g, n) { return g < n ? n : g; },
+
+    //  そのときまでに衆院で取った最大の議席。控えから読む。
+    seatPeak: function (Q) {
+      var rows = this.elecRows(Q), n = Q.seats_hr || 0, i;
+      for (i = 0; i < rows.length; i += 1) {
+        if (rows[i].shakai > n) { n = rows[i].shakai; }
+      }
+      return n;
+    },
+
     verdicts: function (Q) {
       //  経済 ── 毎手の収入と、抱えている負担
       var income = (Q.dues_now || 0);
-      var burden = (Q.local_debt || 0) * 0.04 + (Q.kokutetsu_debt || 0) * 0.5 + (Q.arrears || 0) * 0.3;
+      //  負担は収入の値打ちを食い切れない。食い切ると、毎手の収入が
+      //  あるのに「自前の財政が無い」と書くことになる。
+      var burden = Math.min(income * 1.3,
+        (Q.local_debt || 0) * 0.04 + (Q.kokutetsu_debt || 0) * 0.5 + (Q.arrears || 0) * 0.3);
       var kz = income * 1.8 - burden + Math.min(3, (Q.budget || 0) * 0.12);
       Q.v_keizai = this.grade(kz, 0.9, 1.9, 3.2);
+      //  収入も金庫もあるなら、いちばん下の評語は当たらない
+      if (income >= 1.2 || (Q.budget || 0) >= 25) { Q.v_keizai = this.floor(Q.v_keizai, 1); }
       Q.v_keizai_t = this.VERDICT.keizai[Q.v_keizai];
 
       //  組織 ── 党員・労働戦線・その線の基盤
@@ -7525,18 +7602,30 @@
       //  政権に入ったこと自体を数える。閣僚の椅子を取らずに
       //  連立に参加しているだけの場合もあるが、入ったことは入ったことである。
       var inPower = (Q.ever_in_power || (Q.cabinet_posts_ever || 0) > 0) ? 1 : 0;
+      //  分裂の引き算も上限を置く。四回割れた党でも、いま百五十議席
+      //  あるなら「少数党にとどまった」ではない。
       var ch = (Q.seats_hr || 0) / maj * 60
              + inPower * 20
              + Math.min(12, (Q.cabinet_posts_ever || 0) * 2)
              + ((Q.power_elections || 0) >= 1 ? 25 : 0)
-             - (Q.splits || 0) * 4;
+             - Math.min(16, (Q.splits || 0) * 4);
       Q.v_chuo = this.grade(ch, 30, 52, 78);
+      //  盤面に出ている数から言えないことは言わない
+      if ((Q.seats_hr || 0) >= maj * 0.45) { Q.v_chuo = this.floor(Q.v_chuo, 1); }
+      if (inPower) { Q.v_chuo = this.floor(Q.v_chuo, 2); }
+      if ((Q.power_elections || 0) >= 1) { Q.v_chuo = this.floor(Q.v_chuo, 3); }
       Q.v_chuo_t = this.VERDICT.chuo[Q.v_chuo];
 
       //  地方政治 ── 保有数と取り方、抱えた負担
       this.localPending(Q);
-      var chh = (Q.local_n || 0) * 14 + (Q.local_eff || 0) * 6 - (Q.local_debt || 0) * 0.25;
+      //  負担は保有の値打ちの半分までしか食えない。八つ持っている党に
+      //  「自治体は残らなかった」と書いていたのはここである。
+      var lo = (Q.local_n || 0) * 14 + (Q.local_eff || 0) * 6;
+      var chh = lo - Math.min(lo * 0.5, (Q.local_debt || 0) * 0.25);
       Q.v_chiho = this.grade(chh, 8, 26, 48);
+      //  持っている数から言えないことは言わない
+      if ((Q.local_n || 0) >= 1) { Q.v_chiho = this.floor(Q.v_chiho, 1); }
+      if ((Q.local_n || 0) >= 4) { Q.v_chiho = this.floor(Q.v_chiho, 2); }
       Q.v_chiho_t = this.VERDICT.chiho[Q.v_chiho];
 
       Q.v_total = Q.v_keizai + Q.v_soshiki + Q.v_chuo + Q.v_chiho;
@@ -7601,6 +7690,7 @@
       Q.above_base = above ? 1 : 0;
       Q.quadrant = achieved ? (above ? 1 : 2) : (above ? 3 : 4);
       Q.quadrant_name = ['', '胜利的胜利', '胜利的失败', '失败的胜利', '失败的失败'][Q.quadrant];
+      this.gradeGoals(Q, score, base);
       // 内訳（表示用）
       var w = this.SCORE_W;
       Q.sc_hr = Math.round(w.hr * (v.hr / (v.hr_total / 2)) * 10) / 10;
@@ -7609,6 +7699,62 @@
       Q.sc_split = Math.round(w.split * v.splits * 10) / 10;
       Q.sc_cab = Math.round(w.cabinet * this.cabCount(v.cabinet) * 10) / 10;
       Q.cab_ever = v.cabinet;
+      return Q;
+    },
+
+    //  ── 三つの目標と総合を四段で出す ───────────────────────
+    //
+    //  組閣　　　保てたか／閣僚を出せたか／入っただけか／入れなかったか
+    //  体制改革　単独過半を取ったか／届きかけたか／第一党の域か／その下か
+    //  党の統一　割れずに収まったか／一度割れたか／出口の前に派閥がいるか
+    //  点　　　　史実の基準線に対してどれだけ上か下か
+    //  総合　　　目標の側と点の側を半々で見る
+    gradeGoals: function (Q, score, base) {
+      var posts = Q.cabinet_posts_ever || Q.cabinet_posts || 0;
+      var inpow = (Q.ever_in_power || posts > 0) ? 1 : 0;
+      Q.gr_cabinet = ((Q.power_elections || 0) >= 1) ? 3
+        : (posts >= 4 ? 2 : (inpow ? 1 : 0));
+
+      var maj = Math.floor((Q.hr_total || 511) / 2) + 1;
+      var peak = this.seatPeak(Q);
+      Q.seat_peak = peak;
+      Q.gr_reform = Q.won_majority_ever ? 3
+        : (peak >= maj * 0.85 ? 2 : (peak >= maj * 0.62 ? 1 : 0));
+
+      var sp = Q.splits || 0, worst = Q.worst_mood || 0;
+      Q.gr_unity = (sp === 0 && worst < 45) ? 3
+        : ((sp === 0 || (sp === 1 && worst < 55)) ? 2
+          : ((sp <= 1 && worst < 85) ? 1 : 0));
+
+      var ratio = base > 0 ? score / base : 0;
+      Q.score_ratio = Math.round(ratio * 100);
+      Q.gr_score = ratio >= 1.15 ? 3 : (ratio >= 1.0 ? 2 : (ratio >= 0.85 ? 1 : 0));
+
+      //  目標の側。いちばん高いものと、三つの平均を半々で見る ──
+      //  一つだけ突出していても総合にはしないが、一つも無いのと同じにもしない。
+      var top = Math.max(Q.gr_cabinet, Q.gr_reform, Q.gr_unity);
+      var avg = (Q.gr_cabinet + Q.gr_reform + Q.gr_unity) / 3;
+      Q.gr_goal = Math.round((top + avg) / 2);
+      Q.gr_total = Math.max(0, Math.min(3, Math.round((Q.gr_goal + Q.gr_score) / 2)));
+      //  上の二段は、政権に手が届いたことを条件にする。題と導入が
+      //  「執政の経験」「政権の獲得」と書くので、一度も政権に入って
+      //  いない盤がそこへ来ると、文と盤面が食い違う。
+      if (Q.gr_cabinet === 0) { Q.gr_total = Math.min(Q.gr_total, 1); }
+      if (Q.gr_cabinet === 1 && Q.gr_total > 2) { Q.gr_total = 2; }
+
+      var g = this.GRADE_NAME, T = this.GRADE_TEXT;
+      Q.gr_title = T.title[Q.gr_total];
+      Q.gr_lead_full = T.lead_full[Q.gr_total];
+      Q.gr_lead_early = T.lead_early[Q.gr_total];
+      Q.gr_cabinet_d = T.cabinet[Q.gr_cabinet];
+      Q.gr_reform_d = T.reform[Q.gr_reform];
+      Q.gr_unity_d = T.unity[Q.gr_unity];
+      Q.gr_cabinet_t = g[Q.gr_cabinet];
+      Q.gr_reform_t = g[Q.gr_reform];
+      Q.gr_unity_t = g[Q.gr_unity];
+      Q.gr_score_t = g[Q.gr_score];
+      Q.gr_goal_t = g[Q.gr_goal];
+      Q.gr_total_t = g[Q.gr_total];
       return Q;
     },
 
