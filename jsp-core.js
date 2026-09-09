@@ -2797,6 +2797,9 @@
       { n: 1020, id: 'a1_senkyo60', name: '十一月の総選挙', acts: [1], need: { hr: 0.35 }, year: 1960, fixed: true,
         when: function (Q) { return Q.year >= 1960 &&
                  !window.JSP.LEADERS.here(Q, 'asanuma'); } },
+      // 黒い霧のあと　史実
+      { n: 9224, id: 'gov_kuroikiri_ato', name: '黒い霧のあと', acts: [2, 3], need: { diet: 0.18 }, fixed: true,
+        when: function (Q) { return Q.kuroikiri_gov; } },
       // 政暴法　1961年〜・asanumaが退場後・史実
       { n: 2001, id: 'a2_seiboho', name: '政暴法', acts: [2], need: { diet: 0.15 }, year: 1961, fixed: true,
         when: function (Q) { return Q.year >= 1961 &&
@@ -2903,11 +2906,11 @@
       { n: 117, id: 'kuroikiri', name: '黒い霧解散', acts: [2], need: { diet: 0.22 }, year: 1966, fixed: true,
         when: function (Q) { return Q.year >= 1966 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.evdone_a2_kuroi_kiri && !Q.evdone_kuroikiri_sa; } },
+                 !Q.evdone_a2_kuroi_kiri && !Q.evdone_kuroikiri_sa && !Q.gov_ours; } },
       // 黒い霧　1966年〜・史実
       { n: 2016, id: 'a2_kuroi_kiri', name: '黒い霧', acts: [2], need: { name: 0.25 }, year: 1966, fixed: true,
         when: function (Q) { return Q.year >= 1966 &&
-                 !Q.evdone_kuroikiri && !Q.evdone_kuroikiri_sa; } },
+                 !Q.evdone_kuroikiri && !Q.evdone_kuroikiri_sa && !Q.gov_ours; } },
       // 中ソ対立　1966年〜・史実
       { n: 2036, id: 'a2_chuso', name: '中ソ対立', acts: [2], need: { rel: 0.35 }, year: 1966, fixed: true,
         when: function (Q) { return Q.year >= 1966 &&
@@ -2916,10 +2919,14 @@
       { n: 7117, id: 'kuroikiri_sa', name: '黒い霧解散', acts: [2], need: { diet: 0.22 }, year: 1966, fixed: true,
         when: function (Q) { return Q.year >= 1966 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.evdone_kuroikiri && !Q.evdone_a2_kuroi_kiri; } },
+                 !Q.evdone_kuroikiri && !Q.evdone_a2_kuroi_kiri && !Q.gov_ours; } },
       // 総評の代替わり　1966年〜・史実
       { n: 8012, id: 'a2_sohyo_kotai66', name: '総評の代替わり', acts: [2], need: { labor: 0.2 }, year: 1966, fixed: true,
         when: function (Q) { return Q.year >= 1966; } },
+      // 黒い霧（政権の側）　1966年〜・史実
+      { n: 9223, id: 'gov_kuroikiri', name: '黒い霧（政権の側）', acts: [2, 3], need: { diet: 0.22 }, year: 1966, fixed: true,
+        when: function (Q) { return Q.year >= 1966 &&
+                 Q.gov_ours; } },
       // 学園紛争　帯中間右/右・1967年〜・史実
       { n: 119, id: 'gakuen', name: '学園紛争', acts: [2], need: { rally: 0.28 }, year: 1967, fixed: true,
         when: function (Q) { return Q.year >= 1967 &&
@@ -3264,7 +3271,8 @@
                  Q.local_n >= 1; } },
       // 臨調と行政改革　1980年〜・史実
       { n: 152, id: 'rincho', name: '臨調と行政改革', acts: [4], need: { labor: 0.14 }, year: 1980, fixed: true,
-        when: function (Q) { return Q.year >= 1980; } },
+        when: function (Q) { return Q.year >= 1980 &&
+                 !Q.gov_ours; } },
       // 教科書問題　1980年〜・史実
       { n: 153, id: 'kyokasho', name: '教科書問題', acts: [4], need: { rel: 0.14 }, year: 1980, fixed: true,
         when: function (Q) { return Q.year >= 1980 &&
@@ -3289,7 +3297,8 @@
       // 第二臨調　帯中間右/右・1981年〜・史実
       { n: 4007, id: 'a4_rincho', name: '第二臨調', acts: [4], need: { labor: 0.25 }, year: 1981, fixed: true,
         when: function (Q) { return Q.year >= 1981 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.gov_ours; } },
       // 第二臨調　帯左/中間左・1981年〜・史実
       { n: 7401, id: 'rincho_sa', name: '第二臨調', acts: [4], need: { labor: 0.25 }, year: 1981, fixed: true,
         when: function (Q) { return Q.year >= 1981 &&
@@ -3303,6 +3312,10 @@
       // ライシャワー発言　1981年〜・史実
       { n: 4802, id: 'a4_reischauer', name: 'ライシャワー発言', acts: [4], need: { rally: 0.2 }, year: 1981, fixed: true,
         when: function (Q) { return Q.year >= 1981; } },
+      // 行政改革（政権の側）　1981年〜・史実
+      { n: 9221, id: 'gov_gyokaku', name: '行政改革（政権の側）', acts: [4, 5], need: { labor: 0.25 }, year: 1981, fixed: true,
+        when: function (Q) { return Q.year >= 1981 &&
+                 Q.gov_ours; } },
       // 労働戦線統一の民間先行　1982年〜・史実
       { n: 156, id: 'minkan_senko', name: '労働戦線統一の民間先行', acts: [4], need: { labor: 0.2 }, year: 1982, fixed: true,
         when: function (Q) { return Q.year >= 1982 &&
@@ -3413,7 +3426,8 @@
       // 国鉄の処理　帯中間右/右・1985年〜・史実
       { n: 4014, id: 'a4_kokutetsu_bunkatsu', name: '国鉄の処理', acts: [4], need: { labor: 0.4 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.gov_ours; } },
       // 男女雇用機会均等法　帯中間右/右・1985年〜・史実
       { n: 4015, id: 'a4_danjo', name: '男女雇用機会均等法', acts: [4], need: { diet: 0.25 }, year: 1985, fixed: true,
         when: function (Q) { return Q.year >= 1985 &&
@@ -3508,6 +3522,10 @@
       { n: 8032, id: 'a5_touitsu_87', name: '統一地方選（一九八七年）', acts: [5], need: { org: 0.2 }, year: 1987, fixed: true,
         when: function (Q) { return Q.year >= 1987 &&
                  Q.local_n >= 1; } },
+      // 国鉄改革（政権の側）　1987年〜・史実
+      { n: 9222, id: 'gov_kokutetsu', name: '国鉄改革（政権の側）', acts: [5], need: { labor: 0.3 }, year: 1987, fixed: true,
+        when: function (Q) { return Q.year >= 1987 &&
+                 Q.gov_ours && !Q.kokutetsu_kind; } },
       // リクルート　帯中間右/右・1988年〜・史実
       { n: 5005, id: 'a5_recruit', name: 'リクルート', acts: [5], need: { name: 0.25 }, year: 1988, fixed: true,
         when: function (Q) { return Q.year >= 1988 &&
@@ -3667,6 +3685,10 @@
       { n: 5806, id: 'a5_minshu_kessei', name: '民主リベラル新党', acts: [5], need: { rel: 0.2 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
                  Q.rengo_formed && Q.reorg_done && !Q.minshu_shinto && !Q.kyosan_merged && !Q.jisha_pact && !Q.jisha_cabinet && window.JSP.bandOf(Q) === 4 && (window.JSP.factionOf(Q.post_chair) === "uha" || window.JSP.factionOf(Q.post_chair) === "chuu"); } },
+      // 湾岸戦争（政権の側）　1991年〜・史実
+      { n: 9220, id: 'gov_gulf', name: '湾岸戦争（政権の側）', acts: [5], need: { diet: 0.2 }, year: 1991, fixed: true,
+        when: function (Q) { return Q.year >= 1991 &&
+                 Q.gov_ours; } },
       // PKO国会　帯中間右/右・1992年〜・史実
       { n: 5014, id: 'a5_pko', name: 'PKO国会', acts: [5], need: { diet: 0.35 }, year: 1992, fixed: true,
         when: function (Q) { return Q.year >= 1992 &&
@@ -5157,7 +5179,7 @@
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1989, 11) && !!Q.evdone_sp_madonna1989
           && !Q.evdone_a5_rengo_kessei && !Q.evdone_rengo_kessei_sa; } },
       { n: 9135, id: 'sp_gulf1991', name: '湾岸戦争', acts: [5], fixed: true,
-        when: function (Q) { return Q.ym >= window.JSP.ymOf(1991, 1); } },
+        when: function (Q) { return Q.ym >= window.JSP.ymOf(1991, 1) && !Q.gov_ours; } },
       { n: 9136, id: 'sp_pko1992', name: 'PKO協力法', acts: [5], fixed: true,
         when: function (Q) { return Q.ym >= window.JSP.ymOf(1992, 6) && !Q.gov_ours; } },
 
