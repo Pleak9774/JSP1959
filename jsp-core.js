@@ -17,7 +17,10 @@
   var PCOLOR = { jimin: '#3E6E8C', shakai: '#c00000', minsha: '#8A6A1E', komei: '#5B7F5B', kyosan: '#700000', other: '#888' };
   var FNAME = {
     uha: '右派（西尾派）', chuu: '中間右派（江田派）',
-    chusa: '中間左派（鈴木–佐々木派）', saha: '左派（協会派）'
+    chusa: '中間左派（鈴木–佐々木派）', saha: '左派（協会派）',
+    //  合同で入ってきた側。もとの党の系譜が、そのまま党内の派閥になる。
+    //  民社は右派、社民連は中間右派の系譜なので、ここには作らない。
+    kyosan: '共産党系', hoshu: '保守派', jiyu: '自由派'
   };
 
   // 隣接派閥からの漏れ。史実の民社党 40 = 西尾派 30 + 中間右派 10 で校正
@@ -222,7 +225,7 @@
     //  放っておくと合計が千を大きく越え（実測 1883）、「計千」の表示が嘘になり、
     //  事象一件ぶんの重みも局が進むほど薄まっていた。比率は保つ。
     normDelegates: function (Q) {
-      var ks = ['uha', 'chuu', 'chusa', 'muha', 'saha'], i, s = 0;
+      var ks = ['uha', 'chuu', 'chusa', 'muha', 'saha', 'kyosan', 'hoshu', 'jiyu'], i, s = 0;
       for (i = 0; i < ks.length; i++) { s += Q['del_' + ks[i]] || 0; }
       if (s <= 0) { return Q; }
       for (i = 0; i < ks.length; i++) {
@@ -234,10 +237,12 @@
     // ── 代議員票。協会が動かせる分を切り出す ──────────────────
     delegates: function (Q) {
       var ky = Math.round(Q.del_chusa * Q.kyokai_grip / 100);
+      var ex = (Q.del_kyosan || 0) + (Q.del_hoshu || 0) + (Q.del_jiyu || 0);
       return {
         uha: Q.del_uha, chuu: Q.del_chuu, chusa: Q.del_chusa - ky,
         kyokai: ky, muha: Q.del_muha,
-        total: Q.del_uha + Q.del_chuu + Q.del_chusa + Q.del_muha
+        kyosan: Q.del_kyosan || 0, hoshu: Q.del_hoshu || 0, jiyu: Q.del_jiyu || 0,
+        total: Q.del_uha + Q.del_chuu + Q.del_chusa + Q.del_muha + ex
       };
     },
 
@@ -954,6 +959,9 @@
       if (f === 'uha') { return !Q.minsha_exists; }
       if (f === 'chuu') { return !Q.shamin_exists; }
       if (f === 'saha') { return !Q.shinsha_exists; }
+      //  合同で入ってきた側は、合同したあとにだけ居る。
+      if (f === 'kyosan') { return !!Q.kyosan_merged; }
+      if (f === 'hoshu' || f === 'jiyu') { return !!Q.minshu_wide; }
       return true;
     },
 
@@ -1206,7 +1214,7 @@
       }
       //  扉が閉じている派閣の怒りは、分裂ではなく大会での抵抗として
       //  一度に出る。出したら収まる ── また積み上がるまでの間は平時である。
-      var fs = ['uha', 'chuu', 'chusa', 'saha'], i, f;
+      var fs = this.FAC_KEYS, i, f;
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
         if (!this.inParty(Q, f)) { continue; }
@@ -1254,7 +1262,7 @@
     },
 
     moodDrift: function (Q) {
-      var r = Q.route, i, k, f = ['uha', 'chuu', 'chusa', 'saha'];
+      var r = Q.route, i, k, f = this.FAC_KEYS;
       //  路線ドリフトは党に居る派閥にだけ積む。
       //  以前は出て行った派閥にも積んでから 0 に潰していたので、
       //  繰り上げを入れると「居ない右派の怒り」まで中間右派へ流れる。
@@ -1277,6 +1285,12 @@
       //  以前はこの帯でも毎手 +1 で、一三九手のあいだに何もしなくても
       //  百三十九たまった（閾値は 100）。据え置きに直す。
       if (live.saha) { Q.mood_saha += (r >= 1) ? (3 + r * 3) : (r > 0 ? 2 : (r > -2 ? 0 : -2)); }
+      //  共産党系：合同の条件が左の帯だったので、右へ動けばすぐ怒る。
+      if (live.kyosan) { Q.mood_kyosan += (r >= 0) ? (4 + r * 3) : (r > -2 ? 1 : -2); }
+      //  保守派：自民を出てきた側である。左へ寄れば居場所が無くなる。
+      if (live.hoshu) { Q.mood_hoshu += (r < 1) ? (3 + (1 - r) * 2) : -4; }
+      //  自由派：両端で怒る。中道の右あたりが居心地の良い場所である。
+      if (live.jiyu) { Q.mood_jiyu += (r < -1) ? (2 + (-1 - r) * 2) : (r > 4 ? 3 : -2); }
       //  出て行った派閥に積まれたぶんは、席を継いだ派閥へ繰り上げる。
       this.moodInherit(Q);
       for (i = 0; i < f.length; i++) {
@@ -1984,9 +1998,13 @@
         //  erode で溶けてはいけない（溶けると合同前の支持率へ戻る）。
         Q['merged_' + l] = (Q['merged_' + l] || 0) + v * keep;
       }
-      //  合同した議員は左派の席になる。大会の代議員も左へ寄る。
-      Q.seat_saha = (Q.seat_saha || 0) + take;
-      Q.del_saha = (Q.del_saha || 0) + Math.round(take * 0.6);
+      //  合同で入ってきた議員は、共産党系という派閥になる。
+      //  協会に混ぜないのは、この人たちが持ってきた線が協会のものとは
+      //  別だからである ── 大会でも、別の重みで数える。
+      Q.seat_kyosan = (Q.seat_kyosan || 0) + take;
+      //  共産党は議席の割に組織が大きい。入ってくる党員（六万〜九万）を
+      //  党員千人で一票という他所と同じ換算で代議員に直して足す。
+      Q.del_kyosan = (Q.del_kyosan || 0) + Math.round(take * 0.6) + (neu ? 90 : 60);
       Q.members = (Q.members || 0) + (neu ? 90000 : 60000);
       //  全労連は党の側の組織になる。
       if (Q.reorg_done) {
@@ -2099,6 +2117,13 @@
       Q.seiken_junbi = (Q.seiken_junbi || 0) + 3;
       Q.minshu_shinto = 1;
       Q.minshu_wide = wide ? 1 : 0;
+      //  広い側の結集では、自民を出てきた保守系と、地方の首長から来た
+      //  自由系が入る。議席を持って来るわけではないので、代議員だけが増える。
+      //  民社は右派、社民連は中間右派の系譜なので、そちらへ戻す（復帰）。
+      if (wide) {
+        Q.del_hoshu = (Q.del_hoshu || 0) + 70;
+        Q.del_jiyu = (Q.del_jiyu || 0) + 70;
+      }
       Q.minshu_kind = wide ? 'minshu' : 'shamin';
       Q.minshu_year = Q.year || 1991;
       Q.party_name = name;
@@ -2152,7 +2177,7 @@
     //  脇柱の危機の面がこの二つを並べて出す。
     crisisReasons: function (Q) {
       var r = [], f;
-      var fs = ['uha', 'chuu', 'chusa', 'saha'];
+      var fs = this.FAC_KEYS;
       var worst = 0;
       for (var i = 0; i < fs.length; i++) {
         f = fs[i];
@@ -5374,7 +5399,7 @@
         Q.mem_mark = Q.members;
         this.tallyCounter(Q, 'mem');
       }
-      var i, f, worst = 0, fs = ['uha', 'chuu', 'chusa', 'saha'];
+      var i, f, worst = 0, fs = this.FAC_KEYS;
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
         if (this.inParty(Q, f) && (Q['mood_' + f] || 0) > worst) { worst = Q['mood_' + f]; }
@@ -7277,7 +7302,7 @@
       //  終わった時点で、どの派閥も出口の前に立っていないこと。
       //  党に残っている派閥だけで測る（出て行った派閥の不満は数えない）
       var self = this;
-      var worst = Math.max.apply(null, ['uha', 'chuu', 'chusa', 'saha']
+      var worst = Math.max.apply(null, self.FAC_KEYS
         .filter(function (f) { return self.inParty(Q, f); })
         .map(function (f) { return Q['mood_' + f] || 0; }).concat([0]));
       var g_unity = ((Q.splits || 0) <= 1) && worst < 70;
@@ -7783,7 +7808,10 @@
     //  脇柱は「社会主義協会 633 票」と別に出しているのに、線の計算では
     //  中間左派の重み（−1）で数えていたので、協会が三割を握っても線が
     //  中間左に留まり、脇柱の数字と線が食い違っていた。
-    CONGRESS_W: { saha: -3.5, chusa: -1.0, chuu: 1.0, uha: 2.5 },
+    //  合同で入ってきた側も線を持つ。共産党系は協会より更に左、
+    //  保守派は右派より更に右、自由派はその手前に立つ。
+    CONGRESS_W: { saha: -3.5, chusa: -1.0, chuu: 1.0, uha: 2.5,
+      kyosan: -4.5, jiyu: 2.0, hoshu: 4.0 },
     congressRoute: function (Q) {
       var w = this.CONGRESS_W, k, d, num = 0, den = 0;
       var grip = (Q.kyokai_grip === undefined ? 50 : Q.kyokai_grip);
@@ -7842,12 +7870,13 @@
     //  独立した派閥になるまで中間左派の中に「掌握度」として入っている。
     //  札の view-if / choose-if は式しか書けないので、
     //  誰が主流で誰が傍流かも、ここで数に焼いておく。
-    FAC_KEYS: ['uha', 'chuu', 'chusa', 'saha'],
+    FAC_KEYS: ['uha', 'chuu', 'chusa', 'saha', 'kyosan', 'hoshu', 'jiyu'],
     //  不満度の「不穏」の入り口。ここから譲る相手として名前が出る
     FAC_ANGRY: 45,
     facPool: function (Q) {
       var d = this.delegates(Q), ks = this.FAC_KEYS, i, k;
-      var p = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai + (Q.del_saha || 0) };
+      var p = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai + (Q.del_saha || 0),
+        kyosan: d.kyosan, hoshu: d.hoshu, jiyu: d.jiyu };
       for (i = 0; i < ks.length; i++) {
         k = ks[i];
         p[k] = this.inParty(Q, k) ? Math.max(0, Math.round(p[k] || 0)) : 0;
@@ -8165,6 +8194,7 @@
       //  不満・関係・路線は加算のたびに端数が乗る。表示に 52.599999999999994 が
       //  出ていたので、ここで一括して丸める。
       var r1 = ['mood_uha', 'mood_chuu', 'mood_chusa', 'mood_saha',
+                'mood_kyosan', 'mood_hoshu', 'mood_jiyu',
                 'rel_kyosan', 'rel_minsha', 'rel_komei', 'rel_jimin', 'rel_sohyo',
                 'coalition_rel', 'national_budget', 'kyokai_grip',
                 'nl_activity', 'nl_revulsion', 'nl_distance', 'local_debt'];
@@ -8185,7 +8215,7 @@
       //  実測で協会の掌握度が -20% と 161%、協会派の不満が 206 まで出ていた。
       //  掌握度は grip の表示形式で ％ として画面に出るので、そのまま読者に
       //  見える。負の不満は「怒らせるまでの余白」を勝手に増やしてしまう。
-      var mm = ['mood_uha', 'mood_chuu', 'mood_chusa', 'mood_saha'], mj;
+      var mm = this.FAC_KEYS.map(function (k) { return 'mood_' + k; }), mj;
       for (mj = 0; mj < mm.length; mj++) { Q[mm[mj]] = clamp(Q[mm[mj]] || 0, 0, 160); }
       Q.kyokai_grip = clamp(Q.kyokai_grip || 0, 0, 100);
       Q.nl_activity = clamp(Q.nl_activity || 0, 0, 100);
@@ -8468,6 +8498,10 @@
       rows.push(row('中間左派', d.chusa));
       rows.push(row('<span style="color:#B23A34">協会が動かす分</span>', d.kyokai));
       rows.push(row('無派閥', d.muha));
+      //  合同で入ってきた側は、居るときだけ出す。
+      if (d.kyosan) { rows.push(row(FNAME.kyosan, d.kyosan)); }
+      if (d.hoshu) { rows.push(row(FNAME.hoshu, d.hoshu)); }
+      if (d.jiyu) { rows.push(row(FNAME.jiyu, d.jiyu)); }
       return rows.join('<br>');
     }
   };

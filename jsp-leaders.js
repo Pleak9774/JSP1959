@@ -42,6 +42,7 @@
       note: '総評議長。春闘を組み立てた男。「ヨーロッパ並みの賃金」',
       fit: { chair: 2, secgen: 3, policy: 1, diet: 0, org: 5, youth: 1 },
       passive: '毎回、総評との関係を 2 引き上げる',
+      pfx: function (Q) { Q.rel_sohyo += 2; },
       acts: [
         { name: '春闘を組み立て直す', desc: '総評 +12、官公労・民間労組 +4、資金 +5',
           cost: { capital: 2 }, cd: 3, uses: 3, domain: 'labor',
@@ -79,6 +80,7 @@
       note: '総評事務局長。太田＝岩井体制の片方。組織の実務を握った',
       fit: { chair: 0, secgen: 4, policy: 1, diet: 2, org: 5, youth: 1 },
       passive: '毎回、官公労の組織率をわずかに上げる',
+      pfx: function (Q, J2) { J2.organise(Q, ['kokorou'], 0.01); },
       acts: [
         { name: '単産を横に束ねる', desc: '官公労と民間労組を組織する',
           cost: { budget: 5, capital: 2 }, cd: 3, uses: 3, domain: 'org',
@@ -100,6 +102,7 @@
       note: '国労書記長のち総評事務局長。スト権ストを現場で回した',
       fit: { chair: 1, secgen: 4, policy: 2, diet: 3, org: 4, youth: 1 },
       passive: '毎回、官公労との関係をわずかに保つ',
+      pfx: function (Q, J2) { J2.push(Q, ['kokorou'], 0.3); },
       acts: [
         { name: '国鉄の職場を固める', desc: '官公労 +6、総評 +8、闘争力 +。新中間層 −3',
           cost: { capital: 3 }, cd: 3, uses: 3, domain: 'labor',
@@ -121,6 +124,7 @@
       note: '日教組委員長のち総評議長。教育と平和を一本で語った',
       fit: { chair: 3, secgen: 3, policy: 3, diet: 1, org: 4, youth: 3 },
       passive: '毎回、青年部の側の不満をわずかに抑える',
+      pfx: function (Q) { Q.mood_saha = Math.max(0, (Q.mood_saha || 0) - 1); },
       acts: [
         { name: '教育の現場から組み直す', desc: '教育の軸 +1、官公労 +5、新中間層 +3。農村 −2',
           cost: { capital: 3 }, cd: 3, uses: 3, domain: 'org',
@@ -363,6 +367,97 @@
           need: function (Q) { return !Q.kyosan_merged; },
           fx: function (Q) { Q.ch_kyosan = 1; Q.rel_kyosan += 5; } }
       ] },
+
+    // ── 合同で入ってきた人物 ──────────────────────────────
+    //  社共合同のあとにだけ盤に出る。もとの党の役職と系譜を持ってくる。
+    fuwa: { n: 45, name: '不破哲三', faction: 'kyosan', from: 1969, to: 1993,
+      note: '共産党委員長。理論と国会論戦の両方を回した',
+      fit: { chair: 4, secgen: 3, policy: 5, diet: 5, org: 2, youth: 2 },
+      passive: '毎回、未組織勤労者の傾向が少し上がる',
+      pfx: function (Q, J2) { J2.push(Q, ['mishoshiki'], 0.3); },
+      act: { name: '国会で論戦に立つ', desc: '未組織 +5、新中間層 +4、自民 −8',
+        cost: { capital: 2 }, cd: 3, uses: 3, domain: 'diet',
+        fx: function (Q, J2) { J2.push(Q, ['mishoshiki'], 5); J2.push(Q, ['shinchukan'], 4);
+          Q.rel_jimin -= 8; } } },
+
+    ueda_k: { n: 46, name: '上田耕一郎', faction: 'kyosan', from: 1974, to: 1993,
+      note: '共産党副委員長。『戦後革命論争史』を書き、議会を通じた道を説いた',
+      fit: { chair: 3, secgen: 3, policy: 5, diet: 4, org: 2, youth: 2 },
+      passive: '毎回、政治資源 +1',
+      pfx: function (Q) { Q.capital += 1; },
+      act: { name: '議会の道を書き直す', desc: '政治資源 +4、新中間層 +4、左派 −6',
+        cost: {}, cd: 3, uses: 3, domain: 'koryo',
+        fx: function (Q, J2) { Q.capital += 4; J2.push(Q, ['shinchukan'], 4); Q.mood_saha -= 6; } } },
+
+    shii: { n: 47, name: '志位和夫', faction: 'kyosan', from: 1990, to: 1993,
+      note: '共産党書記局長。合同のとき三十代である',
+      fit: { chair: 2, secgen: 5, policy: 3, diet: 3, org: 4, youth: 5 },
+      passive: '毎回、共産党系の不満をわずかに抑える',
+      pfx: function (Q) { Q.mood_kyosan = Math.max(0, (Q.mood_kyosan || 0) - 2); },
+      act: { name: '若い層を組織する', desc: '党員 +8000、未組織 +3',
+        cost: { budget: 2 }, cd: 3, uses: 3, domain: 'org',
+        fx: function (Q, J2) { J2.growMembers(Q, 8000); J2.push(Q, ['mishoshiki'], 3); } } },
+
+    // ── 民主党（広い側）で入ってきた人物 ──────────────────
+    ozawa: { n: 48, name: '小沢一郎', faction: 'hoshu', from: 1969, to: 1993,
+      note: '自民党を出てきた側。選挙の数と金の差配を知っている',
+      fit: { chair: 3, secgen: 5, policy: 3, diet: 4, org: 5, youth: 1 },
+      passive: '毎回、資金 +1',
+      pfx: function (Q) { Q.budget += 1; },
+      act: { name: '選挙区の割り振りを仕切る', desc: '資金 +6、無派閥代議員 +25、左派 +10',
+        cost: { capital: 3 }, cd: 3, uses: 3, domain: 'org',
+        fx: function (Q) { Q.budget += 6; Q.del_muha += 25; Q.mood_saha += 10; } } },
+
+    hata: { n: 49, name: '羽田孜', faction: 'hoshu', from: 1969, to: 1993,
+      note: '自民党を出てきた側。農政と党務を長く回した',
+      fit: { chair: 4, secgen: 3, policy: 3, diet: 4, org: 3, youth: 2 },
+      passive: '毎回、農村の傾向が少し上がる',
+      pfx: function (Q, J2) { J2.push(Q, ['noson'], 0.3); },
+      act: { name: '農村の側と話をつける', desc: '農村 +6、自営商工 +3、左派 +6',
+        cost: { capital: 2 }, cd: 3, uses: 3, domain: 'rel',
+        fx: function (Q, J2) { J2.push(Q, ['noson'], 6); J2.push(Q, ['jieigyo'], 3);
+          Q.mood_saha += 6; } } },
+
+    hosokawa: { n: 50, name: '細川護熙', faction: 'jiyu', from: 1971, to: 1993,
+      note: '元熊本県知事。地方分権と政治改革を看板にしている',
+      fit: { chair: 5, secgen: 2, policy: 4, diet: 2, org: 2, youth: 3 },
+      passive: '毎回、新中間層の傾向が少し上がる',
+      pfx: function (Q, J2) { J2.push(Q, ['shinchukan'], 0.4); },
+      act: { name: '政治改革を前に出す', desc: '新中間層 +8、未組織 +4、左派 +8',
+        cost: { capital: 3 }, cd: 3, uses: 3, domain: 'rally',
+        fx: function (Q, J2) { J2.push(Q, ['shinchukan'], 8); J2.push(Q, ['mishoshiki'], 4);
+          Q.mood_saha += 8; } } },
+
+    takemura: { n: 51, name: '武村正義', faction: 'jiyu', from: 1986, to: 1993,
+      note: '元滋賀県知事。自治体の財政を数字で語る',
+      fit: { chair: 3, secgen: 4, policy: 4, diet: 3, org: 3, youth: 2 },
+      passive: '毎回、自治体の負担がわずかに軽くなる',
+      pfx: function (Q) { Q.local_debt = Math.max(0, (Q.local_debt || 0) - 0.5); },
+      act: { name: '自治体の財政を締め直す', desc: '自治体の負債 −12、資金 +4',
+        cost: {}, cd: 3, uses: 3, domain: 'fund',
+        fx: function (Q) { Q.local_debt = Math.max(0, (Q.local_debt || 0) - 12); Q.budget += 4; } } },
+
+    // ── 社民連の復帰組 ────────────────────────────────────
+    //  分裂しなければ、この二人はずっと党内に居たはずである。
+    edagogatsu: { n: 52, name: '江田五月', faction: 'chuu', from: 1977, to: 1993,
+      note: '江田三郎の子。参議院と法曹の側に線がある',
+      fit: { chair: 3, secgen: 3, policy: 4, diet: 4, org: 2, youth: 3 },
+      passive: '毎回、新中間層の傾向が少し上がる',
+      pfx: function (Q, J2) { J2.push(Q, ['shinchukan'], 0.3); },
+      act: { name: '参議院で修正を取る', desc: '新中間層 +5、政治資源 +3',
+        cost: {}, cd: 3, uses: 3, domain: 'diet',
+        fx: function (Q, J2) { J2.push(Q, ['shinchukan'], 5); Q.capital += 3; } } },
+
+    kan: { n: 53, name: '菅直人', faction: 'chuu', from: 1980, to: 1993,
+      note: '市民運動から出てきた。組合の名簿の外に足場を持つ',
+      fit: { chair: 4, secgen: 3, policy: 4, diet: 4, org: 3, youth: 4 },
+      passive: '毎回、未組織勤労者の傾向が少し上がる',
+      pfx: function (Q, J2) { J2.push(Q, ['mishoshiki'], 0.3); },
+      act: { name: '市民の側から国会を動かす', desc: '未組織 +6、新中間層 +5、左派 +6',
+        cost: { capital: 2 }, cd: 3, uses: 3, domain: 'rally',
+        fx: function (Q, J2) { J2.push(Q, ['mishoshiki'], 6); J2.push(Q, ['shinchukan'], 5);
+          Q.mood_saha += 6; } } },
+
     okada: { n: 28, name: '岡田春夫', faction: 'chusa', from: 1955, to: 1990,
       note: '国会論戦の名手。政府を追い詰める資料を出すので「爆弾男」と呼ばれた',
       fit: { chair: 2, secgen: 3, policy: 3, diet: 5, org: 2, youth: 2 },
@@ -403,6 +498,12 @@
     // 飛鳥田は横浜市長である。市を取っていなければ党内に登場しない ──
     // 地方の実績が党内人事に還流する、その入口。
     if (id === 'asukata' && !Q.local_yokohama && !Q.asukata_resigned) { return true; }
+    //  合同で入ってきた側は、合同するまで盤に出ない。
+    if (f.faction === 'kyosan' && !Q.kyosan_merged) { return true; }
+    if ((f.faction === 'hoshu' || f.faction === 'jiyu') && !Q.minshu_wide) { return true; }
+    //  社民連へ出て行った二人。分裂しなければずっと党内に居たので、
+    //  割れていない盤では最初から居る。割れたら、合流するまで戻らない。
+    if ((id === 'edagogatsu' || id === 'kan') && Q.shamin_exists && !Q.shamin_merged) { return true; }
     return false;
   }
 
@@ -479,7 +580,7 @@
     //  協会は左派の塊として別に数える
     var block = { uha: d.uha, chuu: d.chuu, chusa: d.chusa, saha: d.kyokai };
     var yes = 0, tot = 0, by = {};
-    ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) {
+    J.FAC_KEYS.forEach(function (g) {
       var n = block[g] || 0;
       tot += n;
       //  親和 -1.00（自派）で全部、+0.80（正面から敵）でほぼ 0
@@ -541,7 +642,7 @@
     var f = FIG[id].faction;
     var w = POST_WEIGHT[post] || 6;
     var row = AFFINITY[f];
-    ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) {
+    J.FAC_KEYS.forEach(function (g) {
       var v = Q['mood_' + g] + row[g] * w;
       Q['mood_' + g] = Math.max(0, Math.min(160, Math.round(v * 10) / 10));
     });
@@ -599,9 +700,12 @@
       if (id && gone(Q, id)) { return; }
       if (!id || seen[id]) { return; }
       seen[id] = 1;
+      //  データで書いた受動効果。switch に無い人物はこちらを使う。
+      var fg = FIG[id];
+      if (fg && fg.pfx) { fg.pfx(Q, J); }
       switch (id) {
         case 'suzuki':
-          ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) { Q['mood_' + g] -= 1; }); break;
+          J.FAC_KEYS.forEach(function (g) { Q['mood_' + g] -= 1; }); break;
         case 'asanuma':
           J.push(Q, ['mishoshiki', 'shinchukan'], 0.3); break;
         case 'sasaki':   Q.del_chusa += 3; break;
@@ -637,7 +741,7 @@
         case 'kono':      Q.capital += 1; break;
       }
     });
-    ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) {
+    J.FAC_KEYS.forEach(function (g) {
       Q['mood_' + g] = Math.max(0, Math.min(160, Math.round(Q['mood_' + g] * 10) / 10));
     });
     return Q;
@@ -720,7 +824,7 @@
     if (a.fx) { a.fx(Q, J); return true; }
     switch (id) {
       case 'suzuki':
-        ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) { Q['mood_' + g] -= 8; }); break;
+        J.FAC_KEYS.forEach(function (g) { Q['mood_' + g] -= 8; }); break;
       case 'asanuma':
         J.push(Q, ['mishoshiki', 'shinchukan'], 3); Q.capital += 2; break;
       case 'sasaki':   Q.del_muha += 25; break;
@@ -765,7 +869,7 @@
       case 'togano':    J.push(Q, ['shinchukan'], 5); J.push(Q, ['mishoshiki'], 3); break;
       case 'kono':      Q.route += 0.5; J.push(Q, ['shinchukan'], 4); Q.mood_saha += 12; break;
     }
-    ['uha', 'chuu', 'chusa', 'saha'].forEach(function (g) {
+    J.FAC_KEYS.forEach(function (g) {
       Q['mood_' + g] = Math.max(0, Math.min(160, Math.round(Q['mood_' + g] * 10) / 10));
     });
     return true;
