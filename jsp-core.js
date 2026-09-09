@@ -4395,7 +4395,7 @@
       { n: 543, id: 'a5_seiken_junbi', name: '政権の準備', acts: [5], need: { diet: 0.14 }, year: 1990,
         when: function (Q) { return Q.year >= 1990 &&
                  Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
-                 Q.cab_kind > 0; } },
+                 !Q.cab_kind; } },
       // 協同組合との関係
       { n: 545, id: 'a5_soshiki_kyodo', name: '協同組合との関係', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14); } },
@@ -5013,7 +5013,7 @@
       // 質問の質
       { n: 2170, id: 'a2_kokkai_shitsumon', name: '質問の質', acts: [2], need: { diet: 0.3 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
-                 Q.cab_kind > 0; } },
+                 !Q.cab_kind; } },
       // 地方の県本部
       { n: 2171, id: 'a2_chihou_seken', name: '地方の県本部', acts: [2], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
@@ -5128,8 +5128,7 @@
       // 最後の党大会　1993年〜
       { n: 5215, id: 'a5_saigo_no_taikai', name: '最後の党大会', acts: [5], need: { koryo: 0.4 }, year: 1993,
         when: function (Q) { return Q.year >= 1993 &&
-                 Q.c_koryo >= window.JSP.needOf(Q, 0.4) &&
-                 Q.cab_kind > 0; } },
+                 Q.c_koryo >= window.JSP.needOf(Q, 0.4); } },
       // 職場から　帯左
       { n: 6001, id: 'a1_b1_hansen_shokuba', name: '職場から', acts: [1], need: { labor: 0.2 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.2) &&
