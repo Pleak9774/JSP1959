@@ -6262,7 +6262,8 @@
       //  （実測で 527/511 のように定数を超えた。）
       //  選挙の控え。図表はこれを読む。控えに乗るので文字列で持つ。
       this.logElection(Q, year);
-      this.cabinetCheck(Q);
+      //  数えるだけ。組むかどうかは組閣の頁で決める。
+      this.cabinetPre(Q);
       //  選挙が済むと擁立数は目減りする（落ちた候補は次に立たない）。
       //  党員と自治体で決まる床までは、放っておいても戻る。
       var fl = this.nomFloor(Q);
@@ -7365,6 +7366,213 @@
       return Q.cab_route;
     },
 
+    // ══════════════════════════════════════════════════════════
+    //  総選挙のあとの組閣
+    //
+    //  原ゲーム（dynamic_social_democracy）の coalition_menu と同じ作りにする。
+    //  あちらは組み合わせごとに一つの選択肢を置き、
+    //    view-if   ＝ 数。その組み合わせで過半に届くか
+    //    choose-if ＝ 関係。相手が乗るか
+    //    unavailable-subtitle ＝ 足りない条件を並べて見せる
+    //  と分けている。数が足りない組み合わせはそもそも出さず、
+    //  数は足りるが関係が足りないものは灰色で理由とともに出す。
+    //
+    //  ここは数と旗だけを立てる。文は場面の側で書く。
+    // ══════════════════════════════════════════════════════════
+
+    //  無所属と旗の無い小党（その他）は、六対四で自民と我々に割れる。
+    OTHER_TO_US: 0.4,
+    otherOurs: function (Q) {
+      return Math.round((Q.res_other || 0) * this.OTHER_TO_US);
+    },
+
+    //  相手が乗る線。党首が我々の推した側なら十だけ下がる。
+    //  （komei_left / minsha_left / kyosan_kaikaku は党首選への介入で立つ）
+    CAB_LINE: { komei: 50, minsha: 55, kyosan: 50, jimin: 40 },
+    cabRelLine: function (Q, p) {
+      var v = this.CAB_LINE[p];
+      if (v === undefined) { v = 50; }
+      var soft = (p === 'kyosan') ? Q.kyosan_kaikaku : Q[p + '_left'];
+      return soft ? v - 10 : v;
+    },
+    cabRelOk: function (Q, p) {
+      if (p === 'komei' && !Q.komei_exists) { return false; }
+      if (p === 'minsha' && !Q.minsha_exists) { return false; }
+      if (p === 'kyosan' && Q.kyosan_merged) { return false; }
+      return (Q['rel_' + p] || 0) >= this.cabRelLine(Q, p);
+    },
+
+    //  自民から割れて出て、自民を降ろす側に立つ党の議席
+    allySplinterSeats: function (Q) {
+      var n = 0, i, k, sp;
+      for (i = 0; i < this.SPLINTER_KEYS.length; i += 1) {
+        k = this.SPLINTER_KEYS[i];
+        sp = this.SPLINTER[k];
+        if (!sp || !sp.ally) { continue; }
+        n += Q['res_sp_' + k] || 0;
+      }
+      return n;
+    },
+
+    //  自民党の総裁。組閣が向こうに回ったとき、首相の名前になる。
+    //  党首選に介入して三木を担いだ盤では、そこから先が変わる。
+    LDP_HEADS: [
+      [1957, '岸信介'], [1960, '池田勇人'], [1964, '佐藤栄作'], [1972, '田中角栄'],
+      [1974, '三木武夫'], [1976, '福田赳夫'], [1978, '大平正芳'], [1980, '鈴木善幸'],
+      [1982, '中曽根康弘'], [1987, '竹下登'], [1989, '海部俊樹'], [1991, '宮澤喜一']
+    ],
+    ldpHead: function (Q) {
+      //  党首選に介入していれば、そこで担いだ人がそのまま残る。
+      if (Q.jimin_head_name) { return Q.jimin_head_name; }
+      var y = Q.year || 1959, i, name = this.LDP_HEADS[0][1];
+      for (i = 0; i < this.LDP_HEADS.length; i++) {
+        if (y >= this.LDP_HEADS[i][0]) { name = this.LDP_HEADS[i][1]; }
+      }
+      return name;
+    },
+
+    //  組み合わせの一覧。順は画面に並べる順。
+    CAB_SHAPES: ['tandoku', 'sakyo', 'shako', 'shamin', 'shakomin',
+      'hijimin', 'zenyato', 'jisha'],
+
+    cabinetOptions: function (Q) {
+      var maj = Math.floor((Q.hr_total || 511) / 2) + 1;
+      var mine = Q.seats_hr || 0;
+      var oth = this.otherOurs(Q);
+      var ko = Q.komei_exists ? (Q.res_komei || 0) : 0;
+      var mi = Q.minsha_exists ? (Q.res_minsha || 0) : 0;
+      var ky = Q.kyosan_merged ? 0 : (Q.res_kyosan || 0);
+      var sp = this.allySplinterSeats(Q);
+      var ji = Q.res_jimin || 0;
+      Q.cab_majority_line = maj;
+      Q.cab_other_ours = oth;
+      Q.cab_sp_seats = sp;
+      Q.cab_ldp_seats = ji + ((Q.res_other || 0) - oth);
+      Q.cab_ldp_head = this.ldpHead(Q);
+
+      //  関係の旗。unavailable の文はこれを見て場面が書く。
+      var ps = ['komei', 'minsha', 'kyosan', 'jimin'], pi;
+      for (pi = 0; pi < ps.length; pi++) {
+        Q['rel_ok_' + ps[pi]] = this.cabRelOk(Q, ps[pi]) ? 1 : 0;
+      }
+      //  全野党共闘の門。三党すべての党首が我々の推した側にいること。
+      //  左派だけでは公明にも民社にも手が届かないので、この道は
+      //  中間左派を通したときにしか開かない。
+      Q.zenyato_ready = (Q.kyosan_kaikaku && Q.komei_left && Q.minsha_left) ? 1 : 0;
+
+      var N = {
+        tandoku: mine,
+        sakyo: mine + ky + oth,
+        shako: mine + ko + oth,
+        shamin: mine + mi + oth,
+        shakomin: mine + ko + mi + oth,
+        hijimin: mine + ko + mi + sp + oth,
+        zenyato: mine + ko + mi + ky + sp + oth,
+        jisha: mine + ji + (Q.res_other || 0)
+      };
+      //  その組み合わせが盤の上で成り立つか（相手の党が在るか）
+      var SHOW = {
+        tandoku: 1,
+        sakyo: (!Q.kyosan_merged && ky > 0) ? 1 : 0,
+        shako: Q.komei_exists ? 1 : 0,
+        shamin: Q.minsha_exists ? 1 : 0,
+        shakomin: (Q.komei_exists && Q.minsha_exists) ? 1 : 0,
+        hijimin: sp > 0 ? 1 : 0,
+        zenyato: (!Q.kyosan_merged && ky > 0 && Q.komei_exists && Q.minsha_exists) ? 1 : 0,
+        jisha: Q.minsha_ka ? 1 : 0
+      };
+      var REL = {
+        tandoku: 1,
+        sakyo: Q.rel_ok_kyosan,
+        shako: Q.rel_ok_komei,
+        shamin: Q.rel_ok_minsha,
+        shakomin: (Q.rel_ok_komei && Q.rel_ok_minsha) ? 1 : 0,
+        hijimin: (Q.rel_ok_komei && Q.rel_ok_minsha) ? 1 : 0,
+        zenyato: (Q.rel_ok_komei && Q.rel_ok_minsha && Q.rel_ok_kyosan &&
+          Q.zenyato_ready) ? 1 : 0,
+        jisha: (Q.minsha_ka && Q.rel_ok_jimin) ? 1 : 0
+      };
+      var i, k, any = 0;
+      for (i = 0; i < this.CAB_SHAPES.length; i++) {
+        k = this.CAB_SHAPES[i];
+        Q['cab_' + k + '_n'] = N[k];
+        Q['cab_' + k + '_maj'] = N[k] >= maj ? 1 : 0;
+        Q['cab_' + k + '_show'] = (SHOW[k] && N[k] >= maj) ? 1 : 0;
+        Q['cab_' + k + '_rel'] = REL[k] ? 1 : 0;
+        Q['cab_' + k + '_ok'] = (Q['cab_' + k + '_show'] && REL[k]) ? 1 : 0;
+        if (Q['cab_' + k + '_ok']) { any = 1; }
+      }
+      //  自社は相手がこちらを要るときだけ差し出される
+      if (Q.cab_jisha_ok && ji >= maj) { Q.cab_jisha_ok = 0; Q.cab_jisha_show = 0; }
+      Q.cab_any = any;
+      return Q;
+    },
+
+    //  選んだ組み合わせで政権に入る。
+    //  kind は CAB が使う 1=単独 2=主導 3=参加 4=自社。
+    cabShapeKind: function (Q, shape) {
+      if (shape === 'tandoku') { return 1; }
+      if (shape === 'jisha') { return 4; }
+      //  受け皿の中でいちばん大きいのが我々なら首班を出せる
+      var top = 0, list = [], i;
+      if (shape !== 'shamin') { list.push(Q.komei_exists ? (Q.res_komei || 0) : 0); }
+      list.push(Q.minsha_exists ? (Q.res_minsha || 0) : 0);
+      if (shape === 'sakyo' || shape === 'zenyato') { list.push(Q.res_kyosan || 0); }
+      for (i = 0; i < list.length; i++) { if (list[i] > top) { top = list[i]; } }
+      return (Q.seats_hr || 0) >= top ? 2 : 3;
+    },
+
+    takeShape: function (Q, shape) {
+      var kind = this.cabShapeKind(Q, shape);
+      Q.cab_shape = shape;
+      Q.cab_route = kind;
+      if (shape === 'jisha') { Q.jisha_pact = 1; Q.jisha_cabinet = 1; }
+      if (shape === 'zenyato') { Q.zenyato_done = 1; }
+      this.takeCabinet(Q, kind);
+      //  取った省に人を入れるのは派閥の強さの順。単独でも同じ表を使う。
+      if (this.CAB && this.CAB.autoFill) { this.CAB.autoFill(Q); }
+      return kind;
+    },
+
+    //  総選挙の直後に走る。ここでは政権に入りも出もしない ──
+    //  どの組み合わせで組むかは、組閣の頁で駕駛員が決める。
+    //  cabinetCheck（自動で決める版）は、一九九三年の判定と検査が使う。
+    cabinetPre: function (Q) {
+      Q.was_in_power = Q.in_power ? 1 : 0;
+      Q.jisha_lost = 0;
+      Q.cab_shape = '';
+      this.cabinetOptions(Q);
+      //  自社連立を組んでいたのに、二党を足しても過半を割ったら約束は消える
+      if (Q.jisha_pact && !Q.cab_jisha_maj) { Q.jisha_pact = 0; Q.jisha_lost = 1; }
+      var bloc = this.coalitionBloc(Q);
+      Q.cab_bloc = bloc.seats;
+      Q.cab_bloc_n = bloc.parties.length;
+      Q.cab_bloc_list = this.blocLine(Q, bloc);
+      Q.cab_nonldp = this.nonLdpSeats(Q);
+      Q.cab_without = Q.cab_nonldp - (Q.seats_hr || 0);
+      return Q;
+    },
+
+    //  組閣は向こうに回った。野に戻る。
+    stayOut: function (Q) {
+      var maj = Q.cab_majority_line || (Math.floor((Q.hr_total || 511) / 2) + 1);
+      Q.cab_shape = 'ldp';
+      Q.cab_offer = 0;
+      Q.jisha_pact = 0;
+      //  組める組み合わせが有ったのに組まなかったのか、
+      //  そもそも席が要らなかったのか。終局の頁がここを読む。
+      if (Q.cab_any) {
+        Q.cab_declined = 1;
+        Q.cab_route = 0;
+        Q.mood_saha = (Q.mood_saha || 0) + 6;
+        Q.mood_chuu = (Q.mood_chuu || 0) - 6;
+      } else {
+        Q.cab_route = ((Q.cab_without || 0) >= maj) ? 5 : 0;
+      }
+      if (this.CAB && Q.in_power) { this.CAB.leavePower(Q); }
+      return Q;
+    },
+
     //  組閣を決めたときに呼ぶ。政権に入り、保ったなら一つ数える。
     takeCabinet: function (Q, route) {
       var C = this.CAB;
@@ -8118,6 +8326,8 @@
       if (this.LEADERS) { this.LEADERS.sync(Q); }
       if (this.CAB) { this.CAB.sync(Q); }
       //  解散できるか。札の choose-if は式しか書けないので、ここで数にしておく。
+      //  組閣の組み合わせ。総選挙の頁だけでなく脇柱でも読む。
+      this.cabinetOptions(Q);
       Q.can_dissolve = this.canDissolve(Q);
       Q.kaisan_cost = this.kaisanCost(Q);
       //  受け皿の数は選挙を跨がなくても脇柱に出したいので、毎手数え直す。

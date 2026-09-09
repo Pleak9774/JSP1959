@@ -132,6 +132,9 @@
     Q.cabinet_posts = (Q.cabinet_posts || 0) + 1;
     //  勝利点が見るのは累計。政権が倒れても、就いた事実は消えない。
     Q.cabinet_posts_ever = (Q.cabinet_posts_ever || 0) + 1;
+    //  誰が座るかは派閥の力関係で決まる。省を取った時点で埋める。
+    //  据え直したければ人選の札から入れ替えられる。
+    autoFill(Q);
     sync(Q);
     return MIN[key].w;
   }
@@ -178,6 +181,65 @@
     Q.cab_fit_lo = fit < 2 ? 1 : 0;
     sync(Q);
     return 1;
+  }
+
+  //  ── 人選を自動で埋める ──────────────────────────────────
+  //  誰を入れるかは党内の力関係で決まる。取った省の数を代議員票で
+  //  按分し、格の高い省から、取り分がいちばん残っている派閥へ渡す。
+  //  同じ派閥の中では、その省への適性がいちばん高い人を入れる。
+  //
+  //  単独政権でも連立でも同じ表を使う。省を選ぶのは駕駛員、
+  //  その椅子に誰が座るかは派閥が決める ── というのが党の実際である。
+  function autoFill(Q) {
+    var keys = ORDER.filter(function (k) { return Q['has_' + k] && !Q['who_' + k]; });
+    if (!keys.length) { return Q; }
+    if (!J.facPool || !J.FAC_KEYS) { return Q; }
+    var pool = J.facPool(Q), fs = J.FAC_KEYS, i, j, k, f;
+    var tot = 0;
+    for (i = 0; i < fs.length; i++) { tot += pool[fs[i]] || 0; }
+    var quota = {};
+    for (i = 0; i < fs.length; i++) {
+      quota[fs[i]] = tot ? (pool[fs[i]] || 0) / tot * keys.length : 0;
+    }
+    for (i = 0; i < keys.length; i++) {
+      k = keys[i];
+      var cand = candidates(Q, k);
+      if (!cand.length) { break; }
+      //  派閥ごとに、その省へ出せるいちばん適した人
+      var best = {};
+      for (j = 0; j < cand.length; j++) {
+        var id = cand[j];
+        var fig = J.LEADERS.FIG[id];
+        if (!fig) { continue; }
+        f = fig.faction || 'muha';
+        var fit = (fig.fit && MIN[k]) ? (fig.fit[MIN[k].fit] || 0) : 0;
+        if (!best[f] || fit > best[f].fit) { best[f] = { id: id, fit: fit }; }
+      }
+      //  取り分がいちばん残っている派閥から順に見る
+      var pick = null, top = -1e9, key = null;
+      for (j = 0; j < fs.length; j++) {
+        f = fs[j];
+        if (!best[f]) { continue; }
+        var q = quota[f] === undefined ? 0 : quota[f];
+        if (q > top) { top = q; pick = best[f]; key = f; }
+      }
+      //  どの派閥も出せないときは、名簿の先頭から入れる（無派閥を含む）
+      if (!pick) {
+        var f2 = null, fit2 = -1;
+        for (j = 0; j < cand.length; j++) {
+          var g = J.LEADERS.FIG[cand[j]];
+          var v = (g && g.fit && MIN[k]) ? (g.fit[MIN[k].fit] || 0) : 0;
+          if (v > fit2) { fit2 = v; f2 = cand[j]; }
+        }
+        if (!f2) { break; }
+        assign(Q, k, f2);
+        continue;
+      }
+      assign(Q, k, pick.id);
+      quota[key] = top - 1;
+    }
+    sync(Q);
+    return Q;
   }
 
   //  人物の適性がそのまま倍率になる。fit は 0〜5。
@@ -338,6 +400,7 @@
     points: points, used: used, left: left, canTake: canTake, take: take,
     clearAll: clearAll, candidates: candidates, assign: assign, power: power,
     canAct: canAct, doAct: doAct, tick: tick, checkRelation: checkRelation,
+    autoFill: autoFill,
     enterPower: enterPower, leavePower: leavePower, sync: sync
   };
 }());
