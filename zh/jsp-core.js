@@ -3031,6 +3031,10 @@
       // 四大公害裁判　1971年〜・史実
       { n: 3801, id: 'a3_kogai_saiban', name: '四大公害诉讼', acts: [3], need: { diet: 0.2 }, year: 1971, fixed: true,
         when: function (Q) { return Q.year >= 1971; } },
+      // 民社党の委員長選　1971年〜・史実
+      { n: 9230, id: 'minsha_toshu', name: '民社党の委員長選', acts: [3], need: { rel: 0.2 }, year: 1971, fixed: true,
+        when: function (Q) { return Q.year >= 1971 &&
+                 !Q.minsha_head_done && Q.minsha_exists; } },
       // 日中国交正常化　1972年〜・史実
       { n: 133, id: 'nicchu', name: '日中国交正常化', acts: [3], need: { rel: 0.14 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
@@ -3067,6 +3071,10 @@
       { n: 7134, id: 'kyoran_bukka_sa', name: '狂乱物価', acts: [3], need: { labor: 0.14 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+      // 三角大福　1972年〜・史実
+      { n: 9231, id: 'jimin_sosaisen', name: '三角大福', acts: [3], need: { rel: 0.2 }, year: 1972, fixed: true,
+        when: function (Q) { return Q.year >= 1972 &&
+                 !Q.jimin_head_done; } },
       // 第一次石油危機　帯中間右/右・1973年〜・史実
       { n: 3009, id: 'a3_oil', name: '第一次石油危機', acts: [3], need: { org: 0.3 }, year: 1973, fixed: true,
         when: function (Q) { return Q.year >= 1973 &&
@@ -3500,6 +3508,10 @@
       // 前川リポート　1986年〜・史実
       { n: 5801, id: 'a5_maekawa', name: '前川报告', acts: [5], need: { labor: 0.2 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986; } },
+      // 公明党の委員長交代　1986年〜・史実
+      { n: 9232, id: 'komei_toshu', name: '公明党の委員長交代', acts: [5], need: { rel: 0.2 }, year: 1986, fixed: true,
+        when: function (Q) { return Q.year >= 1986 &&
+                 !Q.komei_head_done && Q.komei_exists; } },
       // 売上税　1987年〜・史実
       { n: 5003, id: 'a5_baiagezei', name: '売上税', acts: [5], need: { diet: 0.2 }, year: 1987, fixed: true,
         when: function (Q) { return Q.year >= 1987 &&
@@ -7419,11 +7431,14 @@
     LDP_HEADS: [
       [1957, '岸信介'], [1960, '池田勇人'], [1964, '佐藤荣作'], [1972, '田中角荣'],
       [1974, '三木武夫'], [1976, '福田赳夫'], [1978, '大平正芳'], [1980, '铃木善幸'],
-      [1982, '中曾根康弘'], [1987, '竹下登'], [1989, '海部俊樹'], [1991, '宮澤喜一']
+      [1982, '中曾根康弘'], [1987, '竹下登'], [1989, '海部俊树'], [1991, '宫泽喜一']
     ],
     ldpHead: function (Q) {
-      //  党首選に介入していれば、そこで担いだ人がそのまま残る。
-      if (Q.jimin_head_name) { return Q.jimin_head_name; }
+      //  党首選に介入して担いだ人は、その任期のあいだだけ残る。
+      //  期限を切らないと、一度介入しただけで三十四年ぶん総裁が固まってしまう。
+      if (Q.jimin_head_name && (Q.year || 0) <= (Q.jimin_head_until || 0)) {
+        return Q.jimin_head_name;
+      }
       var y = Q.year || 1959, i, name = this.LDP_HEADS[0][1];
       for (i = 0; i < this.LDP_HEADS.length; i++) {
         if (y >= this.LDP_HEADS[i][0]) { name = this.LDP_HEADS[i][1]; }

@@ -212,7 +212,14 @@
       note: '「非武装中立論」の理論家。成田のもとで書記長を務める',
       fit: { chair: 4, secgen: 5, policy: 5, diet: 4, org: 2, youth: 1 },
       passive: '毎回、新中間層の傾向が少し上がる',
-      act: { name: '非武装中立を説く', desc: '新中間層 +4、左派 −6', cost: { capital: 2 }, cd: 3, uses: 3 } },
+      acts: [
+        { name: '非武装中立を説く', desc: '新中間層 +4、左派 −6', cost: { capital: 2 }, cd: 3, uses: 3 },
+        //  書記長として国会の共闘を回した人である。飛鳥田に置くと
+        //  横浜を取っていない盤でこの一本が出なくなるので、こちらに置く。
+        { name: '公明党に回路を作る', desc: '公明 +6、共産 −4、左派の不満 +5。一度だけ',
+          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
+          fx: function (Q) { Q.ch_komei = 1; Q.rel_komei += 6; Q.rel_kyosan -= 4; Q.mood_saha += 5; } }
+      ] },
 
     asukata: { n: 13, name: '飛鳥田一雄', faction: 'chusa', from: 1963, to: 1990,
       note: '横浜市長。全国革新市長会長。市長のまま党委員長になる唯一の男',
@@ -243,13 +250,25 @@
       note: '全逓出身。労組との交渉役。土井のあと委員長を継ぐ',
       fit: { chair: 4, secgen: 4, policy: 2, diet: 4, org: 4, youth: 1 },
       passive: '毎回、総評との関係 +2',
-      act: { name: '労組と手を打つ', desc: '資金 +6、総評 +10', cost: {}, cd: 3, uses: 3 } },
+      acts: [
+        { name: '労組と手を打つ', desc: '資金 +6、総評 +10', cost: {}, cd: 3, uses: 3 },
+        //  田辺－金丸の線。史実でも、この二人が与野党の裏の窓口だった。
+        { name: '自民党に回路を作る', desc: '自民 +6、左派の不満 +8。一度だけ',
+          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
+          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 6; Q.mood_saha += 8; } }
+      ] },
 
     yamaguchi: { n: 18, name: '山口鶴男', faction: 'chusa', from: 1969, to: 1993,
       note: '党務型の書記長。組織と選挙の実務を回す',
       fit: { chair: 2, secgen: 5, policy: 3, diet: 3, org: 4, youth: 1 },
       passive: '毎回、無派閥の代議員 +2',
-      act: { name: '選挙態勢を締める', desc: '政治資源 +3、無派閥代議員 +20', cost: { budget: 2 }, cd: 3, uses: 3 } },
+      acts: [
+        { name: '選挙態勢を締める', desc: '政治資源 +3、無派閥代議員 +20', cost: { budget: 2 }, cd: 3, uses: 3 },
+        //  書記長として社公民の実務を回した人である。
+        { name: '民社党に回路を作る', desc: '民社 +6、共産 −5、左派の不満 +8。一度だけ',
+          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
+          fx: function (Q) { Q.ch_minsha = 1; Q.rel_minsha += 6; Q.rel_kyosan -= 5; Q.mood_saha += 8; } }
+      ] },
 
     ueda: { n: 19, name: '上田哲', faction: 'saha', from: 1968, to: 1993,
       note: '元NHK記者。協会寄りだが、話し方は都市向けである',

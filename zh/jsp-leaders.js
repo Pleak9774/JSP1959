@@ -212,7 +212,14 @@
       note: '全驻劳出身，社会党中左派代表人物与《非武装中立论》的理论奠基者。历任党书记长与委员长，长期致力于将非武装中立政策系统化与现实化。',
       fit: { chair: 4, secgen: 5, policy: 5, diet: 4, org: 2, youth: 1 },
       passive: '每回合增长新中间层的支持倾向',
-      act: { name: '宣讲非武装中立原则', desc: '新中间层支持度 +4、左派 −6', cost: { capital: 2 }, cd: 3, uses: 3 } },
+      acts: [
+        { name: '宣讲非武装中立原则', desc: '新中间层支持度 +4、左派 −6', cost: { capital: 2 }, cd: 3, uses: 3 },
+        //  書記長として国会の共闘を回した人である。飛鳥田に置くと
+        //  横浜を取っていない盤でこの一本が出なくなるので、こちらに置く。
+        { name: '打通公明党渠道', desc: '公明 +6、共产 −4、左派的不满 +5。仅限一次',
+          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
+          fx: function (Q) { Q.ch_komei = 1; Q.rel_komei += 6; Q.rel_kyosan -= 4; Q.mood_saha += 5; } }
+      ] },
 
     asukata: { n: 13, name: '飞鸟田一雄', faction: 'chusa', from: 1963, to: 1990,
       note: '曾任横滨市长与全国革新市长会会长，革新自治体运动的标志人物。提倡扩大党员数量和党制改革。',
@@ -243,13 +250,25 @@
       note: '全递出身，社会党内中道实务派领袖。长期负责国会对策与总评劳工统筹，善于跨党派协调与朝野协商。',
       fit: { chair: 4, secgen: 4, policy: 2, diet: 4, org: 4, youth: 1 },
       passive: '每回合跟总评的关系 +2',
-      act: { name: '同工会进行协调', desc: '资金 +6、总评 +10', cost: {}, cd: 3, uses: 3 } },
+      acts: [
+        { name: '同工会进行协调', desc: '资金 +6、总评 +10', cost: {}, cd: 3, uses: 3 },
+        //  田辺－金丸の線。史実でも、この二人が与野党の裏の窓口だった。
+        { name: '打通自民党渠道', desc: '自民 +6、左派的不满 +8。仅限一次',
+          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
+          fx: function (Q) { Q.ch_jimin = 1; Q.rel_jimin += 6; Q.mood_saha += 8; } }
+      ] },
 
     yamaguchi: { n: 18, name: '山口鹤男', faction: 'chusa', from: 1969, to: 1993,
       note: '群马县职劳出身的党务型官僚，长期担任党书记长。精通选举统筹、组织联络与议事程序',
       fit: { chair: 2, secgen: 5, policy: 3, diet: 3, org: 4, youth: 1 },
       passive: '每回合无派阀的代议员 +2',
-      act: { name: '进行选举布局', desc: '政治资源 +3、无派阀代议员 +20', cost: { budget: 2 }, cd: 3, uses: 3 } },
+      acts: [
+        { name: '进行选举布局', desc: '政治资源 +3、无派阀代议员 +20', cost: { budget: 2 }, cd: 3, uses: 3 },
+        //  書記長として社公民の実務を回した人である。
+        { name: '打通民社党渠道', desc: '民社 +6、共产 −5、左派的不满 +8。仅限一次',
+          cost: { capital: 3 }, cd: 4, uses: 1, domain: 'rel',
+          fx: function (Q) { Q.ch_minsha = 1; Q.rel_minsha += 6; Q.rel_kyosan -= 5; Q.mood_saha += 8; } }
+      ] },
 
     ueda: { n: 19, name: '上田哲', faction: 'saha', from: 1968, to: 1993,
       note: 'NHK工会领袖与记者出身，政治光谱偏向协会左派。擅长街头演说与大众传媒公关，是党内左派中罕见具备强大都市浮动选民动员力的议员',
