@@ -3764,6 +3764,11 @@
         when: function (Q) { return Q.year >= 1989 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  ['history','right_unify'].indexOf(window.JSP.reorgKind(Q)) >= 0 && !Q.evdone_sp_rengo1989; } },
+      // 自民党分裂　1989年〜・史実
+      { n: 5021, id: 'a5_jimin_wareme', name: '自民党分裂', acts: [5], need: { rel: 0.3 }, year: 1989, fixed: true,
+        when: function (Q) { return Q.year >= 1989 &&
+                 Q.year <= 1992 &&
+                 window.JSP.ldpWareReady(Q); } },
       // 昭和が終わる　1989年〜・史実
       { n: 5163, id: 'a5_showa_owari', name: '昭和が終わる', acts: [5], need: { name: 0.2 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3918,7 +3923,7 @@
       // 内閣不信任　1993年〜・史実
       { n: 5018, id: 'a5_fushinnin', name: '内閣不信任', acts: [5], need: { diet: 0.4 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
-                 Q.cab_kind > 0; } },
+                 !Q.cab_kind && !Q.ldp_wareme; } },
       // 一九九三年七月　帯中間右/右・1993年〜・史実
       { n: 5019, id: 'a5_1993', name: '一九九三年七月', acts: [5], need: { hr: 0.5 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
@@ -4922,7 +4927,7 @@
       { n: 5171, id: 'a5_sakigake', name: '新党先驱', acts: [5], need: { hr: 0.2 }, year: 1993,
         when: function (Q) { return Q.year >= 1993 &&
                  Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
-                 Q.cab_kind > 0; } },
+                 !Q.cab_kind && !Q.ldp_wareme; } },
       // 政権に入るという仕事
       { n: 5174, id: 'a5_kanryo_naikaku', name: '政権に入るという仕事', acts: [5], need: { cab: 0.2 },
         when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
@@ -6077,6 +6082,11 @@
 
     splinterOn: function (Q, k) { return (Q['sp_' + k] || 0) > 0; },
 
+    //  生まれる年。早く割れた盤では、その年から数える。
+    splinterBorn: function (Q, k) {
+      return Q['spborn_' + k] || (this.SPLINTER[k] || {}).born || 0;
+    },
+
     //  史実の見積もり。新自由クラブも日本新党も、
     //  こちらが何をしようと生まれて議席を取った。
     //  存在そのものを事象の選択に紐付けていたのは設計の誤りで、
@@ -6091,7 +6101,7 @@
         k = this.SPLINTER_KEYS[i];
         s = this.SPLINTER[k];
         if (this.SPLINTER_BASE[k] === undefined) { continue; }
-        if (year < s.born) { continue; }
+        if (year < this.splinterBorn(Q, k)) { continue; }
         //  戻ったあとは生え直さない
         if (s.back && year >= (Q['spback_' + k] || s.back)) { continue; }
         if (Q['spseed_' + k]) { continue; }
@@ -6110,7 +6120,7 @@
         s = this.SPLINTER[k];
         var frac = Q['sp_' + k] || 0;
         //  まだ生まれていない／もう戻った
-        if (year < s.born) { frac = 0; }
+        if (year < this.splinterBorn(Q, k)) { frac = 0; }
         if (s.back && year >= (Q['spback_' + k] || s.back)) { frac = 0; Q['sp_' + k] = 0; }
         if (frac <= 0) { Q['res_sp_' + k] = 0; continue; }
         var pk = 'res_' + s.parent;
@@ -6227,6 +6237,80 @@
       var sour = Math.max(0, Math.min(40, -(Q.rel_jimin || 0)));
       var n = 22 + komei * 0.30 + minsha * 0.30 + won * 2.2 + sour * 0.25;
       return Math.max(8, Math.min(96, Math.round(n)));
+    },
+
+    //  ── 早く割れる道 ────────────────────────────────
+    //
+    //  羽田孜・小沢一郎・海部俊樹が自民党を出た理由は、金の事件そのもの
+    //  ではない。選挙制度を変える話が、党内の主流派に二度潰されたことである。
+    //  海部の政治改革関連法案は一九九一年に廃案になり、その一年半あと、
+    //  宮沢内閣が同じ法案を出せずに不信任を受けた。
+    //
+    //  だから早く割れる条件も同じ形で書く。
+    //    ・改革の議題が国会に立っていること（seiji_kaikaku_an か、
+    //      東京佐川のあと選挙制度の協議に乗ったこと）
+    //    ・出た先に受け皿があること ── 公明・民社との窓口、閣外協議で
+    //      呑ませた回数、自民との距離。これは ldpSplitSize がそのまま持つ。
+    //
+    //  線は史実の 68 より少し下に置く。届けば、割れは一九九三年六月を
+    //  待たずに起きる ── 議席はその場で動き、次の総選挙を待たない。
+    LDP_WARE_LINE: 62,
+    LDP_WARE_FROM: 1989,
+    LDP_WARE_UNTIL: 1992,
+
+    ldpWareReady: function (Q) {
+      if (Q.ldp_split_done || Q.ldp_wareme) { return 0; }
+      var y = Q.year || 0;
+      if (y < this.LDP_WARE_FROM || y > this.LDP_WARE_UNTIL) { return 0; }
+      //  改革の議題が立っていなければ、出る口実が無い
+      if (!Q.seiji_kaikaku_an && !Q.sagawa_seido) { return 0; }
+      return this.ldpSplitSize(Q) >= this.LDP_WARE_LINE ? 1 : 0;
+    },
+
+    //  札を出す前に、割れる大きさと顔ぶれだけ数えておく。
+    //  文面がこの二つを読む ── 選択肢を選ぶ前に決まっている必要がある。
+    wareSize: function (Q) {
+      Q.ldp_split = Math.min(Q.res_jimin || 0, this.ldpSplitSize(Q));
+      Q.ware_kaifu = (this.ldpHead(Q) === '海部俊树') ? 1 : 0;
+      return Q.ldp_split;
+    },
+
+    //  割れをその場で起こす。総選挙を待たない ── 出て行った議員は
+    //  現有の議席を持って出る。史実の一九九三年六月もそうだった。
+    splitLDPNow: function (Q) {
+      var total = this.ldpSplitSize(Q);
+      var jimin = Q.res_jimin || 0;
+      var take = Math.max(0, Math.min(jimin, total));
+      var sg = Math.round(take * 0.19);
+      var ss = take - sg;
+      var y = Q.year || this.LDP_WARE_FROM;
+      //  次の総選挙からは、母党の議席から同じ割合で切り出す
+      var frac = jimin > 0 ? Math.max(0, Math.min(0.9, take / jimin)) : 0;
+      Q.sp_shinsei = frac * 0.81;
+      Q.sp_sakigake = frac * 0.19;
+      Q.spborn_shinsei = y;
+      Q.spborn_sakigake = y;
+      Q.spseed_shinsei = 1;
+      Q.spseed_sakigake = 1;
+      //  いまの議席をその場で移す
+      Q.res_jimin = jimin - take;
+      Q.res_sp_shinsei = (Q.res_sp_shinsei || 0) + ss;
+      Q.res_sp_sakigake = (Q.res_sp_sakigake || 0) + sg;
+      Q.splinter_seats = this.allySplinterSeats(Q) + (Q.res_sp_shinjiyu || 0);
+      Q.ldp_split = take;
+      Q.ldp_split_done = 1;
+      Q.ldp_wareme = 1;
+      Q.ldp_ware_year = y;
+      //  総裁が出て行く盤もある。海部俊樹は改革の側に立っていた。
+      Q.ware_kaifu = (this.ldpHead(Q) === '海部俊树') ? 1 : 0;
+      if (Q.ware_kaifu) {
+        Q.jimin_head_name = '宫泽喜一';
+        Q.jimin_head_from = y;
+        Q.jimin_head_until = 1993;
+      }
+      //  出て行った側は自民と切れる。こちらとの距離は事象の選択が決める。
+      Q.rel_jimin = (Q.rel_jimin || 0) - 10;
+      return take;
     },
 
     //  一九九三年の分裂を実行する。新生党と さきがけ に配る（史実の比 55:13）。
