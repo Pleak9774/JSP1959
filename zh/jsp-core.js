@@ -329,15 +329,18 @@
     ROSOKON_START: 44,    // 統一労組懇（万人）
     REORG_TEKKO_MAX: 34,
     REORG_ROSOKON_MAX: 26,
-    DUES_RATE: 0.0016,   // 動員力 1 につき一手あたりの分担金
+    //  二〇二六年九月（N2）に 0.0016 → 0.0011。金が余りすぎていた（下の維持費の注記）。
+    DUES_RATE: 0.0011,   // 動員力 1 につき一手あたりの分担金
     //  党費。まず党員の関数である ── 地道に組織を作った党が後半に
     //  金を持っているのは筋が通る。ただし線形にすると、党員を倍にした
     //  だけで収入も倍になり、組織化が唯一の答えになってしまう。
     //  指数 0.6 で、四倍にして 2.3 倍。実際に届く幅は五万〜十五万人で、
-    //  そのあいだ一手あたり 0.34 → 0.67 になる。
+    //  そのあいだ一手あたり 0.30 → 0.58 になる。
     MEMBER_DUES_BASE: 50000,
-    MEMBER_DUES_K: 0.34,
+    MEMBER_DUES_K: 0.30,
     MEMBER_DUES_EXP: 0.6,
+    //  都市の個人後援会から入る金の上限（一手あたり）。unionDues の urban。
+    URBAN_DUES_MAX: 1.6,
     memberDues: function (Q) {
       var m = Math.max(0, Q.members || 0);
       if (m <= 0) { return 0; }
@@ -586,10 +589,13 @@
     //  改革しなければ、赤字は毎手ぶんだけ国庫から出続ける。
     //  国庫から出るということは、党が守った雇用の値札が
     //  毎年ニュースに出るということでもある。
+    //  赤字の一部は党が分担する。その分は維持費に入れて払う
+    //  （upkeep の KOKUTETSU_PARTY_SHARE）。以前はここで党費から
+    //  赤字の額をそのまま引いていたので、未払いの判定のあとで資金が負のまま次の手へ残った。
+    //  turn_n は tickYear が毎手一つ進める（以前は誰も進めず、四手に一度のはずが毎手だった）。
     kokutetsuUpkeep: function (Q) {
       var d = Q.kokutetsu_debt || 0;
       if (!d) { return Q; }
-      Q.budget -= d;
       if ((Q.turn_n || 0) % 4 === 0) { this.push(Q, ['shinchukan', 'jieigyo'], -1); }
       return Q;
     },
@@ -899,7 +905,7 @@
     unionDues: function (Q) {
       var p = this.unionPower(Q);
       //  党費。組合の分担金とは別に、党員から直接入る。
-      //  一九五九年の五万人で 0.34/手。組合が離れても残る金である。
+      //  一九五九年の五万人で 0.30/手。組合が離れても残る金である。
       var fee = this.memberDues(Q);
       var mul = this.diff(Q).income;
       Q.dues_acc = (Q.dues_acc || 0) + (p.total * this.DUES_RATE + fee) * mul;
@@ -915,7 +921,7 @@
       //  組合を切っておいて都市も作れていない党は、そこで干上がる。
       var built = Math.min(1, (Q.lean_shinchukan_shakai || 0) / 30) *
                   Math.min(1, (Q.members || 0) / 90000);
-      var urban = built * built * (1 - dep) * 2.8;
+      var urban = built * built * (1 - dep) * this.URBAN_DUES_MAX;
       Q.dues_urban = Math.round(urban * 100) / 100;
       Q.dues_acc += urban;
       var pay2 = Math.floor(Q.dues_acc);
@@ -1132,26 +1138,323 @@
     //  史実でも、社会党単独が三分の一を持っていたことは一度も無い
     //  （最高の一九五八年でさえ 166/467）。改憲が起きなかったのは、
     //  自民と改憲派が三分の二を集められなかったからである。
-    kaikenBloc: function (Q) {
-      var n = (Q.res_jimin || 0) + (Q.res_minsha || 0)
-            + (Q.res_sp_shinsei || 0) + (Q.res_sp_shinjiyu || 0);
-      //  公明は護憲寄り。こちらとの関係が壊れているときだけ向こうへ行く。
-      if ((Q.rel_komei || 0) < -20) { n += Q.res_komei || 0; }
-      //  その他の半分は保守系無所属である。
-      n += Math.round((Q.res_other || 0) * 0.5);
-      return n;
+    //  ── 改憲の挿話（相手が発議する側）の数 ─────────────────────
+    //  二〇二六年九月（N3）まで、改憲の側が三分の二に届くと「牛歩」の一択で
+    //  九条を失い、局がそこで終わっていた。いまは三手の挿話である：
+    //    発議（手段を一つ）→ 委員会（手段を一つ）→ 採決（臨むか、一度だけ引き延ばす）。
+    //  採決のときに改憲の側が三分の二を割っていれば止まる。割っていなければ九条を失い、
+    //  第Ⅲ・Ⅳ幕はその幕の結算へ、第Ⅴ幕はそのまま一九九三年まで続く。
+    //  手段が引き離す議席は、幕をまたいで持ち越す値（公明・民社・総評との関係、
+    //  動員力、党員）から出す。見込みは脇柱の「危機」の面に出し、本文には書かない。
+    //  数はここに集める。KAIKEN.COST は N2 で締めた経済で打ち手に打たせて合わせる。
+    KAIKEN: {
+      ROUNDS: 3,               //  発議から採決までの手（発議・委員会・採決）
+      KOMEI_LINE: -20,         //  公明はこちらとの関係がこれを割ると改憲の側に回る（前からの線）
+      JIMIN_DOVE: 0.10,        //  自民の中で九条を改めることに慎重な議員の割合
+      KOMEI_STEP: 15,          //  公明を説得すると関係がこれだけ戻る
+      KOMEI_ABSTAIN: -35,      //  説得したあと関係がここまで戻っていれば、今期は賛成に回らない
+      MINSHA_BASE: 0.25, MINSHA_MIN: 0.10, MINSHA_MAX: 0.60, MINSHA_AGAIN: 0.5,
+      STREET_RATE: 0.35, STREET_UNION: 400, STREET_SOHYO_MIN: 20,
+      KOKUMIN_RATE: 0.30, KOKUMIN_MEM: 200000,
+      WARN_GAP: 20, DANGER_GAP: 8, WARN_KOMEI: 15, DANGER_KOMEI: 6,
+      COST: { komei: { capital: 5, again: 2 }, minsha: { capital: 4, budget: 3 },
+              street: { budget: 4, capital: 2 }, kokumin: { budget: 6, capital: 1 },
+              delay: { capital: 3, hc: 2 }, renritsu: { capital: 3, coalition: 25 } },
+      LOSE: { capital: 0.5, rel_sohyo: 15, mood_saha: 20, mood_chusa: 12, members: 0.9 },
+      WIN: { rel_sohyo: 6 }
+      //  九条を失ったときの減点は SCORE_W.kaiken（-30）に置く
     },
 
+    //  改憲の側の議席。S を省けば盤の議席（res_*）で数える。
+    //  S.forecast のとき（総選挙の見込み）は、今期の国会で引き離した分（kk_*）を引かない ──
+    //  kk_* は次の総選挙（runElection）で戻るので、見込みには効かない。
+    kaikenBloc: function (Q, S) {
+      var K = this.KAIKEN;
+      if (!S) {
+        S = { jimin: Q.res_jimin || 0, minsha: Q.res_minsha || 0, komei: Q.res_komei || 0,
+              other: Q.res_other || 0, shinsei: Q.res_sp_shinsei || 0, shinjiyu: Q.res_sp_shinjiyu || 0 };
+      }
+      var n = (S.jimin || 0) + (S.minsha || 0) + (S.shinsei || 0) + (S.shinjiyu || 0);
+      //  公明は護憲寄り。こちらとの関係が壊れているときだけ向こうへ行く。
+      //  今期説得して外した公明（kk_komei_out）は、関係がまた冷えても戻らない。
+      if (Q.komei_exists && (Q.rel_komei || 0) < K.KOMEI_LINE && (S.forecast || !Q.kk_komei_out)) {
+        n += S.komei || 0;
+      }
+      //  その他の半分は保守系無所属である。
+      n += Math.round((S.other || 0) * 0.5);
+      if (!S.forecast) {
+        n -= Math.min(S.minsha || 0, Q.kk_minsha_out || 0);
+        n -= (Q.kk_float_out || 0);
+      }
+      return Math.max(0, n);
+    },
+
+    //  改憲の側の数と、脇柱・主画面・選挙の頁が読む値を焼く。refresh から毎回呼ぶ。
+    //  総選挙の見込み（kaiken_fore）はここでは数えない（写しを作るので重い）。
+    //  endturn（kaikenTurn）・候補者調整・脇柱の on-arrival で kaikenForecast が焼いたものを読む。
     kaikenRisk: function (Q) {
+      var K = this.KAIKEN, C = K.COST;
       Q.goken_seats = this.gokenSeats(Q);
       Q.goken_line = this.gokenLine(Q);
       Q.goken_ratio = Math.round((Q.goken_seats / (Q.hr_total || 511)) * 1000) / 10;
-      Q.kaiken_bloc = this.kaikenBloc(Q);
-      var band = this.bandOf(Q);
+      var line = this.kaikenLine(Q), bloc = this.kaikenBloc(Q), band = this.bandOf(Q);
+      var ep = Q.kaiken_ep || 0;
+      //  九条がもう改められている（相手に改められたか、こちらが右の線で改めたか）
+      var nine = !!(Q.kyujo_ushinatta || Q.kyujo_kaisei);
+      Q.kaiken_line = line;
+      Q.kaiken_bloc = bloc;
+      Q.kaiken_gap = line - bloc;
+      //  あと何議席引き離せば三分の二を割るか。連立を条件にして取り下げさせたら 0。
+      Q.kaiken_left = Q.kaiken_withdrawn ? 0 : Math.max(0, bloc - line + 1);
+      var kin = (Q.komei_exists && (Q.rel_komei || 0) < K.KOMEI_LINE && !Q.kk_komei_out) ? 1 : 0;
+      Q.kk_komei_in = kin;
+      Q.komei_swing = (Q.komei_exists && !kin && !Q.kk_komei_out) ? (Q.res_komei || 0) : 0;
+      //  関係があといくつ下がると公明が向こうへ回るか（komei_swing > 0 のときだけ意味がある）
+      Q.komei_drop = Math.floor((Q.rel_komei || 0) - K.KOMEI_LINE) + 1;
       //  相手が三分の二を集めたときだけ。
-      //  こちらが右の線に居るなら党が呾んだということなので危機にならない。
-      Q.kaiken_danger = (Q.kaiken_bloc >= this.kaikenLine(Q) && band !== 4) ? 1 : 0;
+      //  こちらが右の線に居るなら党が呑んだということなので危機にならない。
+      Q.kaiken_danger = (bloc >= line && band !== 4 && !nine && !Q.kaiken_blocked) ? 1 : 0;
+      //  届いているのにまだ挿話が始まっていない（選挙のあと・幕の頭・事象で公明が離れた手）。
+      //  この手の終わりの kaikenTurn で発議が始まる。主画面が赤字で出す。
+      Q.kaiken_imminent = (Q.kaiken_danger && (Q.act || 1) >= 3 && !Q.kaiken_term_used && !ep) ? 1 : 0;
+      //  予警。第Ⅱ幕から、挿話の外でだけ出す。
+      var warn = 0, kw = 0;
+      if ((Q.act || 1) >= 2 && !nine && band !== 4 && !Q.kaiken_blocked && !ep) {
+        var gap = Q.kaiken_gap;
+        var kc = Q.komei_swing > 0 && Q.komei_swing >= gap && gap > 0;
+        if (gap <= K.DANGER_GAP || (kc && Q.komei_drop <= K.DANGER_KOMEI)) { warn = 2; }
+        else if (gap <= K.WARN_GAP || (kc && Q.komei_drop <= K.WARN_KOMEI)) { warn = 1; }
+        kw = (kc && Q.komei_drop <= K.WARN_KOMEI) ? 1 : 0;
+      }
+      Q.kaiken_warn = warn;
+      Q.kaiken_komei_warn = kw;
+      //  脇柱の一行の出し分け：0 平時 1 挿話の中 2 今期は止めた 3 九条を失った 4 右の線 5 こちらで九条を改めた
+      Q.kaiken_state = Q.kyujo_ushinatta ? 3 : (Q.kyujo_kaisei ? 5 : (ep > 0 ? 1
+        : (Q.kaiken_blocked ? 2 : (band === 4 ? 4 : 0))));
+      Q.kaiken_to_vote = ep > 0 ? Math.max(0, (Q.kaiken_rounds || K.ROUNDS) - ep) : 0;
+      //  手段の頁（発議と委員会）がまだ先にあるか、いまその頁にいるか。脇柱の「打てる手」はこのときだけ出す。
+      //  委員会の回で手段を選んだあとは、採決（と一度だけの引き延ばし）しか残っていない。
+      //  連立を条件にして取り下げさせたあと（kaiken_withdrawn）は、次の手の終わりに止まるので手段はもう無い。
+      Q.kk_lever_ahead = (ep > 0 && ep < K.ROUNDS && !Q.kaiken_withdrawn
+        && !(ep === K.ROUNDS - 1 && Q.kk_lever_ep === ep)) ? 1 : 0;
+      //  手段の費用（選択肢の副題と choose-if が読む）
+      Q.kk_cost_komei = C.komei.capital + C.komei.again * (Q.kk_uses_komei || 0);
+      Q.kk_cost_minsha_c = C.minsha.capital; Q.kk_cost_minsha_b = C.minsha.budget;
+      Q.kk_cost_street_b = C.street.budget; Q.kk_cost_street_c = C.street.capital;
+      Q.kk_cost_kokumin_b = C.kokumin.budget; Q.kk_cost_kokumin_c = C.kokumin.capital;
+      Q.kk_cost_renritsu = C.renritsu.capital;
+      this.kaikenEstimate(Q);
       return Q.kaiken_danger;
+    },
+
+    //  引き離せる浮動票：自民の慎重派、保守系無所属（その他の半分）、新自由クラブ。
+    //  街頭と国民運動はここから引く。引いた分（kk_float_out）は次の総選挙まで戻らない。
+    kaikenPool: function (Q) {
+      var K = this.KAIKEN;
+      return Math.max(0, Math.round((Q.res_jimin || 0) * K.JIMIN_DOVE)
+        + Math.round((Q.res_other || 0) * 0.5) + (Q.res_sp_shinjiyu || 0) - (Q.kk_float_out || 0));
+    },
+    //  総選挙の見込みでの改憲の側（opt.all。開票と同じ算術で党ごとの議席を出す）。
+    //  k・year を省けば「いま総選挙なら」。写しで数えるので盤は触らない。
+    //  重いので refresh では呼ばない（kaikenTurn・候補者調整・脇柱の on-arrival）。
+    kaikenForecast: function (Q, k, year) {
+      var f = this.seatForecast(Q, k, year, { all: true });
+      var a = f.all || {};
+      Q.kaiken_fore = this.kaikenBloc(Q, { jimin: a.jimin || 0, minsha: a.minsha || 0, komei: a.komei || 0,
+        other: a.other || 0, shinsei: a.sp_shinsei || 0, shinjiyu: a.sp_shinjiyu || 0, forecast: 1 });
+      //  その選挙の定数での三分の二（定数が変わる年がある）
+      Q.kaiken_fore_line = Math.ceil((f.hr_total || Q.hr_total || 511) * 2 / 3);
+      return Q.kaiken_fore;
+    },
+    //  手段ごとの見込み（脇柱の「危機」の面と、手段の頁の効き目）。
+    kaikenEstimate: function (Q) {
+      var K = this.KAIKEN;
+      var cl = function (x, a, b) { return Math.max(a, Math.min(b, x)); };
+      var pool = this.kaikenPool(Q);
+      Q.kk_pool = pool;
+      var kin = Q.kk_komei_in || 0;
+      Q.kk_est_komei = (kin && (Q.rel_komei || 0) + K.KOMEI_STEP >= K.KOMEI_ABSTAIN) ? (Q.res_komei || 0) : 0;
+      Q.kk_komei_twice = (kin && !Q.kk_est_komei) ? 1 : 0;
+      var ms = Math.max(0, (Q.res_minsha || 0) - (Q.kk_minsha_out || 0));
+      Q.kk_est_minsha = Q.minsha_exists ? Math.round(ms
+        * cl(K.MINSHA_BASE + (Q.rel_minsha || 0) / 200, K.MINSHA_MIN, K.MINSHA_MAX)
+        * ((Q.kk_uses_minsha || 0) > 0 ? K.MINSHA_AGAIN : 1)) : 0;
+      var rs = Q.rel_sohyo || 0;
+      Q.kk_est_street = rs >= K.STREET_SOHYO_MIN ? Math.round(pool * K.STREET_RATE
+        * Math.min(1, (Q.union_power || 0) / K.STREET_UNION) * (0.5 + cl(rs, 0, 100) / 200)) : 0;
+      Q.kk_est_kokumin = Math.round(pool * K.KOKUMIN_RATE * cl(0.4 + (Q.members || 0) / K.KOKUMIN_MEM, 0.4, 1));
+      //  参院で護憲の側が三分の一を持っていれば、引き延ばしは安く済む（判定は衆院だけ）
+      var hc = (Q.seats_hc || 0) + (Q.hc_kyosan || 0) + (kin ? 0 : (Q.hc_komei || 0));
+      Q.kk_hc_hold = hc >= Math.ceil(this.HC_TOTAL / 3) ? 1 : 0;
+      Q.kk_cost_delay = Q.kk_hc_hold ? K.COST.delay.hc : K.COST.delay.capital;
+      //  手段の頁がもう無ければ出さない（そのときは脇柱が「手段を打てる回はもう無い」と書く）
+      Q.kaiken_hopeless = !Q.kk_lever_ahead || (Q.cab_kind === 4 && Q.in_power) || (Q.kaiken_left || 0) <= 0 ? 0
+        : ((Q.kaiken_left || 0) > Q.kk_est_komei + Q.kk_est_minsha + Q.kk_est_street + Q.kk_est_kokumin ? 1 : 0);
+      return Q;
+    },
+
+    //  endturn から毎手呼ぶ（前の「kaikenRisk して pending_kaiken を立てる」二行の代わり）。
+    //  kaiken_page：1 発議 2 委員会 3 採決（引き延ばせるとき） 4 採決（そのまま） 5 止めた
+    kaikenTurn: function (Q) {
+      if ((Q.act || 1) >= 2) { this.kaikenForecast(Q); }
+      this.kaikenRisk(Q);
+      Q.pending_kaiken = 0; Q.kaiken_page = 0;
+      if ((Q.kaiken_ep || 0) > 0) {
+        //  挿話のあいだに党が右の線へ移ったら、何も罰さずに畳む
+        if (this.bandOf(Q) === 4) {
+          Q.kaiken_ep = 0;
+          this.crisisRecheck(Q);
+          this.kaikenRisk(Q);
+          return 0;
+        }
+        Q.kaiken_ep += 1;
+        this.kaikenRisk(Q);
+        //  委員会の回は、改憲の側がもう三分の二を割っていても飛ばさない
+        //  （割ったままなら採決の手に「取り下げ」として止まる）。設計書どおり割った手で
+        //  すぐ止めると、差の小さい挿話は手段一つで終わり、選ぶ場面が一度しか無い。
+        if (Q.kaiken_ep >= (Q.kaiken_rounds || this.KAIKEN.ROUNDS)) {
+          Q.kaiken_page = Q.kaiken_left <= 0 ? 5 : (Q.kaiken_delay_used ? 4 : 3);
+          if (Q.kaiken_page !== 5) { Q.kaiken_early = 0; }
+        } else if (Q.kaiken_withdrawn) {
+          //  連立を条件にして取り下げさせた手のあとは、委員会の頁を出さずにすぐ止める。
+          //  上の「委員会の回は飛ばさない」は数で割れたときだけの話で、自民党が棚上げを
+          //  呑んだあとに委員会の頁（審議を急いでいる）を出すと話が食い違う。
+          Q.kaiken_page = 5;
+          Q.kaiken_early = 1;
+        } else {
+          Q.kaiken_page = 2;
+          //  委員会の時点で割れていれば、自民党は採決の前に取り下げる（@soshi の文の出し分け）
+          Q.kaiken_early = Q.kaiken_left <= 0 ? 1 : 0;
+        }
+        Q.pending_kaiken = 1;
+      } else if (Q.kaiken_danger && (Q.act || 1) >= 3 && !Q.kaiken_term_used && !Q.kyujo_ushinatta) {
+        this.kaikenStart(Q);
+        Q.kaiken_page = 1;
+        Q.pending_kaiken = 1;
+      }
+      //  pending_kaiken が立っているのに頁が無いと、endturn の go-to がどれも立たず止まる
+      if (Q.pending_kaiken && !(Q.kaiken_page >= 1 && Q.kaiken_page <= 5)) {
+        //  開発者向けの印（audit-play が "Error" で拾う）。訳の対象にしないため英字で書く
+        console.log('Error: kaikenTurn has no page, kaiken_page=' + Q.kaiken_page);
+        Q.pending_kaiken = 0; Q.kaiken_page = 0; Q.kaiken_ep = 0;
+      }
+      return Q.pending_kaiken;
+    },
+    kaikenStart: function (Q) {
+      Q.kaiken_ep = 1;
+      Q.kaiken_rounds = this.KAIKEN.ROUNDS;
+      Q.kaiken_delay_used = 0; Q.kaiken_early = 0; Q.kaiken_result = 0; Q.kaiken_dropped = 0;
+      Q.kaiken_term_used = 1;
+      Q.kk_uses_komei = 0; Q.kk_uses_minsha = 0; Q.kaiken_withdrawn = 0;
+      Q.kk_last = ''; Q.kk_last_peel = 0; Q.kk_lever_ep = 0;
+      Q.kaiken_start_year = Q.year || 0;
+      //  危機に入れる。局面ごとの一度きりとは別で、使い済みでも入る。刻むのは一手分（+2 手）
+      var r = this.crisisReasons(Q);
+      if (!Q.crisis_on) { this.crisisEnter(Q, r, 1); } else { this.crisisRows(Q, r); }
+      //  採決までに局面が閉じないよう、手を足す（暦は turns_left で測るので総手数も同じだけ）
+      var need = Q.kaiken_rounds - 1;
+      if ((Q.turns_left || 0) < need) {
+        var d = need - (Q.turns_left || 0);
+        Q.turns_left = (Q.turns_left || 0) + d;
+        Q.phase_turns = (Q.phase_turns || 0) + d;
+      }
+      Q.crisis_turns_left = Math.max(Q.crisis_turns_left || 0, need + 1);
+      this.kaikenRisk(Q);
+      return Q;
+    },
+    //  手段の頁の on-arrival。先に費用を払い、効かせてから refresh。
+    kaikenLever: function (Q, key) {
+      var K = this.KAIKEN, C = K.COST, n = 0;
+      this.kaikenRisk(Q);
+      if (key === 'komei') {
+        Q.capital = (Q.capital || 0) - Q.kk_cost_komei;
+        Q.rel_komei = (Q.rel_komei || 0) + K.KOMEI_STEP;
+        if (Q.rel_komei >= K.KOMEI_ABSTAIN && !Q.kk_komei_out) { Q.kk_komei_out = 1; n = Q.res_komei || 0; }
+        Q.kk_uses_komei = (Q.kk_uses_komei || 0) + 1;
+        Q.mood_saha = (Q.mood_saha || 0) + 6;
+      } else if (key === 'minsha') {
+        Q.capital = (Q.capital || 0) - C.minsha.capital;
+        Q.budget = (Q.budget || 0) - C.minsha.budget;
+        n = Q.kk_est_minsha || 0;
+        Q.kk_minsha_out = (Q.kk_minsha_out || 0) + n;
+        Q.kk_uses_minsha = (Q.kk_uses_minsha || 0) + 1;
+        Q.rel_minsha = (Q.rel_minsha || 0) + 6;
+        Q.rel_sohyo = (Q.rel_sohyo || 0) - 5;
+        Q.mood_saha = (Q.mood_saha || 0) + 5;
+      } else if (key === 'street') {
+        Q.budget = (Q.budget || 0) - C.street.budget;
+        Q.capital = (Q.capital || 0) - C.street.capital;
+        n = Q.kk_est_street || 0;
+        Q.kk_float_out = (Q.kk_float_out || 0) + n;
+        Q.rel_sohyo = (Q.rel_sohyo || 0) + 4;
+        this.push(Q, ['kokorou', 'minrou'], 3);
+        this.push(Q, ['shinchukan'], -2);
+      } else if (key === 'kokumin') {
+        Q.budget = (Q.budget || 0) - C.kokumin.budget;
+        Q.capital = (Q.capital || 0) - C.kokumin.capital;
+        n = Q.kk_est_kokumin || 0;
+        Q.kk_float_out = (Q.kk_float_out || 0) + n;
+        this.push(Q, ['mishoshiki', 'shinchukan'], 3);
+        Q.members = (Q.members || 0) + 2000;
+      } else if (key === 'renritsu') {
+        Q.kaiken_withdrawn = 1;
+        Q.coalition_rel = (Q.coalition_rel || 0) - C.renritsu.coalition;
+        Q.capital = (Q.capital || 0) - C.renritsu.capital;
+      }
+      Q.kk_last = key; Q.kk_last_peel = n; Q.kk_lever_ep = Q.kaiken_ep || 0;
+      this.refresh(Q);
+      return n;
+    },
+    //  採決を一手先へ送る。挿話ごとに一度だけ。
+    kaikenDelay: function (Q) {
+      this.kaikenRisk(Q);
+      Q.capital = (Q.capital || 0) - (Q.kk_cost_delay || 0);
+      Q.kaiken_rounds = (Q.kaiken_rounds || this.KAIKEN.ROUNDS) + 1;
+      Q.kaiken_delay_used = 1;
+      if ((Q.turns_left || 0) < 1) {
+        Q.turns_left = (Q.turns_left || 0) + 1;
+        Q.phase_turns = (Q.phase_turns || 0) + 1;
+      }
+      Q.crisis_turns_left = Math.max(Q.crisis_turns_left || 0, 2);
+      Q.rel_jimin = (Q.rel_jimin || 0) - 10;
+      if (!Q.kk_hc_hold) { this.push(Q, ['shinchukan'], -2); }
+      Q.kk_last = 'delay'; Q.kk_last_peel = 0;
+      this.refresh(Q);
+      return Q;
+    },
+    //  採決。kaiken_result 1 止めた 0 通った
+    kaikenResolve: function (Q) {
+      this.kaikenRisk(Q);
+      Q.kaiken_result = (Q.kaiken_left || 0) <= 0 ? 1 : 0;
+      Q.kaiken_ep = 0; Q.kaiken_page = 0; Q.pending_kaiken = 0;
+      this.kaikenRisk(Q);
+      return Q.kaiken_result;
+    },
+    kaikenWin: function (Q) {
+      var K = this.KAIKEN;
+      Q.kaiken_blocked = 1;
+      Q.kaiken_block_n = (Q.kaiken_block_n || 0) + 1;
+      Q.rel_sohyo = (Q.rel_sohyo || 0) + K.WIN.rel_sohyo;
+      this.push(Q, ['mishoshiki', 'kokorou'], 2);
+      if (!Q.achievement_goken_mamotta) { this.award('goken_mamotta'); }
+      this.crisisRecheck(Q);
+      this.refresh(Q);
+      return Q;
+    },
+    kaikenLose: function (Q) {
+      var L = this.KAIKEN.LOSE;
+      Q.kyujo_ushinatta = 1;
+      Q.kaiken_lost_act = Q.act || 0;
+      Q.kaiken_lost_year = Q.year || 0;
+      Q.kaiken_ep = 0; Q.kaiken_page = 0; Q.pending_kaiken = 0;
+      Q.capital = Math.floor((Q.capital || 0) * L.capital);
+      Q.rel_sohyo = (Q.rel_sohyo || 0) - L.rel_sohyo;
+      Q.mood_saha = (Q.mood_saha || 0) + L.mood_saha;
+      Q.mood_chusa = (Q.mood_chusa || 0) + L.mood_chusa;
+      Q.members = Math.round((Q.members || 0) * L.members);
+      this.crisisRecheck(Q);
+      this.refresh(Q);
+      return Q;
     },
 
     //  分裂の扉が開いているか。splitCheck と factionPressure の
@@ -1314,20 +1617,28 @@
     //  盤面のどこにも現れていなかった。
     //
     //    資金   専従と機関紙。党員が増えるほど高くつく。自治体を持てば更に。
-    //    政治資源 貯まるものではない。使わなければ散る（毎手 6%）。
+    //    政治資源 貯まるものではない。床（CAPITAL_SOFT）より上は使わなければ散る（毎手 15%）。
     //  校正（実機139手の通しを6シードずつ）：
     //    維持費なし        careless hr111 / 資金峰34 / 政治資源峰83
     //    0.35 / 0.96      careless hr 61 / 資金峰18 / 政治資源峰28 / 未払23回
     //                     金に気を配る打ち手 hr103 / 資金峰45 / 未払0回
     //  金を見ない打ち手と見る打ち手で 42議席の差が付く。それまでは差が無かった。
+    //  二〇二六年九月（N2）にもう一度締めた。それでも金は余っていて、札を打ち続ける打ち手
+    //  （playtest の cards、普通、60局）で各手の初めの資金が中央値 53・p90 165、
+    //  第Ⅲ幕以降は 90 前後あった。分担金・党費・都市の後援会を下げ、党員と自治体の
+    //  維持費を上げ、国鉄の赤字の分担を維持費に入れ、30 を超えた分を毎手一割流す
+    //  （BUDGET_SOFT）。政治資源も床 12 → 8、減衰 10% → 15%、入り 1/20 → 1/24。
+    //  締めたあと（同じ種）：資金 中央値 12・p90 37、幕ごと 8/17/19/7/9、資金 3 以下の手 19%、
+    //  払えなかった回数が残る手 7%、政治資源 中央値 16、選べない選択肢が出る頁 22%。
+    //  難度ごとの資金中央値 簡単 24・普通 12・難しい 8（締める前 129・53・22）。
     //  専従と機関紙。党員に比例するが、こちらも線形ではない ──
     //  機関紙は一度刷れば部数が増えても割安になるし、県連の事務所は
     //  党員が倍になっても倍にはならない。指数は党費（0.6）より小さく、
     //  そのぶん「組織を作れば手元は楽になる、ただし楽になり方は鈍る」。
-    //  五万人で 0.175、十五万五千人で 0.29。自治体の分は線形のまま
+    //  五万人で 0.26、十五万五千人で 0.43。自治体の分は線形のまま
     //  （一つ持てば一つぶんの役所が要る）。
     UPKEEP_MEMBER_BASE: 50000,
-    UPKEEP_MEMBER_K: 0.175,
+    UPKEEP_MEMBER_K: 0.26,
     UPKEEP_MEMBER_EXP: 0.45,
     memberUpkeep: function (Q) {
       var m = Math.max(0, Q.members || 0);
@@ -1335,9 +1646,21 @@
       return this.UPKEEP_MEMBER_K *
         Math.pow(m / this.UPKEEP_MEMBER_BASE, this.UPKEEP_MEMBER_EXP);
     },
-    UPKEEP_PER_CITY: 0.34,
-    CAPITAL_DECAY: 0.90,
-    CAPITAL_SOFT: 12,   // ここまでは減らない。上だけ削る
+    UPKEEP_PER_CITY: 0.45,
+    CAPITAL_DECAY: 0.85,
+    CAPITAL_SOFT: 8,    // ここまでは減らない。上だけ削る
+    //  国鉄を改革しなかった赤字のうち、党が維持費として負う割合（赤字 3 なら毎手 1.05）
+    KOKUTETSU_PARTY_SHARE: 0.35,
+    //  資金を貯め込めないようにする線。これを超えた分の一割が、毎手
+    //  県連と専従へ回って消える（端数は budget_leak_acc に貯めて整数で引く）。
+    BUDGET_SOFT: 30,
+    BUDGET_LEAK: 0.10,
+    //  毎手の維持費（資金）。専従・機関紙・自治体・国鉄の分担。脇柱の見込みと払いの両方がこれを使う。
+    upkeepCost: function (Q) {
+      return (this.memberUpkeep(Q) +
+              this.localCount(Q) * this.UPKEEP_PER_CITY +
+              (Q.kokutetsu_debt || 0) * this.KOKUTETSU_PARTY_SHARE) * this.diff(Q).upkeep;
+    },
     // ══════════════════════════════════════════════════════════
     //  新左翼
     //
@@ -1458,9 +1781,9 @@
     //  入りは二つで決まる。
     //   ・六つの役職に、その職に向いた人を置けているか（適性の合計）
     //   ・党内が落ち着いているか（いちばん怒っている派閥を見る）
-    //  開幕は適性合計 30（六人とも適任）で、一手あたり 1.2 前後になる。
-    //  減衰 0.96 と釣り合う天井は 30 ほど。貯め込みは効かない。
-    CAPITAL_PER_FIT: 20,
+    //  開幕は適性合計 30（六人とも適任）で、一手あたり 1.0 前後になる。
+    //  床（CAPITAL_SOFT）より上は毎手 15% 散るので、貯め込みは効かない。
+    CAPITAL_PER_FIT: 24,
     //  議員団の大きさ。国会で使える手は議席の数で決まる。
     //  一九五九年の 166 議席で 1.15、九十議席で 0.9、単独過半（256）で 1.45。
     //  下は 0.8、上は 1.6 で止める ── 崩れても入りが枯れず、
@@ -1498,12 +1821,23 @@
     },
 
     upkeep: function (Q) {
-      var cost = (this.memberUpkeep(Q) +
-                  this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep;
+      var cost = this.upkeepCost(Q);
       Q.upkeep_acc = (Q.upkeep_acc || 0) + cost;
       var pay = Math.floor(Q.upkeep_acc);
       if (pay > 0) { Q.upkeep_acc = Math.round((Q.upkeep_acc - pay) * 100) / 100; Q.budget -= pay; }
       Q.upkeep_now = Math.round(cost * 10) / 10;
+      //  貯め込んだ金は県連と専従に回る。線（BUDGET_SOFT）を超えた分の一割を毎手。
+      //  端数は溜めておき、整数になった分だけ引く。脇柱に説明の行がある（budget_over）。
+      Q.budget_leak_now = 0;
+      if (Q.budget > this.BUDGET_SOFT) {
+        Q.budget_leak_acc = (Q.budget_leak_acc || 0) + (Q.budget - this.BUDGET_SOFT) * this.BUDGET_LEAK;
+        var lk = Math.floor(Q.budget_leak_acc);
+        if (lk > 0) {
+          Q.budget_leak_acc = Math.round((Q.budget_leak_acc - lk) * 100) / 100;
+          Q.budget -= lk;
+          Q.budget_leak_now = lk;
+        }
+      }
       //  払えなければ組織が痩せる。専従を切るということである。
       if (Q.budget < 0) {
         Q.budget = 0;
@@ -1529,6 +1863,20 @@
           Q.capital = Math.max(soft, Q.capital - lose);
         }
       }
+      return Q;
+    },
+
+    //  金庫の向き（脇柱の表示だけに使う。盤の算術には入らない）。
+    //  endturn で、手番の入り・出（分担金・党費・維持費・流失・指導部の受動効果・
+    //  自治体の負担）を払う前の資金 b0 と払ったあとの差を取り、
+    //  前の値 0.75・今回 0.25 で均す。札や事象で使った金は入らない。
+    budgetTrend: function (Q, b0) {
+      var d = (Q.budget || 0) - (b0 || 0);
+      var t = (Q.budget_trend_n || 0) > 0 ? (Q.budget_trend || 0) * 0.75 + d * 0.25 : d;
+      Q.budget_trend_n = (Q.budget_trend_n || 0) + 1;
+      Q.budget_trend = Math.round(t * 10) / 10;
+      Q.budget_trend_abs = Math.abs(Q.budget_trend);
+      Q.budget_trend_dir = (Q.budget_trend >= 0.2) ? 1 : ((Q.budget_trend <= -0.2) ? -1 : 0);
       return Q;
     },
 
@@ -2326,6 +2674,8 @@
       var r = [], f;
       var fs = this.FAC_KEYS;
       var worst = 0;
+      //  改憲の挿話のあいだは、これがいちばん上に立つ（挿話が明ければ消える）
+      if ((Q.kaiken_ep || 0) > 0) { r.push(['修宪发议', '在表决之前，从修宪阵营拉走足够的议席']); }
       for (var i = 0; i < fs.length; i++) {
         f = fs[i];
         if (this.inParty(Q, f) && (Q['mood_' + f] || 0) > worst) { worst = Q['mood_' + f]; }
@@ -2351,46 +2701,80 @@
       var r = this.crisisReasons(Q);
       var on = r.length > 0;
       if (Q.crisis_on) {
+        //  改憲の挿話のあいだは、刻んだ手数が尽きても危機を畳まない
+        if ((Q.kaiken_ep || 0) > 0) { Q.crisis_turns_left = Math.max(Q.crisis_turns_left || 0, 2); }
         //  刻んだ手数を使い切ったら、理由が消えていなくても平時に戻る
         Q.crisis_turns_left = Math.max(0, (Q.crisis_turns_left || 0) - 1);
         if (!on || Q.crisis_turns_left <= 0) {
-          Q.crisis_on = 0;
-          Q.crisis_why = '';
-          Q.crisis_rows = '';
-          Q.crisis_n = 0;
-          Q.crisis_turns_left = 0;
+          this.crisisOff(Q);
+        } else {
+          //  理由はいまのもので出し直す（挿話が明けたら改憲の行が消える）
+          this.crisisRows(Q, r);
         }
       } else if (on && !Q.crisis_used) {
         //  局面ごとに一度だけ。crisis_used は局面の境で戻る
-        Q.crisis_used = 1;
-        Q.crisis_on = 1;
-        //  帯は横に短く畳む。脇柱の面は理由ごとに一行ずつ立てる ──
-        //  理由が三つ重なったとき、点で繋いだ一行は読めない。
-        Q.crisis_why = r.map(function (x) { return x[0]; }).join('・');
-        Q.crisis_rows = r.map(function (x) {
-          return '<span class="jsp-cr-item">' + x[0] + '</span>'
-            + '<span class="jsp-cr-way">' + '脱出的路' + '　' + x[1] + '</span>';
-        }).join('');
-        Q.crisis_n = r.length;
-        //  「暦は同じで手数が三倍」を素直にやると、第Ⅱ幕の12手局面で
-        //  +24手になってしまう。危機として細かく刻むのは先の四手ぶんまで。
-        Q.crisis_gain = Math.min(Q.turns_left, this.CRISIS_MAX_FINE) * (this.GRAIN_COARSE - 1);
-        //  暦は turns_left で測るので、総手数も同じだけ増やす。
-        //  そうしないと危機のあいだだけ暦が先へ走る（tickYear の①）。
-        //  増やしたぶん一手あたりの月数が三分の一になる ── 危機の一手が
-        //  一か月になるというのは、暦の側から見るとこのことである。
-        var pcfg = this.ACTS[Q.act || 1];
-        var pnow = Q.phase_turns || (pcfg && pcfg.phases[(Q.phase || 1) - 1]) || Q.turns_left;
-        Q.phase_turns = pnow + Q.crisis_gain;
-        Q.turns_left += Q.crisis_gain;
-        //  鰴った手数と同じだけ続く。危機そのものが「細かい手の束」である
-        Q.crisis_turns_left = Math.max(1, Q.crisis_gain);
-        Q.grain = this.GRAIN_FINE;
-        Q.crisis_shown = 0;
+        this.crisisEnter(Q, r);
       }
       Q.grain = Q.crisis_on ? this.GRAIN_FINE : this.GRAIN_COARSE;
       Q.grain_name = Q.grain === this.GRAIN_FINE ? '一个月' : '一个季度';
       return Q.crisis_on;
+    },
+    //  危機に入る。cap は細かく刻む先の手数（省けば CRISIS_MAX_FINE）。
+    //  改憲の挿話は cap = 1 で、使い済み（crisis_used）でも入る（kaikenStart）。
+    crisisEnter: function (Q, r, cap) {
+      Q.crisis_used = 1;
+      Q.crisis_on = 1;
+      this.crisisRows(Q, r);
+      //  「暦は同じで手数が三倍」を素直にやると、第Ⅱ幕の12手局面で
+      //  +24手になってしまう。危機として細かく刻むのは先の四手ぶんまで。
+      var c = (cap === undefined || cap === null) ? this.CRISIS_MAX_FINE : cap;
+      Q.crisis_gain = Math.min(Q.turns_left || 0, c) * (this.GRAIN_COARSE - 1);
+      //  暦は turns_left で測るので、総手数も同じだけ増やす。
+      //  そうしないと危機のあいだだけ暦が先へ走る（tickYear の①）。
+      //  増やしたぶん一手あたりの月数が三分の一になる ── 危機の一手が
+      //  一か月になるというのは、暦の側から見るとこのことである。
+      var pcfg = this.ACTS[Q.act || 1];
+      var pnow = Q.phase_turns || (pcfg && pcfg.phases[(Q.phase || 1) - 1]) || Q.turns_left;
+      Q.phase_turns = pnow + Q.crisis_gain;
+      Q.turns_left += Q.crisis_gain;
+      //  増やした手数と同じだけ続く。危機そのものが「細かい手の束」である
+      Q.crisis_turns_left = Math.max(1, Q.crisis_gain);
+      Q.grain = this.GRAIN_FINE;
+      Q.grain_name = '一个月';
+      Q.crisis_shown = 0;
+      return Q;
+    },
+    //  帯は横に短く畳む。脇柱の面は理由ごとに一行ずつ立てる ──
+    //  理由が三つ重なったとき、点で繋いだ一行は読めない。
+    crisisRows: function (Q, r) {
+      Q.crisis_why = r.map(function (x) { return x[0]; }).join('・');
+      Q.crisis_rows = r.map(function (x) {
+        return '<span class="jsp-cr-item">' + x[0] + '</span>'
+          + '<span class="jsp-cr-way">' + '脱出的路' + '　' + x[1] + '</span>';
+      }).join('');
+      Q.crisis_n = r.length;
+      return Q;
+    },
+    crisisOff: function (Q) {
+      Q.crisis_on = 0;
+      Q.crisis_why = '';
+      Q.crisis_rows = '';
+      Q.crisis_n = 0;
+      Q.crisis_turns_left = 0;
+      return Q;
+    },
+    //  挿話が手の途中で明けたとき（止めた・失った）。ほかの理由が残っていれば
+    //  理由の行だけ出し直し、無ければそこで平時に戻す。
+    crisisRecheck: function (Q) {
+      if (!Q.crisis_on) { return Q; }
+      var r = this.crisisReasons(Q);
+      if (r.length) { this.crisisRows(Q, r); }
+      else {
+        this.crisisOff(Q);
+        Q.grain = this.GRAIN_COARSE;
+        Q.grain_name = '一个季度';
+      }
+      return Q;
     },
 
     // ══════════════════════════════════════════════════════════
@@ -2935,8 +3319,8 @@
       { n: 1003, id: 'a1_asanuma_hokyo', name: '「日中共同の敵」', acts: [1], need: { rel: 0.2 }, year: 1959, fixed: true,
         when: function (Q) { return Q.year >= 1959 &&
                  window.JSP.LEADERS.here(Q, 'asanuma'); } },
-      // 原水協の席次　1959年〜・史実
-      { n: 1005, id: 'a1_gensuikyo', name: '原水協の席次', acts: [1], need: { rally: 0.2 }, year: 1959, fixed: true,
+      // 原水協大会の対立　1959年〜・史実
+      { n: 1005, id: 'a1_gensuikyo', name: '原水協大会の対立', acts: [1], need: { rally: 0.2 }, year: 1959, fixed: true,
         when: function (Q) { return Q.year >= 1959; } },
       // 西尾処分　1959年〜・史実
       { n: 1012, id: 'a1_nishio_shobun', name: '西尾処分', acts: [1], need: { split: 0.2 }, year: 1959, fixed: true,
@@ -3008,7 +3392,7 @@
       { n: 115, id: 'nikkan', name: '日韓基本条約', acts: [2], need: { diet: 0.14 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.evdone_a2_nikkan; } },
+                 !Q.evdone_a2_nikkan && !Q.in_power; } },
       // ベトナム戦争と北爆　帯中間右/右・1963年〜・史実
       { n: 116, id: 'vietnam', name: 'ベトナム戦争と北爆', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
@@ -3017,8 +3401,8 @@
       // 東京オリンピック　1963年〜・史実
       { n: 312, id: 'a2_tokyo_gorin', name: '東京オリンピック', acts: [2], need: { rally: 0.14 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963; } },
-      // 公害が名前を持つ　帯中間右/右・1963年〜・史実
-      { n: 313, id: 'a2_kougai_hajime', name: '公害が名前を持つ', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
+      // 公害病と原因企業　帯中間右/右・1963年〜・史実
+      { n: 313, id: 'a2_kougai_hajime', name: '公害病と原因企業', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  !Q.evdone_a2_kogai && !Q.evdone_kougai_hajime_sa; } },
@@ -3042,14 +3426,14 @@
       { n: 7115, id: 'nikkan_sa', name: '日韓基本条約', acts: [2], need: { diet: 0.14 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.evdone_a2_nikkan; } },
+                 !Q.evdone_a2_nikkan && !Q.in_power; } },
       // ベトナム戦争と北爆　帯左/中間左・1963年〜・史実
       { n: 7116, id: 'vietnam_sa', name: 'ベトナム戦争と北爆', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  !Q.evdone_vietnam && !Q.evdone_a2_vietnam; } },
-      // 公害が名前を持つ　帯左/中間左・1963年〜・史実
-      { n: 7313, id: 'kougai_hajime_sa', name: '公害が名前を持つ', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
+      // 各地の公害病　帯左/中間左・1963年〜・史実
+      { n: 7313, id: 'kougai_hajime_sa', name: '各地の公害病', acts: [2], need: { rally: 0.2 }, year: 1963, fixed: true,
         when: function (Q) { return Q.year >= 1963 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  !Q.evdone_a2_kogai && !Q.evdone_a2_kougai_hajime; } },
@@ -3063,7 +3447,8 @@
                  Q.minsha_exists; } },
       // 池田退陣　1964年〜・史実
       { n: 2163, id: 'a2_ikeda_taijin', name: '池田退陣', acts: [2], need: { name: 0.2 }, year: 1964, fixed: true,
-        when: function (Q) { return Q.year >= 1964; } },
+        when: function (Q) { return Q.year >= 1964 &&
+                 !Q.in_power; } },
       // 原潜寄港　1964年〜・史実
       { n: 2803, id: 'a2_gensen', name: '核潜艇停靠', acts: [2], need: { rally: 0.2 }, year: 1964, fixed: true,
         when: function (Q) { return Q.year >= 1964; } },
@@ -3074,7 +3459,7 @@
       // 日韓基本条約　1965年〜・史実
       { n: 2009, id: 'a2_nikkan', name: '日韓基本条約', acts: [2], need: { diet: 0.3 }, year: 1965, fixed: true,
         when: function (Q) { return Q.year >= 1965 &&
-                 !Q.evdone_nikkan && !Q.evdone_nikkan_sa; } },
+                 !Q.evdone_nikkan && !Q.evdone_nikkan_sa && !Q.in_power; } },
       // 北爆　1965年〜・史実
       { n: 2010, id: 'a2_vietnam', name: '北爆', acts: [2], need: { rally: 0.3 }, year: 1965, fixed: true,
         when: function (Q) { return Q.year >= 1965 &&
@@ -3134,8 +3519,8 @@
       { n: 2034, id: 'a2_seinen_bunretsu', name: '社青同解放派', acts: [2], need: { youth: 0.35 }, year: 1968, fixed: true,
         when: function (Q) { return Q.year >= 1968 &&
                  Q.kyokai_grip >= 35 && !Q.evdone_a2_seiseido_kaiho; } },
-      // プラハ　1968年〜・史実
-      { n: 2037, id: 'a2_praha', name: 'プラハ', acts: [2], need: { rel: 0.4 }, year: 1968, fixed: true,
+      // プラハの春への軍事介入　1968年〜・史実
+      { n: 2037, id: 'a2_praha', name: 'プラハの春への軍事介入', acts: [2], need: { rel: 0.4 }, year: 1968, fixed: true,
         when: function (Q) { return Q.year >= 1968 &&
                  Q.kyokai_grip >= 35; } },
       // 成田知巳　1968年〜・史実
@@ -3223,15 +3608,15 @@
       // 金脈問題　1972年〜・史実
       { n: 135, id: 'kinmyaku', name: '金脈問題', acts: [3], need: { diet: 0.2 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
-                 !Q.evdone_a3_kaneda && !Q.gov_ours; } },
+                 !Q.evdone_a3_kaneda && !Q.in_power; } },
       // ニクソン訪中　1972年〜・史実
       { n: 322, id: 'a3_bei_chugoku', name: 'ニクソン訪中', acts: [3], need: { rel: 0.14 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972; } },
       // 列島改造と地価　1972年〜・史実
       { n: 323, id: 'a3_retto_kaizo', name: '列島改造と地価', acts: [3], need: { diet: 0.2 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972; } },
-      // あさま山荘　1972年〜・史実
-      { n: 3006, id: 'a3_asama', name: 'あさま山荘', acts: [3], need: { name: 0.2 }, year: 1972, fixed: true,
+      // あさま山荘事件　1972年〜・史実
+      { n: 3006, id: 'a3_asama', name: 'あさま山荘事件', acts: [3], need: { name: 0.2 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
                  !Q.evdone_sp_rengo_sekigun1972; } },
       // 日中国交正常化　1972年〜・史実
@@ -3255,7 +3640,7 @@
       // 三角大福　1972年〜・史実
       { n: 9231, id: 'jimin_sosaisen', name: '三角大福', acts: [3], need: { rel: 0.2 }, year: 1972, fixed: true,
         when: function (Q) { return Q.year >= 1972 &&
-                 !Q.jimin_head_done; } },
+                 !Q.jimin_head_done && !Q.in_power; } },
       // 第一次石油危機　帯中間右/右・1973年〜・史実
       { n: 3009, id: 'a3_oil', name: '第一次石油危機', acts: [3], need: { org: 0.3 }, year: 1973, fixed: true,
         when: function (Q) { return Q.year >= 1973 &&
@@ -3278,16 +3663,17 @@
       // 春闘三二・九%　1974年〜・史実
       { n: 324, id: 'a3_shunto_74', name: '春闘三二・九%', acts: [3], need: { labor: 0.2 }, year: 1974, fixed: true,
         when: function (Q) { return Q.year >= 1974; } },
-      // 金脈　1974年〜・史実
-      { n: 3010, id: 'a3_kaneda', name: '金脈', acts: [3], need: { name: 0.25 }, year: 1974, fixed: true,
+      // 金脈問題　1974年〜・史実
+      { n: 3010, id: 'a3_kaneda', name: '金脈問題', acts: [3], need: { name: 0.25 }, year: 1974, fixed: true,
         when: function (Q) { return Q.year >= 1974 &&
-                 !Q.evdone_kinmyaku; } },
+                 !Q.evdone_kinmyaku && !Q.in_power; } },
       // 企業ぐるみ選挙　1974年〜・史実
       { n: 3011, id: 'a3_kigyo_gurumi', name: '企業ぐるみ選挙', acts: [3], need: { hc: 0.3 }, year: 1974, fixed: true,
         when: function (Q) { return Q.year >= 1974; } },
       // 三木内閣　1974年〜・史実
       { n: 3012, id: 'a3_miki', name: '三木内閣', acts: [3], need: { diet: 0.25 }, year: 1974, fixed: true,
-        when: function (Q) { return Q.year >= 1974; } },
+        when: function (Q) { return Q.year >= 1974 &&
+                 !Q.in_power; } },
       // 原子力船むつ　1974年〜・史実
       { n: 3804, id: 'a3_mutsu', name: '核动力船陆奥', acts: [3], need: { org: 0.2 }, year: 1974, fixed: true,
         when: function (Q) { return Q.year >= 1974; } },
@@ -3327,19 +3713,20 @@
       { n: 138, id: 'hokaku_hakuchu', name: '保革伯仲', acts: [3], need: { diet: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 !Q.evdone_a3_hakuchu; } },
+                 !Q.evdone_a3_hakuchu && !Q.in_power; } },
       // 中道連合の始まり　軸未定/社公民・1976年〜・史実
       { n: 140, id: 'shakomin_goi_zen', name: '中道連合の始まり', acts: [3], need: { rel: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 三木の政治改革　1976年〜・史実
       { n: 325, id: 'a3_miki_kaikaku', name: '三木の政治改革', acts: [3], need: { diet: 0.2 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 Q.komei_exists; } },
+                 Q.komei_exists && !Q.gov_ours; } },
       // ロッキードのあと　1976年〜・史実
       { n: 432, id: 'a3_lockheed_ato', name: 'ロッキードのあと', acts: [3], need: { diet: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 Q.komei_exists && !Q.gov_ours; } },
+                 Q.komei_exists && !Q.in_power; } },
       // 革新自治体の敗北　1976年〜・史実
       { n: 433, id: 'a3_kakushin_haiboku', name: '革新自治体の敗北', acts: [3], need: { rel: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -3356,11 +3743,11 @@
       { n: 3017, id: 'a3_hakuchu', name: '保革伯仲', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 (Q.minsha_exists && Q.seats_hr >= 110) && !Q.evdone_hokaku_hakuchu && !Q.evdone_hokaku_hakuchu_sa; } },
-      // 一九七六年十二月　1976年〜・史実
-      { n: 3170, id: 'a3_1976_senkyo', name: '一九七六年十二月', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
+                 (Q.minsha_exists && Q.seats_hr >= 110) && !Q.evdone_hokaku_hakuchu && !Q.evdone_hokaku_hakuchu_sa && !Q.in_power; } },
+      // 一九七六年十二月の総選挙　1976年〜・史実
+      { n: 3170, id: 'a3_1976_senkyo', name: '一九七六年十二月の総選挙', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 Q.komei_exists; } },
+                 Q.komei_exists && !Q.in_power; } },
       // 主任制　1976年〜・史実
       { n: 3171, id: 'a3_shunin_kyoiku', name: '主任制', acts: [3], need: { labor: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976; } },
@@ -3368,7 +3755,7 @@
       { n: 7138, id: 'hokaku_hakuchu_sa', name: '保革伯仲', acts: [3], need: { diet: 0.25 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 (Q.seats_hr >= 110) && !Q.evdone_a3_hakuchu; } },
+                 (Q.seats_hr >= 110) && !Q.evdone_a3_hakuchu && !Q.in_power; } },
       // ロッキード　帯左/中間左・1976年〜・史実
       { n: 7315, id: 'lockheed_sa', name: 'ロッキード', acts: [3], need: { name: 0.35 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
@@ -3377,14 +3764,14 @@
       { n: 7317, id: 'hakuchu2_sa', name: '数の均衡', acts: [3], need: { hr: 0.4 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 (Q.seats_hr >= 110) && !Q.evdone_hokaku_hakuchu_sa; } },
+                 (Q.seats_hr >= 110) && !Q.evdone_hokaku_hakuchu_sa && !Q.in_power; } },
       // 査問問題　1976年〜・史実
       { n: 3802, id: 'a3_miyamoto_samon', name: '查问问题', acts: [3], need: { rel: 0.2 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976; } },
       // 大福の密約　1976年〜・史実
       { n: 9233, id: 'jimin_sosai76', name: '大福の密約', acts: [3], need: { rel: 0.2 }, year: 1976, fixed: true,
         when: function (Q) { return Q.year >= 1976 &&
-                 !Q.jimin_sosai76_done; } },
+                 !Q.jimin_sosai76_done && !Q.in_power; } },
       // 飛鳥田一雄　1977年〜・史実
       { n: 3020, id: 'a3_asukata', name: '飛鳥田一雄', acts: [3], need: { chair: 0.3 }, year: 1977, fixed: true,
         when: function (Q) { return Q.year >= 1977 &&
@@ -3404,8 +3791,8 @@
       // 円高不況　1977年〜・史実
       { n: 3805, id: 'a3_endaka', name: '日元升值萧条', acts: [3], need: { labor: 0.2 }, year: 1977, fixed: true,
         when: function (Q) { return Q.year >= 1977; } },
-      // 開港　1978年〜・史実
-      { n: 4001, id: 'a4_narita_kaiko', name: '開港', acts: [4], need: { rally: 0.15 }, year: 1978, fixed: true,
+      // 成田空港の開港　1978年〜・史実
+      { n: 4001, id: 'a4_narita_kaiko', name: '成田空港の開港', acts: [4], need: { rally: 0.15 }, year: 1978, fixed: true,
         when: function (Q) { return Q.year >= 1978; } },
       // 日中平和友好条約　1978年〜・史実
       { n: 4161, id: 'a4_nicchu_yuko', name: '日中平和友好条約', acts: [4], need: { rel: 0.15 }, year: 1978, fixed: true,
@@ -3423,8 +3810,8 @@
       { n: 8108, id: 'a4_kurisu', name: '超法规行动', acts: [4], need: { diet: 0.14 }, year: 1978, fixed: true,
         when: function (Q) { return Q.year >= 1978 &&
                  !Q.gov_ours; } },
-      // 牛肉・オレンジ　1978年〜・史実
-      { n: 4801, id: 'a4_gyuniku', name: '牛肉与橙子', acts: [4], need: { diet: 0.2 }, year: 1978, fixed: true,
+      // 牛肉・オレンジの輸入枠　1978年〜・史実
+      { n: 4801, id: 'a4_gyuniku', name: '牛肉・オレンジの輸入枠', acts: [4], need: { diet: 0.2 }, year: 1978, fixed: true,
         when: function (Q) { return Q.year >= 1978; } },
       // 自治体からの撤退　1979年〜・史実
       { n: 441, id: 'a4_shakomin_jichitai', name: '自治体からの撤退', acts: [4], need: { org: 0.14 }, year: 1979, fixed: true,
@@ -3447,8 +3834,8 @@
       { n: 4162, id: 'a4_gengo', name: '元号法制化', acts: [4], need: { diet: 0.15 }, year: 1979, fixed: true,
         when: function (Q) { return Q.year >= 1979 &&
                  !Q.evdone_gengo; } },
-      // 一九七九年十月　1979年〜・史実
-      { n: 4163, id: 'a4_1979_senkyo', name: '一九七九年十月', acts: [4], need: { hr: 0.25 }, year: 1979, fixed: true,
+      // 一九七九年十月の総選挙　1979年〜・史実
+      { n: 4163, id: 'a4_1979_senkyo', name: '一九七九年十月の総選挙', acts: [4], need: { hr: 0.25 }, year: 1979, fixed: true,
         when: function (Q) { return Q.year >= 1979 &&
                  !Q.gov_ours; } },
       // 革新自治体の崩落　帯左/中間左・1979年〜・史実
@@ -3479,7 +3866,7 @@
       { n: 4005, id: 'a4_shako_goi', name: '社公合意', acts: [4], need: { rel: 0.3 }, year: 1980, fixed: true,
         when: function (Q) { return Q.year >= 1980 &&
                  [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
-                 !Q.evdone_sp_shako1980; } },
+                 !Q.evdone_sp_shako1980 && !Q.in_power; } },
       // ハプニング解散　1980年〜・史実
       { n: 4006, id: 'a4_happening', name: 'ハプニング解散', acts: [4], need: { diet: 0.3 }, year: 1980, fixed: true,
         when: function (Q) { return Q.year >= 1980 &&
@@ -3704,15 +4091,16 @@
       { n: 5301, id: 'a5_shimon_zenkoku', name: '拒按者一万人', acts: [5], need: { rally: 0.22 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986 &&
                  !Q.kyosan_merged; } },
-      // 一九八六年七月　1986年〜・史実
-      { n: 5001, id: 'a5_doujitsu86', name: '一九八六年七月', acts: [5], need: { hr: 0.15 }, year: 1986, fixed: true,
+      // 一九八六年七月の同日選　1986年〜・史実
+      { n: 5001, id: 'a5_doujitsu86', name: '一九八六年七月の同日選', acts: [5], need: { hr: 0.15 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986; } },
       // 原発をどうするか　1986年〜・史実
       { n: 5207, id: 'a5_chernobyl', name: '原発をどうするか', acts: [5], need: { rally: 0.25 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986; } },
       // 前川リポート　1986年〜・史実
       { n: 5801, id: 'a5_maekawa', name: '前川报告', acts: [5], need: { labor: 0.2 }, year: 1986, fixed: true,
-        when: function (Q) { return Q.year >= 1986; } },
+        when: function (Q) { return Q.year >= 1986 &&
+                 !Q.in_power; } },
       // 公明党の委員長交代　1986年〜・史実
       { n: 9232, id: 'komei_toshu', name: '公明党の委員長交代', acts: [5], need: { rel: 0.2 }, year: 1986, fixed: true,
         when: function (Q) { return Q.year >= 1986 &&
@@ -3747,15 +4135,16 @@
       // 安竹宮　1987年〜・史実
       { n: 9235, id: 'jimin_sosai87', name: '安竹宮', acts: [5], need: { rel: 0.2 }, year: 1987, fixed: true,
         when: function (Q) { return Q.year >= 1987 &&
-                 !Q.jimin_sosai87_done; } },
-      // リクルート　帯中間右/右・1988年〜・史実
-      { n: 5005, id: 'a5_recruit', name: 'リクルート', acts: [5], need: { name: 0.25 }, year: 1988, fixed: true,
+                 !Q.jimin_sosai87_done && !Q.in_power; } },
+      // リクルート事件　帯中間右/右・1988年〜・史実
+      { n: 5005, id: 'a5_recruit', name: 'リクルート事件', acts: [5], need: { name: 0.25 }, year: 1988, fixed: true,
         when: function (Q) { return Q.year >= 1988 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 消費税成立　帯中間右/右・1988年〜・史実
       { n: 5006, id: 'a5_shohizei_seiritsu', name: '消費税成立', acts: [5], need: { diet: 0.3 }, year: 1988, fixed: true,
         when: function (Q) { return Q.year >= 1988 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // リクルート　帯左/中間左・1988年〜・史実
       { n: 7602, id: 'recruit_sa', name: 'リクルート', acts: [5], need: { name: 0.25 }, year: 1988, fixed: true,
         when: function (Q) { return Q.year >= 1988 &&
@@ -3788,7 +4177,7 @@
       { n: 5021, id: 'a5_jimin_wareme', name: '自民党分裂', acts: [5], need: { rel: 0.3 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  Q.year <= 1992 &&
-                 window.JSP.ldpWareReady(Q); } },
+                 window.JSP.ldpWareReady(Q) && !Q.in_power; } },
       // 昭和が終わる　1989年〜・史実
       { n: 5163, id: 'a5_showa_owari', name: '昭和が終わる', acts: [5], need: { name: 0.2 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3815,7 +4204,7 @@
       { n: 7604, id: 'yama_ga_ugoita_sa', name: '地动山摇', acts: [5], need: { hc: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
-                 (Q.seats_hc >= 80) && !Q.evdone_a5_sanin_daishou && !Q.evdone_a5_yama_ga_ugoita; } },
+                 (Q.seats_hc >= 80) && !Q.evdone_a5_sanin_daishou && !Q.evdone_a5_yama_ga_ugoita && !Q.in_power; } },
       // 連合結成　帯左/中間左・1989年〜・史実
       { n: 7605, id: 'rengo_kessei_sa', name: '連合結成', acts: [5], need: { labor: 0.35 }, year: 1989, fixed: true,
         when: function (Q) { return Q.year >= 1989 &&
@@ -3867,16 +4256,16 @@
       { n: 5010, id: 'a5_1990', name: '一九九〇年二月', acts: [5], need: { hr: 0.35 }, year: 1990, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
                  !Q.gov_ours; } },
-      // 湾岸　帯中間右/右・1990年〜・史実
-      { n: 5011, id: 'a5_wangan', name: '湾岸', acts: [5], need: { rally: 0.3 }, year: 1990, fixed: true,
+      // 湾岸危機　帯中間右/右・1990年〜・史実
+      { n: 5011, id: 'a5_wangan', name: '湾岸危機', acts: [5], need: { rally: 0.3 }, year: 1990, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 地価　1990年〜・史実
-      { n: 5167, id: 'a5_bubble', name: '地価', acts: [5], need: { org: 0.25 }, year: 1990, fixed: true,
+      // 地価高騰　1990年〜・史実
+      { n: 5167, id: 'a5_bubble', name: '地価高騰', acts: [5], need: { org: 0.25 }, year: 1990, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
                  !Q.evdone_a5_baburu; } },
-      // 湾岸　帯左/中間左・1990年〜・史実
-      { n: 7606, id: 'wangan_sa', name: '湾岸', acts: [5], need: { rally: 0.3 }, year: 1990, fixed: true,
+      // 湾岸戦争　帯左/中間左・1990年〜・史実
+      { n: 7606, id: 'wangan_sa', name: '海湾战争', acts: [5], need: { rally: 0.3 }, year: 1990, fixed: true,
         when: function (Q) { return Q.year >= 1990 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 社共合同　1990年〜・史実
@@ -3902,8 +4291,8 @@
       { n: 5168, id: 'a5_wangan_kikin', name: '九十億ドル', acts: [5], need: { diet: 0.3 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
                  Q.komei_exists; } },
-      // ソ連が消えた　帯左/中間左・1991年〜・史実
-      { n: 7607, id: 'soren_sa', name: 'ソ連が消えた', acts: [5], need: { koryo: 0.3 }, year: 1991, fixed: true,
+      // ソ連の消滅　帯左/中間左・1991年〜・史実
+      { n: 7607, id: 'soren_sa', name: 'ソ連の消滅', acts: [5], need: { koryo: 0.3 }, year: 1991, fixed: true,
         when: function (Q) { return Q.year >= 1991 &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 証券不祥事　1991年〜・史実
@@ -3951,7 +4340,8 @@
       // 一九九三年七月　帯中間右/右・1993年〜・史実
       { n: 5019, id: 'a5_1993', name: '一九九三年七月', acts: [5], need: { hr: 0.5 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.was_in_power; } },
       // 山花委員長　1993年〜・史実
       { n: 5020, id: 'a5_yamahana', name: '山花委員長', acts: [5], need: { chair: 0.35 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
@@ -3974,7 +4364,8 @@
       // 一九九三年七月　帯左/中間左・1993年〜・史実
       { n: 7610, id: 'senkyo93_sa', name: '一九九三年七月', acts: [5], need: { hr: 0.5 }, year: 1993, fixed: true,
         when: function (Q) { return Q.year >= 1993 &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.was_in_power; } },
       // 警職法の記憶
       { n: 101, id: 'keishokuho', name: '警職法の記憶', acts: [1], need: { rally: 0.12 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.12) &&
@@ -3993,7 +4384,8 @@
       // 憲法調査会　帯中間右/右
       { n: 105, id: 'kenpo_chosakai', name: '憲法調査会', acts: [2], need: { diet: 0.12 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.12) &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 沖縄と小笠原
       { n: 106, id: 'okinawa_59', name: '沖縄と小笠原', acts: [2], need: { rel: 0.12 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.12); } },
@@ -4035,7 +4427,8 @@
       { n: 120, id: 'shakomin_kousou', name: '長期政権構想', acts: [2], need: { koryo: 0.2 }, year: 1966,
         when: function (Q) { return Q.year >= 1966 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
-                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 革新統一の呼びかけ　軸未定/社共
       { n: 121, id: 'kakushin_toitsu', name: '革新統一の呼びかけ', acts: [2], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
@@ -4078,7 +4471,7 @@
       // 売上税
       { n: 171, id: 'uriagezei', name: '売上税', acts: [5], need: { diet: 0.14 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
-                 !Q.evdone_a5_baiagezei && !Q.gov_ours; } },
+                 !Q.evdone_a5_baiagezei && !Q.in_power; } },
       // 土井委員長の登場　帯中間右/右
       { n: 172, id: 'doi_shunin', name: '土井委員長の登場', acts: [5], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
@@ -4118,7 +4511,7 @@
       { n: 213, id: 'a2_shakomin_kyogi', name: '中道両党との政策協議', acts: [2], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
                  [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
-                 Q.komei_exists; } },
+                 Q.komei_exists && !Q.in_power; } },
       // 革新自治体の波　軸社共
       { n: 214, id: 'a2_sakyo_jichitai', name: '革新自治体の波', acts: [2], need: { rel: 0.14 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.14) &&
@@ -4149,7 +4542,8 @@
       { n: 233, id: 'a4_shakomin_seiken', name: '社公民の政権協議', acts: [4], need: { rel: 0.2 }, year: 1980,
         when: function (Q) { return Q.year >= 1980 &&
                  Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 全労協の準備　帯左・1988年〜
       { n: 241, id: 'a5_saha_zenrokyo', name: '全労協の準備', acts: [5], need: { labor: 0.2 }, year: 1988,
         when: function (Q) { return Q.year >= 1988 &&
@@ -4165,7 +4559,7 @@
       { n: 243, id: 'a5_sakyo_saigo', name: '社共共闘の最後', acts: [5], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
-                 !Q.kyosan_merged && !Q.evdone_a5_c1_kyodo_saigo; } },
+                 !Q.kyosan_merged && !Q.evdone_a5_c1_kyodo_saigo && !Q.in_power; } },
       // 一六六議席のあと　asanumaが在席
       { n: 301, id: 'a1_1958_senkyo', name: '一六六議席のあと', acts: [1], need: { koryo: 0.12 },
         when: function (Q) { return Q.year <= 1959 &&
@@ -4199,7 +4593,8 @@
       { n: 311, id: 'a2_shotoku_baizo', name: '所得倍増計画', acts: [2], need: { diet: 0.14 },
         when: function (Q) { return Q.year <= 1965 &&
                  Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
-                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 総評の路線　帯中間右/右
       { n: 314, id: 'a2_sohyo_ohta', name: '総評の路線', acts: [2], need: { labor: 0.2 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.2) &&
@@ -4280,8 +4675,8 @@
       { n: 412, id: 'a2_kenpou_kaigi', name: '護憲連合の運営', acts: [2], need: { rally: 0.14 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.14) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 党財政の底
-      { n: 413, id: 'a2_zaisei_kiki', name: '党財政の底', acts: [2], need: { fund: 0.2 },
+      // 党財政の危機
+      { n: 413, id: 'a2_zaisei_kiki', name: '党財政の危機', acts: [2], need: { fund: 0.2 },
         when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.2) &&
                  (Q.budget || 0) <= 8 || (Q.arrears || 0) >= 2; } },
       // 国会の運営
@@ -4308,8 +4703,8 @@
       { n: 425, id: 'a2_kokusai', name: '社会主義インター', acts: [2], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
                  [2, 3, 4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 青年組織の空洞
-      { n: 431, id: 'a3_seiseido_kaitai', name: '青年組織の空洞', acts: [3], need: { org: 0.14 },
+      // 青年組織の空洞化
+      { n: 431, id: 'a3_seiseido_kaitai', name: '青年組織の空洞化', acts: [3], need: { org: 0.14 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.14) &&
                  Q.kyokai_grip >= 35; } },
       // 協会規制の決議　帯中間左/中間右
@@ -4323,7 +4718,8 @@
       // 公明党からの照会　軸未定/社公民
       { n: 436, id: 'a3_shakomin_shokai', name: '公明党からの照会', acts: [3], need: { rel: 0.14 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.14) &&
-                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [0, 2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 政策集団と学者　帯中間左/中間右/右
       { n: 437, id: 'a3_gakusha', name: '政策集団と学者', acts: [3], need: { koryo: 0.14 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.14) &&
@@ -4331,7 +4727,7 @@
       // 核持ち込み疑惑
       { n: 443, id: 'a4_kaku_mochikomi', name: '核持ち込み疑惑', acts: [4], need: { diet: 0.25 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25) &&
-                 !Q.gov_ours; } },
+                 !Q.in_power; } },
       // 生活者の党へ　帯中間右
       { n: 445, id: 'a4_shakai_shimin', name: '生活者の党へ', acts: [4], need: { rally: 0.25 },
         when: function (Q) { return Q.c_rally >= window.JSP.needOf(Q, 0.25) &&
@@ -4363,7 +4759,8 @@
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25); } },
       // 国会での存在感
       { n: 503, id: 'a1_shakaito_kokkai', name: '国会での存在感', acts: [3], need: { diet: 0.3 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
+                 !Q.in_power; } },
       // 統一地方選
       { n: 504, id: 'a1_chihou_senkyo', name: '統一地方選', acts: [3], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3); } },
@@ -4407,7 +4804,8 @@
       { n: 528, id: 'a4_uha_shakomin_seiken', name: '社公民の政権準備', acts: [4], need: { rel: 0.14 }, year: 1983,
         when: function (Q) { return Q.year >= 1983 &&
                  Q.c_rel >= window.JSP.needOf(Q, 0.14) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 都市政策
       { n: 529, id: 'a4_toshi_seisaku', name: '都市政策', acts: [4], need: { diet: 0.3 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3); } },
@@ -4452,7 +4850,7 @@
       { n: 550, id: 'a5_saigo_no_toki', name: '最後の総選挙の前に', acts: [5], need: { diet: 0.35 },
         when: function (Q) { return Q.phase >= 3 &&
                  Q.c_diet >= window.JSP.needOf(Q, 0.35) &&
-                 Q.minsha_exists && Q.ldp_split_done; } },
+                 Q.minsha_exists && Q.ldp_split_done && !Q.in_power; } },
       // 協会の位置　帯左
       { n: 601, id: 'b1_a1_kyokai_saiken', name: '協会の位置', acts: [1], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
@@ -4483,8 +4881,8 @@
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
                  [4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  !Q.opp_merged && !Q.minshu_shinto && Q.minsha_exists; } },
-      // 労働学校の量産　帯左
-      { n: 608, id: 'b1_a3_rodo_gakko', name: '労働学校の量産', acts: [3], need: { org: 0.2 },
+      // 労働学校の運営方針　帯左
+      { n: 608, id: 'b1_a3_rodo_gakko', name: '労働学校の運営方針', acts: [3], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 共闘の実務　軸社共
@@ -4496,8 +4894,8 @@
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0 &&
                  !Q.evdone_a4_sakyo_saigo; } },
-      // 中道という場所　軸社公民
-      { n: 631, id: 'c2_a1_chudo_tanjo', name: '中道という場所', acts: [1], need: { rel: 0.25 },
+      // 中道勢力の台頭　軸社公民
+      { n: 631, id: 'c2_a1_chudo_tanjo', name: '中道勢力の台頭', acts: [1], need: { rel: 0.25 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.25) &&
                  [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 政策の一致点　軸社公民
@@ -4508,8 +4906,8 @@
       { n: 1004, id: 'a1_zengakuren_split', name: '全学連の分裂', acts: [1], need: { youth: 0.2 }, year: 1959,
         when: function (Q) { return Q.year >= 1959 &&
                  Q.c_youth >= window.JSP.needOf(Q, 0.2); } },
-      // 春闘という発明
-      { n: 1006, id: 'a1_shunto', name: '春闘という発明', acts: [1], need: { labor: 0.2 },
+      // 春闘の確立
+      { n: 1006, id: 'a1_shunto', name: '春闘の確立', acts: [1], need: { labor: 0.2 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.2); } },
       // 綱領論争　帯左/中間左
       { n: 1014, id: 'a1_koryo_ronso', name: '綱領論争', acts: [1], need: { koryo: 0.2 },
@@ -4571,12 +4969,12 @@
       // 総評の重心
       { n: 2017, id: 'a2_sohyo_kanko', name: '総評の重心', acts: [2], need: { labor: 0.25 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.25); } },
-      // 革新自治体の増殖
-      { n: 2018, id: 'a2_kaku_jichitai', name: '革新自治体の増殖', acts: [2], need: { org: 0.35 },
+      // 革新自治体の広がり
+      { n: 2018, id: 'a2_kaku_jichitai', name: '革新自治体の広がり', acts: [2], need: { org: 0.35 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35) &&
                  Q.local_n >= 2; } },
-      // 党本部の帳簿
-      { n: 2025, id: 'a2_shakyo_jimu', name: '党本部の帳簿', acts: [2], need: { fund: 0.25 },
+      // 党本部の財政
+      { n: 2025, id: 'a2_shakyo_jimu', name: '党本部の財政', acts: [2], need: { fund: 0.25 },
         when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.25); } },
       // 国鉄の組合
       { n: 2026, id: 'a2_kokutetsu', name: '国鉄の組合', acts: [2], need: { labor: 0.35 },
@@ -4584,14 +4982,14 @@
       // 保革伯仲の予感
       { n: 2028, id: 'a2_hokakuhaku', name: '保革伯仲の予感', acts: [2], need: { hr: 0.2 },
         when: function (Q) { return Q.c_hr >= window.JSP.needOf(Q, 0.2) &&
-                 Q.minsha_exists && Q.seats_hr >= 130; } },
+                 Q.minsha_exists && Q.seats_hr >= 130 && !Q.in_power; } },
       // 「道」第二次草案　帯左・1966年〜
       { n: 2029, id: 'a2_michi_2', name: '「道」第二次草案', acts: [2], need: { koryo: 0.4 }, year: 1966,
         when: function (Q) { return Q.year >= 1966 &&
                  Q.c_koryo >= window.JSP.needOf(Q, 0.4) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 構造改革派の残り火　帯中間左/中間右
-      { n: 2030, id: 'a2_kozo_zanto', name: '構造改革派の残り火', acts: [2], need: { koryo: 0.35 },
+      // 構造改革派の処遇　帯中間左/中間右
+      { n: 2030, id: 'a2_kozo_zanto', name: '構造改革派の処遇', acts: [2], need: { koryo: 0.35 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.35) &&
                  [2, 3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 社共の選挙協定　軸社共
@@ -4635,7 +5033,8 @@
                  Q.kyokai_grip >= 55; } },
       // 与党の内紛
       { n: 2045, id: 'a2_hoshu_bunretsu', name: '与党の内紛', acts: [2], need: { diet: 0.25 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25) &&
+                 !Q.in_power; } },
       // 春闘相場
       { n: 2046, id: 'a2_shunto_soba', name: '春闘相場', acts: [2], need: { labor: 0.4 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.4); } },
@@ -4643,12 +5042,13 @@
       { n: 2047, id: 'a2_chihou_giin', name: '地方議員団', acts: [2], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
                  Q.local_n >= 1; } },
-      // 参議院という別の場所
-      { n: 2048, id: 'a2_sanin', name: '参議院という別の場所', acts: [2], need: { hc: 0.25 },
+      // 参院選の候補者選び
+      { n: 2048, id: 'a2_sanin', name: '参院選の候補者選び', acts: [2], need: { hc: 0.25 },
         when: function (Q) { return Q.c_hc >= window.JSP.needOf(Q, 0.25); } },
       // 国対政治
       { n: 2050, id: 'a2_kokutai', name: '国対政治', acts: [2], need: { diet: 0.4 },
-        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.4); } },
+        when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.4) &&
+                 !Q.in_power; } },
       // 自治体の赤字
       { n: 3014, id: 'a3_jichitai_akaji', name: '自治体の赤字', acts: [3], need: { org: 0.35 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.35) &&
@@ -4671,7 +5071,8 @@
       // 社公民の政権構想　軸社公民
       { n: 4017, id: 'a4_sankyo_tsume', name: '社公民の政権構想', acts: [4], need: { rel: 0.35 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.35) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 社共の最後の枠　軸社共
       { n: 4018, id: 'a4_sakyo_saigo', name: '社共の最後の枠', acts: [4], need: { rel: 0.3 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.3) &&
@@ -4712,8 +5113,8 @@
       { n: 3105, id: 'a3_b1_kyokai_taikai', name: '協会の全国大会', acts: [3], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 市民運動との回路　帯中間左
-      { n: 3111, id: 'a3_b2_shimin_undo', name: '市民運動との回路', acts: [3], need: { org: 0.25 },
+      // 市民運動とのつながり　帯中間左
+      { n: 3111, id: 'a3_b2_shimin_undo', name: '市民運動とのつながり', acts: [3], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 政策集団　帯中間左
@@ -4817,8 +5218,8 @@
       { n: 4111, id: 'a4_b2_chiiki_seisaku', name: '地域からの政策', acts: [4], need: { org: 0.2 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.2) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 環境という新しい軸　帯中間左
-      { n: 4112, id: 'a4_b2_kankyo', name: '環境という新しい軸', acts: [4], need: { org: 0.25 },
+      // 環境政策という新しい課題　帯中間左
+      { n: 4112, id: 'a4_b2_kankyo', name: '環境政策という新しい課題', acts: [4], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 市民派の候補　帯中間左
@@ -4883,7 +5284,7 @@
       // 少数与党の国会
       { n: 4174, id: 'a4_shosuha_kyoryoku', name: '少数与党の国会', acts: [4], need: { diet: 0.3 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
-                 Q.seats_hr >= 105; } },
+                 Q.seats_hr >= 105 && !Q.in_power; } },
       // テレビの中の政治
       { n: 4175, id: 'a4_media', name: 'テレビの中の政治', acts: [4], need: { name: 0.3 },
         when: function (Q) { return Q.c_name >= window.JSP.needOf(Q, 0.3); } },
@@ -4958,7 +5359,8 @@
       // 閣僚の割り振り　軸社公民
       { n: 5152, id: 'a5_c2_kakuryo_wari', name: '閣僚の割り振り', acts: [5], need: { rel: 0.35 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.35) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 新党さきがけ　1993年〜
       { n: 5171, id: 'a5_sakigake', name: '新党先驱', acts: [5], need: { hr: 0.2 }, year: 1993,
         when: function (Q) { return Q.year >= 1993 &&
@@ -4999,7 +5401,8 @@
       // 議員立法　帯中間左
       { n: 2113, id: 'a2_b2_giin_rippou', name: '議員立法', acts: [2], need: { diet: 0.25 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.25) &&
-                 [2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 生産性運動をどう見るか　帯中間右
       { n: 2121, id: 'a2_b3_seisansei', name: '生産性運動をどう見るか', acts: [2], need: { labor: 0.25 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.25) &&
@@ -5018,8 +5421,8 @@
       { n: 2132, id: 'a2_b4_gendai_shihon', name: '現代資本主義論', acts: [2], need: { koryo: 0.25 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.25) &&
                  [4].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 共闘会議　軸社共
-      { n: 2141, id: 'a2_c1_kyodo_kaigi', name: '共闘会議', acts: [2], need: { rel: 0.2 },
+      // 共産党との共闘会議　軸社共
+      { n: 2141, id: 'a2_c1_kyodo_kaigi', name: '共産党との共闘会議', acts: [2], need: { rel: 0.2 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.blocOf(Q)) >= 0; } },
       // 機関紙の競争　軸社共
@@ -5054,13 +5457,14 @@
       { n: 2171, id: 'a2_chihou_seken', name: '地方の県本部', acts: [2], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
                  Q.kyokai_grip >= 35; } },
-      // テレビが来る
-      { n: 2172, id: 'a2_terebi', name: 'テレビが来る', acts: [2], need: { name: 0.25 },
+      // テレビの時代
+      { n: 2172, id: 'a2_terebi', name: 'テレビの時代', acts: [2], need: { name: 0.25 },
         when: function (Q) { return Q.c_name >= window.JSP.needOf(Q, 0.25) &&
                  Q.kyokai_grip >= 35; } },
       // 国対の金
       { n: 2173, id: 'a2_kokutai_ura', name: '国対の金', acts: [2], need: { fund: 0.3 },
-        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.3); } },
+        when: function (Q) { return Q.c_fund >= window.JSP.needOf(Q, 0.3) &&
+                 !Q.in_power; } },
       // 海外の労働運動
       { n: 2174, id: 'a2_kokusai_rodo', name: '海外の労働運動', acts: [2], need: { labor: 0.3 },
         when: function (Q) { return Q.c_labor >= window.JSP.needOf(Q, 0.3) &&
@@ -5190,8 +5594,8 @@
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.35) &&
                  [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
                  Q.komei_exists; } },
-      // 原発の立地に反対する　帯左/中間左
-      { n: 6007, id: 'a3_b1_genpatsu_hantai', name: '原発の立地に反対する', acts: [3], need: { org: 0.3 },
+      // 原発立地への反対　帯左/中間左
+      { n: 6007, id: 'a3_b1_genpatsu_hantai', name: '原発立地への反対', acts: [3], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
                  [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
       // 財政規律　帯中間右/右
@@ -5205,7 +5609,8 @@
       // 中道と国会で組む　軸社公民
       { n: 6010, id: 'a3_c2_kokkai_kyodo', name: '中道と国会で組む', acts: [3], need: { diet: 0.35 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.35) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 平和教育　帯左/中間左
       { n: 6011, id: 'a4_b1_heiwa_kyoiku', name: '平和教育', acts: [4], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
@@ -5222,7 +5627,8 @@
       // 連立の名簿　軸社公民
       { n: 6014, id: 'a4_c2_seiken_meibo', name: '連立の名簿', acts: [4], need: { rel: 0.35 },
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.35) &&
-                 [2].indexOf(window.JSP.blocOf(Q)) >= 0; } },
+                 [2].indexOf(window.JSP.blocOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 最後の砦　帯左
       { n: 6015, id: 'a5_b1_saigo_no_toride', name: '最後の砦', acts: [5], need: { org: 0.3 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.3) &&
@@ -5242,7 +5648,8 @@
       // 憲法調査会　帯左/中間左
       { n: 7105, id: 'kenpo_chosakai_sa', name: '憲法調査会', acts: [2], need: { diet: 0.12 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.12) &&
-                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [1, 2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 所得倍増計画　帯左/中間左
       { n: 7311, id: 'shotoku_baizo_sa', name: '所得倍増計画', acts: [2], need: { diet: 0.14 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.14) &&
@@ -5271,10 +5678,11 @@
       { n: 8021, id: 'c3_taikai_shudo', name: '党大会の主導権', acts: [2, 3, 4], need: { org: 0.25 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.25) &&
                  [3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
-      // 連立の座席　帯中間右
-      { n: 8022, id: 'c3_rengo_seiken', name: '連立の座席', acts: [4, 5], need: { diet: 0.3 },
+      // 連立政権の構想　帯中間右
+      { n: 8022, id: 'c3_rengo_seiken', name: '連立政権の構想', acts: [4, 5], need: { diet: 0.3 },
         when: function (Q) { return Q.c_diet >= window.JSP.needOf(Q, 0.3) &&
-                 [3].indexOf(window.JSP.bandOf(Q)) >= 0; } },
+                 [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
+                 !Q.in_power; } },
       // 民主社会主義の党　帯右
       { n: 4806, id: 'a4_minsha_ka', name: '民主社会主义的党', acts: [3, 4, 5], need: { koryo: 0.2 },
         when: function (Q) { return Q.c_koryo >= window.JSP.needOf(Q, 0.2) &&
@@ -5297,13 +5705,13 @@
         when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
                  [3].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
-      // 相手の足場　帯中間左
-      { n: 9203, id: 'gov_chusa_kaitai', name: '相手の足場', acts: [5], need: { cab: 0.2 },
+      // 自民党の支持基盤　帯中間左
+      { n: 9203, id: 'gov_chusa_kaitai', name: '自民党の支持基盤', acts: [5], need: { cab: 0.2 },
         when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
-      // 徹底してやる　帯左
-      { n: 9204, id: 'gov_saha_kaitai', name: '徹底してやる', acts: [5], need: { cab: 0.2 },
+      // 相手の組織基盤を解体する　帯左
+      { n: 9204, id: 'gov_saha_kaitai', name: '相手の組織基盤を解体する', acts: [5], need: { cab: 0.2 },
         when: function (Q) { return Q.c_cab >= window.JSP.needOf(Q, 0.2) &&
                  [1].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.gov_ours && !Q.minshu_shinto && !Q.minsha_ka; } },
@@ -5339,8 +5747,8 @@
         when: function (Q) { return Q.c_rel >= window.JSP.needOf(Q, 0.3) &&
                  [3, 4].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  Q.minsha_ka && Q.fuji_daigaku && !Q.evdone_a4_seisui_kaigi; } },
-      // 地方議員団の政策室　帯中間左
-      { n: 9212, id: 'a3_jichitai_seisakushitsu', name: '地方議員団の政策室', acts: [3], need: { org: 0.24 },
+      // 地方議員のための政策室　帯中間左
+      { n: 9212, id: 'a3_jichitai_seisakushitsu', name: '地方議員のための政策室', acts: [3], need: { org: 0.24 },
         when: function (Q) { return Q.c_org >= window.JSP.needOf(Q, 0.24) &&
                  [2].indexOf(window.JSP.bandOf(Q)) >= 0 &&
                  !Q.evdone_a3_jichitai_seisakushitsu; } },
@@ -5572,6 +5980,9 @@
       var cfg = this.ACTS[Q.act || 1];
       if (!cfg) { return Q; }
       Q.act_turn = (Q.act_turn || 0) + 1;
+      //  通しの手数。幕をまたいでも戻さない（act_turn は幕ごとに 0 へ戻る）。
+      //  国鉄の「四手に一度」（kokutetsuUpkeep）がこれを読む。
+      Q.turn_n = (Q.turn_n || 0) + 1;
       var ph = Math.max(1, Q.phase || 1);
       var marks = cfg.marks || [[cfg.to, 12]];
       var a = (ph > 1) ? (marks[ph - 2] || [cfg.from, cfg.fromM || 1])
@@ -5722,7 +6133,12 @@
       //  それぞれが次の闘争の土台になるので、幕をまたいで残す。
       'sutoken_won', 'sutoken_partial', 'rincho_blunted', 'gyokaku_junbi',
       'kokutetsu_kind', 'kokutetsu_n', 'kokutetsu_scale', 'kokutetsu_debt',
-      'koku_kouyou', 'shunto_peak', 'shunto_jisei'
+      'koku_kouyou', 'shunto_peak', 'shunto_jisei',
+      //  改憲の挿話。一期の国会は幕をまたぐことがある（一九七七年に止めたら、
+      //  一九七九年の総選挙までは止めたまま）。九条を失ったことは終わりまで残る。
+      //  どれも carryOver では消さない。承継の約束として書いておく。
+      'kyujo_ushinatta', 'kaiken_lost_year', 'kaiken_term_used', 'kaiken_blocked',
+      'kk_komei_out', 'kk_minsha_out', 'kk_float_out'
     ],
 
     //  幕をまたぐときに呼ぶ。承継する値以外は捨て、盤面を新しい年へ進める。
@@ -5737,7 +6153,10 @@
                    'mem_mark', 'split_mark', 'act_months', 'act_turn', 'phase_turns',
                    'ev_cursor', 'dues_acc',
                    'pending_event', 'pending_split', 'pending_faction',
-                   'action_timer', 'jinji_timer', 'turns_left', 'phase'];
+                   'action_timer', 'jinji_timer', 'turns_left', 'phase',
+                   //  改憲の挿話は幕をまたがせない（kaiken_lost_act は act_end が読むので残す）
+                   'kaiken_ep', 'kaiken_page', 'kaiken_rounds', 'kaiken_delay_used',
+                   'pending_kaiken', 'kaiken_withdrawn'];
       for (i = 0; i < local.length; i++) { Q[local[i]] = 0; }
       Q.pending_faction = '';
       // evdone は消さない。幕作用域があるので消す必要がなく、
@@ -5831,8 +6250,10 @@
     },
 
     //  この盤面で、いま立てている数だと最大何議席取れるか。
-    nomCeiling: function (Q, share) {
-      var k = Q.kouho || this.NOM_OPEN;
+    //  kk を渡すと、その人数で数える（見込みの頁が選択肢ごとに使う）。
+    //  渡さなければ Q.kouho ── runElection の呼び方はこちら。
+    nomCeiling: function (Q, share, kk) {
+      var k = (kk === undefined || kk === null) ? (Q.kouho || this.NOM_OPEN) : kk;
       var tot = Q.hr_total || 511;
       var dens = k / tot;
       var ratio = dens > 0 ? share / dens : 0;
@@ -5840,6 +6261,146 @@
       return { kouho: k, ratio: Math.round(ratio * 10) / 10,
                win: win, cap: Math.round(k * win) };
     },
+
+    // ══════════════════════════════════════════════════════════
+    //  議席の見込み
+    //
+    //  選挙の頁は、天井で切った分をすべて「候補を立てていない選挙区で
+    //  捨てた」と書いていた。二〇二六年九月に打って数えると、そう書いた
+    //  回の六割は逆で、立てすぎて同じ選挙区で票を分け合い、共倒れしていた。
+    //
+    //  天井は 人数 k × 当選率 w(得票率 ÷ (k / 定数))。w の折れ方から、
+    //  天井は比が 69.5 のところで最も高い。比がそれより大きい（人が少ない）と
+    //  票のある選挙区に人がいない。小さい（人が多い）と共倒れする。
+    //  だから最適の人数は floor(得票率 × 定数 ÷ 69.5)。右側は一人につき
+    //  0.86 議席ずつ落ち、左側は 0.13 議席ずつしか上がらないので、
+    //  五の倍数に丸めずに切り捨てる（丸めると十六回に一回、二議席損をした）。
+    //
+    //  seatForecast は runElection と同じ順でなぞる ──
+    //  暦を選挙の日へ進め、事象で積んだ候補（nom_bonus × 7）を足し、
+    //  得票を配り（allocate）、擁立数の天井で切る。盤の算術は一字も変えていない。
+    //  暦を進めるときと opt を使うときは写しの上で数えるので、Q は触らない。
+    //  （opt を使わず暦も進めないときは Q の上で allocate する。tally が負の
+    //  傾向を 0 に挟むのは、これまでの refresh と同じ場所・同じ作用である。）
+    // ══════════════════════════════════════════════════════════
+    NOM_BEST_RATIO: 69.5,
+    NOM_WARN: 5,            // これより小さい取りこぼしは「ほぼ最適」と言う
+    //  事象で積んだ候補の人数（runElection と同じ丸め）
+    nomBonusK: function (Q) { return Q.nom_bonus ? Math.round(Q.nom_bonus * 7) : 0; },
+    //  次の選挙で実際に立つ人数
+    nomPlanned: function (Q) { return (Q.kouho || this.NOM_OPEN) + this.nomBonusK(Q); },
+    //  この得票でいちばん多く取れる人数
+    nomBestK: function (Q, share) {
+      var tot = Q.hr_total || 511;
+      return clamp(Math.floor(share * tot / this.NOM_BEST_RATIO), 60, tot);
+    },
+    //  取りこぼしの理由。0 無し／1 少なすぎ／2 多すぎ／3 ほぼ最適（それでも天井に当たった）
+    nomVerdict: function (Q, share, vote, k) {
+      var nc = this.nomCeiling(Q, share, k);
+      var kb = this.nomBestK(Q, share);
+      var best = Math.min(vote, this.nomCeiling(Q, share, kb).cap);
+      var seats = Math.min(vote, nc.cap);
+      var fix = Math.max(0, best - seats);
+      var cause = (vote <= nc.cap) ? 0 : (fix < this.NOM_WARN ? 3 : (k > kb ? 2 : 1));
+      return { kouho: k, ratio: nc.ratio, win: nc.win, cap: nc.cap, vote: vote, seats: seats,
+               best_k: kb, best: best, fix: fix, cause: cause };
+    },
+    //  写し。盤の値はどれも一段の数か文字列なので、浅い写しで足りる
+    //  （深い写しは refresh 一回の三倍かかる）。
+    fcCopy: function (Q) {
+      var c = {}, k;
+      for (k in Q) { if (Object.prototype.hasOwnProperty.call(Q, k)) { c[k] = Q[k]; } }
+      return c;
+    },
+    //  いま（year を渡せばその年の投票日に）総選挙をしたら何議席か。
+    //    k     立てる人数。省けば nomPlanned（いまの人数＋事象の候補）
+    //    opt.perm(c)   写しに先に永久の効果を掛ける（大きな決定の見込み用）
+    //    opt.decay     'election' 押した票が残りの手数ぶん基線へ戻ってから数える
+    //                  'base'     押した票がすべて基線へ戻ってから数える
+    //    opt.turns     decay の手数（省けば turns_left）
+    //    opt.all       各党の議席も出す（v.all）。runElection が配ったあとにやる
+    //                  三つ ── 天井の余りを自民と諸派へ半々、一九八〇年の弔い合戦、
+    //                  新党の切り出し ── まで写しの上でなぞる
+    seatForecast: function (Q, k, year, opt) {
+      opt = opt || {};
+      var c = Q, i, l;
+      var future = !!(year && year > (Q.year || 0));
+      if (future || opt.perm || opt.decay || opt.all) { c = this.fcCopy(Q); }
+      if (opt.perm) { opt.perm(c); }
+      if (future) { this.setDate(c, year, this.HR_MONTH[year] || 12); }
+      if (opt.decay) {
+        var T = (opt.turns === undefined || opt.turns === null) ? (c.turns_left || 0) : opt.turns;
+        var f = opt.decay === 'base' ? 0 : Math.pow(1 - this.DECAY, Math.max(0, T));
+        for (i = 0; i < LAYERS.length; i++) {
+          l = LAYERS[i];
+          var b = this.baselineLean(c, l), s0 = c['lean_' + l + '_shakai'] || 0;
+          var nl = b + (s0 - b) * f;
+          c['lean_' + l + '_jimin'] = (c['lean_' + l + '_jimin'] || 0) - (nl - s0);
+          c['lean_' + l + '_shakai'] = nl;
+        }
+      }
+      var kk = (k === undefined || k === null) ? this.nomPlanned(c) : k;
+      var r = this.allocate(c);
+      var v = this.nomVerdict(c, r.share.shakai, r.seats.shakai, kk);
+      v.share = r.share;
+      v.year = c.year || 0;
+      v.hr_total = c.hr_total || 0;   //  その選挙の定数（改憲の見込みの三分の二に使う）
+      if (opt.all) { v.all = this.fcAll(c, r.seats, v, year || c.year || 0); }
+      return v;
+    },
+    //  opt.all の本体。c は写し（runElection と同じ関数で書き換えてよい）。
+    fcAll: function (c, seats, v, year) {
+      var s = {}, p, j, out = {};
+      for (j = 0; j < PARTIES.length; j++) { p = PARTIES[j]; s[p] = seats[p] || 0; }
+      if (s.shakai > v.cap) {
+        var diff = s.shakai - v.cap;
+        s.shakai = v.cap;
+        s.jimin += Math.round(diff * 0.5);
+        s.other += diff - Math.round(diff * 0.5);
+      }
+      for (j = 0; j < PARTIES.length; j++) { p = PARTIES[j]; c['res_' + p] = s[p]; }
+      if (year === 1980) {
+        var small = ['komei', 'kyosan', 'other', 'minsha'], grab = 0, m, take;
+        for (m = 0; m < small.length; m++) {
+          take = Math.round(c['res_' + small[m]] * 0.12);
+          c['res_' + small[m]] -= take; grab += take;
+        }
+        c.res_jimin += grab;
+      }
+      if (year >= 1993 && !c.ldp_split_done) { this.splitLDP1993(c); }
+      this.seedSplinters(c, year);
+      this.applySplinters(c, year);
+      for (j = 0; j < PARTIES.length; j++) { p = PARTIES[j]; out[p] = c['res_' + p] || 0; }
+      for (j = 0; j < this.SPLINTER_KEYS.length; j++) {
+        p = this.SPLINTER_KEYS[j];
+        out['sp_' + p] = c['res_sp_' + p] || 0;
+      }
+      return out;
+    },
+    //  脇柱・主画面・外盤・調整の頁が読む見込みを Q に焼く。
+    //  fc を渡さなければ、ここで数える（主画面は写しで数えて盤を触らない）。
+    fcFields: function (Q, fc) {
+      if (!fc) { fc = this.seatForecast(this.fcCopy(Q)); }
+      Q.nom_kouho = fc.kouho;
+      Q.nom_ratio = fc.ratio;
+      Q.nom_win = Math.round(fc.win * 100);
+      Q.nom_cap = fc.cap;
+      Q.nom_floor = this.nomFloor(Q);
+      Q.nom_short = Math.max(0, (Math.floor((Q.hr_total || 511) / 2) + 1) - fc.cap);
+      Q.fc_seats = fc.seats; Q.fc_vote = fc.vote; Q.fc_best_k = fc.best_k; Q.fc_best = fc.best;
+      Q.fc_fix = fc.fix; Q.fc_cause = fc.cause;
+      Q.fc_warn = (fc.cause === 1 || fc.cause === 2) ? fc.cause : 0;
+      Q.fc_bonus_k = this.nomBonusK(Q); Q.fc_bonus_abs = Math.abs(Q.fc_bonus_k);
+      Q.fc_year = this.nextElection(Q) || 0;
+      Q.fc_floor_dir = (fc.kouho > Q.nom_floor) ? 2 : ((fc.kouho < Q.nom_floor) ? 1 : 0);
+      //  総評から二十五人出してもらった場合（powers.sohyo_kouho の副題）。
+      //  人数は得票の配り方に効かないので、同じ得票で天井だけ数え直せばよい。
+      Q.fc_sohyo = this.nomVerdict(Q, fc.share.shakai, fc.vote, fc.kouho + 25).seats;
+      return Q;
+    },
+    //  主画面の on-arrival から呼ぶ。endturn は refresh のあとで暦を進めるので、
+    //  主画面の見込みが一手古くなり、直後に描き直す脇柱と食い違っていた。
+    fcView: function (Q) { return this.fcFields(Q, null); },
 
     //  選挙を執行して結果を Q に焼く。どの年でも使える
 
@@ -6494,6 +7055,15 @@
     runElection: function (Q, year) {
       //  暦を後ろへ戻さない。選挙は年の目印であって、時間の巻き戻しではない。
       this.setDate(Q, year, this.HR_MONTH[year] || 12);
+      //  新しい国会。改憲の挿話で今期に引き離した分と「今期は止めた」を戻す。
+      //  審議中の発議は解散で消える（kaiken_dropped）。末尾の refresh が新しい数で数え直す。
+      Q.kaiken_term_used = 0; Q.kaiken_blocked = 0;
+      Q.kk_komei_out = 0; Q.kk_minsha_out = 0; Q.kk_float_out = 0; Q.kaiken_withdrawn = 0;
+      if ((Q.kaiken_ep || 0) > 0) {
+        Q.kaiken_ep = 0; Q.kaiken_page = 0; Q.pending_kaiken = 0; Q.kaiken_dropped = 1;
+        //  危機の帯から「改憲の発議」の行を外す（ほかの理由が無ければ平時に戻る）
+        this.crisisRecheck(Q);
+      }
       //  事象で積んだ候補者の当て（nom_bonus）が、選挙のときに実際の
       //  擁立数になる。この値は五十二か所で書かれていたのに、
       //  どこからも読まれていなかった ── 新人を擁立しても盤面が動かない。
@@ -6513,6 +7083,12 @@
       Q.res_nom_ratio = nc.ratio;
       Q.res_nom_win = Math.round(nc.win * 100);
       Q.res_nom_cap = nc.cap;
+      //  取りこぼしの理由を控える（選挙の頁が読む）。議席の算術はこの下のまま。
+      var nv = this.nomVerdict(Q, r.share.shakai, r.seats.shakai, nc.kouho);
+      Q.res_vote_seats = nv.vote; Q.res_nom_best_k = nv.best_k; Q.res_nom_best = nv.best;
+      Q.res_nom_fix = nv.fix; Q.res_nom_cause = nv.cause;
+      Q.res_nom_bonus_k = Math.round((Q.nom_bonus_used || 0) * 7);
+      Q.res_nom_bonus_abs = Math.abs(Q.res_nom_bonus_k);
       Q.nom_effect = Q.res_nom_win;      // 表示の名前は据え置く
       Q.res_nom_lost = 0;
       if (r.seats.shakai > nc.cap) {
@@ -6874,12 +7450,34 @@
 
 
     // ══════════════════════════════════════════════════════════
-    //  勝利点と四象限
-    //  三つの目標（組閣・体制改革・党の統一）のどれかを達成したかと、
-    //  勝利点が史実の水準を超えたかで四つに分ける。
-    //  史実は「組閣は達成、点は低い」＝ 勝利の失敗 に落ちる。
+    //  勝利点と評価（N4 で組み直した）
+    //
+    //  勝利点 ＝（衆院の通算 ＋ 参院 ＋ 政権の段 − 分裂 − 九条 ＋ 基盤）× 路線の係数
+    //    衆院の通算  これまでの総選挙の議席を、史実の値がある回だけ平均したもの。
+    //                一回の山や谷ではなく、三十四年の積み上げで数える。
+    //    政権の段    GOV_PTS。入っていない／入った／主導した／選挙をまたいで保った。
+    //    党員        直には数えない。基盤（BASE_BY_BAND）の一部としてだけ効く。
+    //                基盤の中の党員は線ごとに 85k〜130k で頭打ちなので、
+    //                党員を積むだけで取れるのは基盤の三分の一までである。
+    //                以前は十万人ごとに 30 点で、党員を刷るだけで勝てた。
+    //  史実の線 ＝ 同じ物差しで史実の党を測った点 × 難度の上乗せ（histLine）。
+    //  評価（四つの題）は政権がどこまで行ったかで決まり、勝ち負けは線を越えたかで決まる。
+    //  三十四年の勝ち負けは、一九九三年まで打つか、選挙をまたいで政権を保ったときにだけ出す。
     // ══════════════════════════════════════════════════════════
-    SCORE_W: { hr: 100, hc: 40, members: 30, split: -25, cabinet: 8 },
+    //  kaiken：九条を失った（改憲の挿話で採決を止められなかった）。一度の分裂より重い。
+    //  分裂と同じく路線の係数の前で引く。局は負けにしない（駕駛員の決め、N3・N4）。
+    SCORE_W: { hr: 100, hc: 40, split: -25, kaiken: -30 },
+    //  政権の段の点。0 入っていない　1 政権に入った　2 連立を主導した（閣僚の累計 4 以上か首班）
+    //  3 選挙をまたいで政権を保った（民社党化の線では衆院 MINSHA_WIN_SEATS も要る）
+    GOV_PTS: [0, 25, 35, 50],
+    //  史実の党の政権の段。第Ⅴ幕だけ、細川内閣の第一党・閣僚六人で「主導」。
+    HIST_GOV: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 2 },
+    //  政権に入らずに「野党の維持」を名乗れる線。政権の点を抜いた勝利点が、
+    //  政権の点を抜いた史実の線のこの割合に届いていれば維持、届かなければ喪失。
+    OPP_HOLD: 0.85,
+    //  各総選挙の定数。一九九三年の線（十二回ぶんの史実の平均）を出すときに使う。
+    HIST_TOTAL: { 1960: 467, 1963: 467, 1967: 486, 1969: 486, 1972: 491, 1976: 511,
+                  1979: 511, 1980: 511, 1983: 511, 1986: 512, 1990: 512, 1993: 511 },
 
     //  史実の終値（1993年）。衆院70/511、参院約70、党員約5万、
     //  分裂2（民社党・社民連）、細川内閣での閣僚6。
@@ -6992,6 +7590,9 @@
       { id: 'yama_ga_ugoita', art: 'motif/sangiin.jpg',
         name: '地动山摇', desc: '在参议院的改选议席上超过过了自民党。',
         when: function (Q) { return !!Q.madonna; } },
+      { id: 'goken_mamotta', art: 'motif/kenpou.jpg',
+        name: '挡下了发议', desc: '挡下了修宪发议。',
+        when: function (Q) { return (Q.kaiken_block_n || 0) > 0; } },
       //  幕の目標
       { id: 'act1_pass', art: 'motif/taikai59.jpg',
         name: '第Ⅰ幕　分裂与安保', desc: '达成了到一九六〇年为止的目标。',
@@ -7012,20 +7613,23 @@
       { id: 'kanso_1993', art: 'motif/toki.png',
         name: '一九九三年', desc: '恭喜你走到了最后。',
         end: true, when: function (Q) { return !!Q.ran_full; } },
+      //  評価の四つの題（結末の q1〜q4 の頁が渡す）。題は評価（verdict）で決まる。
       { id: 'shori_no_shori', art: 'motif/akushu55.jpg',
-        name: '夺取政权', desc: '我党推进到了组阁，三项目标与累计记录均达到了上一档。' },
+        name: '夺取政权', desc: '跨过大选保住政权，或取得单独过半后结束。' },
       { id: 'shori_no_shippai', art: 'motif/saitouitsu55.jpg',
-        name: '执政经验', desc: '我党推进到了组阁，目标或累计记录中有一项越过了基准线。' },
+        name: '执政经验', desc: '进入过政权，但在跨过大选保住政权之前结束。' },
       { id: 'shippai_no_shori', art: 'motif/mayday49.png',
-        name: '维持在野', desc: '我党从未进入政权，或者目标与累计记录中有一项略低于基准线。' },
+        name: '维持在野', desc: '未进入政权，但保住了接近史实的阵地后结束。' },
       { id: 'shippai_no_shippai', art: 'motif/hahaoya55.png',
-        name: '失去阵地', desc: '我党在组阁、单独过半、党的统一三项上均处于低位，累计记录也未达到基准线。' },
+        name: '失去阵地', desc: '未进入政权，也没能守住史实水平的阵地就结束了。' },
+      //  三十四年の勝ちは、一九九三年まで打ったか、選挙をまたいで政権を保って
+      //  早く終えたときにだけ付く。幕の終わりで降りたときは付かない。
       { id: 'zenkyoku_shori', art: 'motif/saitouitsu_taikai.png',
         name: '全局胜利', desc: '在贯穿三十四年的判定中获胜。',
-        end: true, when: function (Q) { return !!Q.global_win; } },
+        end: true, when: function (Q) { return !!Q.win_now && (!!Q.ran_full || !!Q.early_exit); } },
       { id: 'seiken_wo_tamotta', art: 'motif/sokaku.jpg',
-        name: '保住了政权', desc: '没有让一九九三年的政权垮掉。',
-        end: true, when: function (Q) { return (Q.gv_kind || 0) === 3; } }
+        name: '保住了政权', desc: '取得政权后，跨过一次大选仍然守住了政权。',
+        end: true, when: function (Q) { return (Q.gov_level || 0) === 3 && (!!Q.ran_full || !!Q.early_exit); } }
     ],
 
     //  毎手見て、条件が真になったものを渡す。
@@ -7156,6 +7760,9 @@
         Q.res_shakai = Q.seats_hr;
         Q.seats_hc = Math.max(Q.seats_hc || 0, 70);
       }
+      //  路線の帯が変わった知らせ（goalState）は、砂場で置いた線では出さない。
+      //  次の refresh で今の帯を覚え直す。
+      Q.goal_band = 0; Q.vc_note = 0; Q.vc_note_now = 0;
       this.refresh(Q);
       return Q;
     },
@@ -7184,23 +7791,23 @@
            parts: [['union_minrou', 290], ['lean_minrou_shakai', 32], ['members', 90000]] }
     },
 
-    //  線ごとに二つの数が違う。難度と、天井である。
+    //  線ごとに違う数。
     //
-    //  BAND_BAR   超えるべき線の高さ。中間右は組合を切って
-    //             都市の票と社公民の枠で連立に入る ── 一番早く着くので線も低い。
-    //  BAND_MULT  得点の倍率。同じ議席・同じ閣僚でも、
+    //  BAND_BAR   【停用・N4】超えるべき線の高さを線ごとに変えていた（中間右 0.70 など）。
+    //             路線が動くと史実の線と幕の及第線が画面に何も出ないまま上下したので、
+    //             どこからも読まない。数は記録のために残す。線の差は下の二つだけで出す。
+    //  BAND_MULT  勝利点の係数（画面では「路線の係数」）。同じ議席・同じ閣僚でも、
     //             何を土台にして取ったかで、残るものが違う。
     //             都市の票は組織ではない。次の選挙まで持っている保証が無い。
-    //
-    //  結果として中間右は「達成しやすく、点は一番低い」線になる。
-    //  左と右はどちらも基盤を作り直す線なので、遠く、そのぶん高い。
+    //  BASE_BY_BAND  基盤の中身と上限（上）。
     BAND_BAR:  { 1: 1.22, 2: 1.00, 3: 0.70, 4: 1.16 },
     BAND_MULT: { 1: 1.15, 2: 1.00, 3: 0.82, 4: 1.10 },
 
-    //  史実の党が自分の線の物差しで取っていたであろう基盤 ── その線の上限の三分の一。
-    //  比較の基準にこれを足さないと、基盤の分だけ全員が得をする。
+    //  史実の党が自分の線の物差しで取っていたであろう基盤 ── その線の上限の 85%。
+    //  各打ち手の幕の終わりの基盤は中央値で 79〜100% だった（N4 の前の測り）。
+    //  0.33 のままだと誰もが基盤だけで 15〜25 点を只で取り、史実をなぞった局が線を越えた。
     //  帯によって上限が違うので、この値も帯によって違う。
-    HIST_BASE_FRAC: 0.33,
+    HIST_BASE_FRAC: 0.85,
     histBase: function (band) {
       var cfg = this.BASE_BY_BAND[band] || this.BASE_BY_BAND[2];
       return cfg.w * this.HIST_BASE_FRAC * (this.BAND_MULT[band] || 1);
@@ -7242,6 +7849,7 @@
     //  同じ値打ちではない。史実の六人ぶんまでは満額、その先は三割にする。
     //  こうしないと、議席四十九・分裂三回の党が、
     //  議席百二十七の党より高い点を取ることになる。
+    //  【N4 から勝利点には使わない】閣僚の数は政権の段（govLevel）の「主導」の条件にだけ効く。
     CAB_FULL: 6, CAB_TAIL: 0.30,
     cabCount: function (n) {
       n = n || 0;
@@ -7249,40 +7857,65 @@
     },
 
     // ══════════════════════════════════════════════════════════
-    //  勝利条件
+    //  勝利条件（N4）
     //
-    //  幕の勝利  幕の終わりに最低条件を満たしていれば、その幕は勝ち。
+    //  幕の目標  幕の終わりに二つのどちらかを満たしていれば、その幕は勝ち。
     //            そこで記録を残して降りることも、次の幕へ進むこともできる。
-    //  全局勝利  ① 組閣したあと、次の総選挙でも政権を保った ── その場で決まる。
-    //            ② 一九九三年まで行って、一度でも組閣したか、
-    //               政権は取れなかったが組織が残っているか。
+    //  三十四年  一九九三年まで打つか、選挙をまたいで政権を保って早く終えたときに、
+    //            勝利点を史実の線と比べて勝ち負けを出す（finalScore）。
+    //            幕の終わりで降りたときは、そこまでの評価の題だけを出し、勝ち負けは出さない。
     // ══════════════════════════════════════════════════════════
 
-    //  ── 幕の最低勝利条件 ──────────────────────────────────
-    //  三つのうちどれかでよい。線によって届く道が違うからである。
-    //   ① 及第線に届く（線ごとの難度で割った線）
+    //  ── 幕の目標 ───────────────────────────────────────
+    //  二つのどちらかでよい。
+    //   ① 幕の最後の総選挙で、衆院 ACTS[act].pass 議席以上（どの線でも同じ線）
     //   ② その幕のあいだに政権に入った
-    //   ③ 議席は届かなくても、その線の基盤を六割作れていて、
-    //      かつその幕で新しく割れていない
+    //  以前は線ごとの難度（BAND_BAR）を掛けた及第線と、三つめの
+    //  「基盤を六割作り、この幕で割れていない」があった。基盤の六割は測ると
+    //  ほとんどの局のほとんどの幕で満たしていて、第Ⅱ・Ⅳ幕は何もしなくても勝っていた。
+    //  ACT_BASE_NEED は【停用・N4】。
     ACT_BASE_NEED: 60,
     actVictory: function (Q) {
-      var bar = this.BAND_BAR[this.bandOf(Q)] || 1;
-      //  表示にも使うので残す。finalScore を呼ばない幕の結算でも要る。
-      Q.band_bar = bar;
-      Q.band_mult = this.BAND_MULT[this.bandOf(Q)] || 1;
-      var line = Math.round((Q.pass_line || 0) * bar);
-      Q.act_line = line;
-      this.baseScore(Q);
-      var bySeats = (Q.seats_hr || 0) >= line;
+      //  目標の線と、議席・政権の二つの印は goalState が置く（主画面と脇柱も同じ値を出す）
+      this.goalState(Q);
       var noSplit = (Q.splits || 0) <= (Q.splits_act_start || 0);
-      var byBase = (Q.base_frac || 0) >= this.ACT_BASE_NEED && noSplit;
-      var byPower = !!Q.in_power || !!Q.act_power;
-      Q.av_seats = bySeats ? 1 : 0;
-      Q.av_base = byBase ? 1 : 0;
-      Q.av_power = byPower ? 1 : 0;
       Q.av_nosplit = noSplit ? 1 : 0;
-      Q.act_pass = (bySeats || byBase || byPower) ? 1 : 0;
+      Q.act_pass = (Q.av_seats || Q.av_power) ? 1 : 0;
+      //  この幕のうちに改憲の発議を止められず九条を失ったら、この幕は負け
+      //  （「記録して降りる」もこれで選べなくなる）。
+      Q.av_kaiken = (Q.kaiken_lost_act && Q.kaiken_lost_act === Q.act) ? 0 : 1;
+      if (!Q.av_kaiken) { Q.act_pass = 0; }
+      //  幕ごとの勝ち負け（結末の頁の「幕の勝敗」）。1 勝ち　2 負け　0 まだ
+      Q['act_res_' + (Q.act || 1)] = Q.act_pass ? 1 : 2;
       return Q.act_pass;
+    },
+
+    //  ── 目標と評価の見込み（refresh の最後で毎回） ─────────────
+    //  主画面の目標の一行、脇柱の「この幕の目標」と「三十四年の評価（いま終えたら）」、
+    //  幕の開きの頁が読む値を置く。finalScore もここで毎回走るので、
+    //  final_* と gr_* はいつも今の盤の値である（結末の頁でももう一度数える）。
+    goalState: function (Q) {
+      var cfg = this.ACTS[Q.act || 1] || this.ACTS[1];
+      Q.act_line = cfg.pass;
+      Q.act_to = cfg.to;
+      Q.act_elec_last = cfg.elections[cfg.elections.length - 1];
+      Q.act_elec_done = ((Q.elec_year || 0) >= Q.act_elec_last) ? 1 : 0;
+      Q.av_seats = ((Q.seats_hr || 0) >= Q.act_line) ? 1 : 0;
+      Q.av_power = (Q.in_power || Q.act_power) ? 1 : 0;
+      if (Q.has_souri) { Q.souri_ever = 1; }
+      //  一度だけの知らせ。主画面の on-arrival が vc_note_now に移して出し、0 に戻す。
+      //   1 民社党化で勝ちの条件が変わった　2 路線の帯が移った（係数と基盤の中身が変わる）
+      //  帯を初めて覚えるとき（開幕・砂場）は知らせない。
+      var band = this.bandOf(Q);
+      if (Q.goal_band && Q.goal_band !== band) { Q.vc_note = 2; }
+      Q.goal_band = band;
+      if (Q.minsha_ka && !Q.minsha_ka_noted) { Q.vc_note = 1; Q.minsha_ka_noted = 1; }
+      Q.gv_seat_need = this.MINSHA_WIN_SEATS;
+      this.finalScore(Q);
+      //  一九九三年の史実の線（十二回の総選挙の史実の平均で測る）。
+      //  第Ⅰ・Ⅱ幕の見込みはその幕の史実と比べるので高く出やすい。並べて出す。
+      Q.final_base_1993 = this.histLine(Q, 5, true);
+      return Q;
     },
 
     //  幕の勝利を取ったところで記録を残す。
@@ -7444,39 +8077,31 @@
       return hit >= 2;
     },
 
+    //  結末の頁の外枠。勝ち負けと評価は finalScore が出す（win_now・verdict）。
+    //  ここは結末の文を選ぶための値と、前からある名の値を揃えるだけ。
+    //  gv_org は開きの文（組織が残ったか）を選ぶのにだけ使う。
     globalVictory: function (Q) {
       this.finalScore(Q);
-      //  選挙をまたいで政権を保った＝組閣を二回続けた
-      var held = (Q.power_elections || 0) >= 1;
-      var everCab = !!Q.ever_in_power || (Q.cabinet_posts_ever || 0) > 0;
       var org = this.orgSurvives(Q);
-      var above = (Q.final_score || 0) > (Q.final_base || 0);
-      Q.gv_held = held ? 1 : 0;
-      Q.gv_cabinet = everCab ? 1 : 0;
+      var G = Q.gov_level || 0;
+      Q.gv_held = (G === 3) ? 1 : 0;
+      Q.gv_cabinet = (G >= 1) ? 1 : 0;
       Q.gv_org = org ? 1 : 0;
-      //  民社党化の線。議席と連続組閣の両方が要る。
-      var mk = !!Q.minsha_ka;
-      Q.gv_minsha_line = mk ? 1 : 0;
+      Q.gv_minsha_line = Q.minsha_ka ? 1 : 0;
       Q.gv_seat_need = this.MINSHA_WIN_SEATS;
       Q.gv_seat_ok = ((Q.seats_hr || 0) >= this.MINSHA_WIN_SEATS) ? 1 : 0;
-      //  ① 政権を保った ── これだけで全局勝利
-      //  ② 一九九三年まで行って、組閣したことがあるか、組織が残っている
-      //  民社党化の線では ① も ② も使えない。上の二つを両方満たすことだけが勝ちになる。
-      Q.global_win = (mk ? (held && Q.gv_seat_ok === 1)
-        : (held || everCab || (org && above))) ? 1 : 0;
-      //  見出しは起きたことを言う。勝ったかどうかは global_win が言う。
-      Q.gv_kind = held ? 3 : (everCab ? 2 : (org && above ? 1 : 0));
-      //  全局も四段で出す。民社党化の線では、保つことに議席の条件が付く。
-      Q.gr_global = mk
-        ? ((held && Q.gv_seat_ok === 1) ? 3 : (held ? 2 : (everCab ? 1 : 0)))
-        : Q.gv_kind;
+      //  前からある名。global_win は三十四年の勝ち、gv_kind と gr_global は評価の段。
+      Q.global_win = Q.win_now ? 1 : 0;
+      Q.gv_kind = Q.verdict === 3 ? 3 : (Q.verdict === 2 ? 2 : (Q.win_now ? 1 : 0));
+      Q.gr_global = Q.verdict;
       Q.gr_global_t = this.GRADE_NAME[Q.gr_global];
       Q.gr_global_d = this.GRADE_TEXT.global[Q.gr_global];
-      this.verdicts(Q);
-      return Q.global_win;
+      return Q.win_now;
     },
 
     //  ── 四つの面からの評語 ────────────────────────────────
+    //  【N4 から画面に出さない】VERDICT と verdicts() は残してあるが、どこからも呼ばない。
+    //  中文の対照表の鍵（文そのもの）を生かしておくためである。
     //  同じ点数でも、どこで取ったかで党の姿は違う。
     //  経済・組織・中央政治・地方政治の四つで別々に見る。
     VERDICT: {
@@ -7534,6 +8159,9 @@
         '我党维持了一定的会派规模，保留了地方组织的集票功能。<br>尽管止步于此，我党仍为后继者留下了能够交接的组织基础。',
         '我党在众院与参院确立了足以左右法案走势的地位，夯实了政策立案能力。<br>在排开问鼎政权的阵容之际，本阶段的任务告一段落。'
       ],
+      //  幕の終わりで降りたとき、評価が「政権の獲得」で、しかも党が政権に入っているときの導入。
+      //  lead_early[3] は「政権を伺う」と書くので、政権の中にいる盤では食い違う（N4 で足した）。
+      lead_held: '我党已经加入内阁，派出的阁僚能够直接参与预算和法案的制定。<br>本阶段的任务就在我党执政的时候告一段落。',
       cabinet: [
         '我党仅保住议院运营委员会的理事席位，始终无缘登上阁僚名单。',
         '我党加入了少数派联合政权并派出大臣，核心职位却全数让给对方。',
@@ -7632,88 +8260,149 @@
       return Q;
     },
 
-    scoreOf: function (v) {
-      var w = this.SCORE_W;
-      return Math.round((
-        w.hr * (v.hr / (v.hr_total / 2)) +
-        w.hc * (v.hc / 126) +
-        w.members * (v.members / 100000) +
-        w.split * v.splits +
-        w.cabinet * this.cabCount(v.cabinet)
-      ) * 10) / 10;
+    //  ── 勝利点の材料（N4） ─────────────────────────────────
+    //  衆院の通算。これまでの総選挙の議席を、史実の値がある回だけ平均する
+    //  （解散で打った回は史実が無いので入れない）。ours と hist は過半に対する割合
+    //  （議席 ÷ 定数の半分）、seats と hseats は画面に出す議席の平均。
+    //  総選挙がまだ一度も無いときは、いまの議席とその幕の史実で代える。
+    seatAvg: function (Q) {
+      var rows = this.elecRows(Q).filter(function (r) { return r.total > 0 && r.hist > 0; });
+      var n = rows.length, i, o = 0, h = 0, s = 0, hs = 0;
+      if (!n) {
+        var tot = Q.hr_total || 511;
+        var ref = this.HIST_ACT[Q.act || 1] || this.HIST_FINAL;
+        return { ours: (Q.seats_hr || 0) / (tot / 2), hist: ref.hr / (tot / 2),
+                 seats: Q.seats_hr || 0, hseats: ref.hr, n: 0 };
+      }
+      for (i = 0; i < n; i++) {
+        o += rows[i].shakai / (rows[i].total / 2);
+        h += rows[i].hist / (rows[i].total / 2);
+        s += rows[i].shakai; hs += rows[i].hist;
+      }
+      return { ours: o / n, hist: h / n, seats: Math.round(s / n), hseats: Math.round(hs / n), n: n };
     },
 
-    finalScore: function (Q) {
-      var v = {
-        hr: Q.seats_hr, hr_total: Q.hr_total || 511, hc: Q.seats_hc || 0,
-        members: Q.members, splits: Q.splits || 0,
-        cabinet: Q.cabinet_posts_ever || Q.cabinet_posts || 0
-      };
-      var mult = this.BAND_MULT[this.bandOf(Q)] || 1.0;
-      Q.band_mult = mult;
-      var score = Math.round((this.scoreOf(v) + this.baseScore(Q)) * mult * 10) / 10;
-      var ref = this.HIST_ACT[Q.act] || this.HIST_FINAL;
-      //  基準は史実が立っていた線で測る。プレイヤーの線ではない。
-      var refBand = this.bandOf({ route: ref.route === undefined ? -1 : ref.route });
-      var raw = this.scoreOf(ref) + this.histBase(refBand);
-      Q.hist_hr = ref.hr; Q.hist_hc = ref.hc; Q.hist_splits = ref.splits; Q.hist_cab = ref.cabinet;
-      //  史実に「並んだ」だけでは超えたことにしない。5%の余裕を要求する。
-      //  これがないと史実そのものが基準ちょうどで通ってしまい、
-      //  「勝利の失敗＝史実」という設計の前提が崩れる。
-      //  線ごとの高さを掛ける。中間右は低く、左と右は高い。
-      var bar = this.BAND_BAR[this.bandOf(Q)] || 1.0;
-      Q.band_bar = bar;
-      var base = Math.round(raw * this.diff(Q).bar * bar * 10) / 10;
+    //  政権の段。3 選挙をまたいで政権を保った（民社党化の線では衆院 MINSHA_WIN_SEATS 以上も要る）
+    //  2 連立を主導した（閣僚の累計 4 以上か首班）　1 政権に入った　0 入っていない
+    govLevel: function (Q) {
+      var posts = Q.cabinet_posts_ever || Q.cabinet_posts || 0;
+      var held = (Q.power_elections || 0) >= 1 &&
+        (!Q.minsha_ka || (Q.seats_hr || 0) >= this.MINSHA_WIN_SEATS);
+      if (held) { return 3; }
+      if (posts >= 4 || Q.souri_ever || Q.has_souri) { return 2; }
+      if (Q.ever_in_power || posts > 0) { return 1; }
+      return 0;
+    },
 
-      // 三つの目標。どれかひとつ達成していれば「目標達成」
-      var g_cabinet = ((Q.cabinet_posts_ever || Q.cabinet_posts || 0) > 0) || !!Q.ever_in_power;
-      var g_reform = !!Q.won_majority_ever;      // 単独過半を一度でも取ったか
-      //  党の統一は「割れなかった」だけでは足りない。
-      //  終わった時点で、どの派閥も出口の前に立っていないこと。
-      //  党に残っている派閥だけで測る（出て行った派閥の不満は数えない）
+    //  史実の線。同じ物差しで史実の党を測り、難度の上乗せ（DIFF.bar）を掛ける。
+    //  衆院は、プレイヤーがこれまでに打った総選挙と同じ回の史実の平均（allYears なら十二回全部）。
+    //  参院・分裂・政権の段はその幕の終わりの史実（HIST_ACT・HIST_GOV）、
+    //  基盤は史実の党が立っていた線の上限の HIST_BASE_FRAC。線はプレイヤーの路線では動かない。
+    histLine: function (Q, act, allYears, sa) {
+      var ref = this.HIST_ACT[act] || this.HIST_FINAL;
+      var h = 0, y, k = 0;
+      if (allYears) {
+        for (y in this.HIST_HR) {
+          if (this.HIST_HR.hasOwnProperty(y)) { h += this.HIST_HR[y] / ((this.HIST_TOTAL[y] || 511) / 2); k += 1; }
+        }
+        h = k ? h / k : 0;
+      } else { h = (sa || this.seatAvg(Q)).hist; }
+      var refBand = this.bandOf({ route: ref.route === undefined ? -1 : ref.route });
+      var w = this.SCORE_W;
+      var raw = w.hr * h + w.hc * ref.hc / 126 + this.GOV_PTS[this.HIST_GOV[act] || 0] +
+        w.split * ref.splits + this.histBase(refBand);
+      return Math.round(raw * this.diff(Q).bar * 10) / 10;
+    },
+
+    //  勝利点・史実の線・評価（verdict）・勝ち負け（win_now）・三つの目標の印。
+    //  goalState（refresh の最後）から毎回呼ばれるので、盤は触らない（表示の値だけを書く）。
+    //
+    //  評価（四つの題）  3 政権の獲得  選挙をまたいで政権を保ったか、単独過半を取った
+    //                    2 執政の経験  政権に入った（保つ前に終えた）
+    //                    1 野党の維持  政権に入らず、政権の点を抜いた勝利点が史実の線（同じく抜く）の OPP_HOLD 以上
+    //                    0 地歩の喪失  それに届かない。国家改造の発議に失敗して党が封じられたときも 0
+    //  勝ち負け          勝利点が史実の線を越えたか、政権を保ったか、単独過半を取ったなら勝ち。
+    //                    九条を失ったことは 30 点を引くだけで、負けにはしない（駕駛員の決め）。
+    //  勝ち負けを画面で「判定」として出すのは、一九九三年まで打ったときと、政権を保って早く終えたとき、
+    //  党が封じられたときだけ。幕の終わりで降りたときは評価の題だけを出す（結末の頁）。
+    finalScore: function (Q) {
+      var r1 = function (x) { return Math.round(x * 10) / 10; };
+      var act = Q.act || 5;
+      var sa = this.seatAvg(Q);
+      var G = this.govLevel(Q);
+      var mult = this.BAND_MULT[this.bandOf(Q)] || 1.0;
+      var base = this.baseScore(Q);
+      var w = this.SCORE_W;
+      var posts = Q.cabinet_posts_ever || Q.cabinet_posts || 0;
+      Q.band_mult = mult;
+      Q.gov_level = G;
+      //  内訳（画面では符号を付けずに出す。引く二つは「引く点」として正の数で持つ）
+      Q.sc_hr = r1(w.hr * sa.ours);
+      Q.sc_hc = r1(w.hc * (Q.seats_hc || 0) / 126);
+      Q.sc_gov = this.GOV_PTS[G];
+      Q.sc_split_abs = r1(-w.split * (Q.splits || 0));
+      Q.sc_kaiken_abs = Q.kyujo_ushinatta ? -w.kaiken : 0;
+      var score = r1((Q.sc_hr + Q.sc_hc + Q.sc_gov - Q.sc_split_abs - Q.sc_kaiken_abs + base) * mult);
+      var line = this.histLine(Q, act, false, sa);
+      var above = score > line;
+      Q.final_score = score;
+      Q.final_base = line;
+      Q.hist_score = r1(line / (this.diff(Q).bar || 1));
+      Q.score_ratio = line > 0 ? Math.round(100 * score / line) : 0;
+      var ref = this.HIST_ACT[act] || this.HIST_FINAL;
+      Q.hist_hr = ref.hr; Q.hist_hc = ref.hc; Q.hist_splits = ref.splits; Q.hist_cab = ref.cabinet;
+      Q.seat_avg = sa.seats; Q.seat_avg_hist = sa.hseats; Q.seat_avg_n = sa.n;
+      Q.cab_ever = posts;
+
+      //  評価の題
+      var endBad = !!Q.kokka_failed;
+      var hGov = this.GOV_PTS[this.HIST_GOV[act] || 0] * this.diff(Q).bar;
+      var opp = score - Q.sc_gov * mult, oppLine = line - hGov;
+      var verdict = endBad ? 0 : ((G === 3 || Q.won_majority_ever) ? 3
+        : (G >= 1 ? 2 : (opp >= this.OPP_HOLD * oppLine ? 1 : 0)));
+      Q.verdict = verdict;
+      //  勝ち負けと、その理由。1 政権を保った　2 単独過半　3 線を越えた　4 届かなかった　6 党が封じられた
+      //  （5「憲法が変わった」は設計書にあったが、九条を失っても負けにしないので使わない）
+      Q.win_now = (!endBad && (above || G === 3 || Q.won_majority_ever)) ? 1 : 0;
+      Q.win_why = endBad ? 6 : (G === 3 ? 1 : (Q.won_majority_ever ? 2 : (above ? 3 : 4)));
+      //  結末の頁で勝ち負けを「判定」として出すか（一九九三年・政権を保った早い終わり・党が封じられた）
+      Q.judge_on = (Q.ran_full || Q.early_exit || Q.kokka_failed) ? 1 : 0;
+
+      //  三つの目標（組閣・単独過半・統一の四段の評語は gradeGoals）
       var self = this;
       var worst = Math.max.apply(null, self.FAC_KEYS
         .filter(function (f) { return self.inParty(Q, f); })
         .map(function (f) { return Q['mood_' + f] || 0; }).concat([0]));
-      var g_unity = ((Q.splits || 0) <= 1) && worst < 70;
       Q.worst_mood = Math.round(worst * 10) / 10;
-      var achieved = g_cabinet || g_reform || g_unity;
-      var above = score > base;
+      this.gradeGoals(Q);
+      Q.ck_seats = (sa.ours >= sa.hist) ? 1 : 0;
+      Q.ck_gov = (G >= 1) ? 1 : 0;
+      Q.ck_unity = (Q.gr_unity >= 2) ? 1 : 0;
 
-      Q.final_score = score;
-      Q.final_base = base;
-      Q.hist_score = Math.round(raw * 10) / 10;
-      Q.g_cabinet = g_cabinet ? 1 : 0;
-      Q.g_reform = g_reform ? 1 : 0;
-      Q.g_unity = g_unity ? 1 : 0;
-      Q.goal_met = achieved ? 1 : 0;
+      //  前からある名（道具と古い頁が読む）
       Q.above_base = above ? 1 : 0;
-      Q.quadrant = achieved ? (above ? 1 : 2) : (above ? 3 : 4);
+      Q.goal_met = Q.ck_gov;
+      Q.quadrant = Q.ck_gov ? (above ? 1 : 2) : (above ? 3 : 4);
       Q.quadrant_name = ['', '胜利的胜利', '胜利的失败', '失败的胜利', '失败的失败'][Q.quadrant];
-      this.gradeGoals(Q, score, base);
-      // 内訳（表示用）
-      var w = this.SCORE_W;
-      Q.sc_hr = Math.round(w.hr * (v.hr / (v.hr_total / 2)) * 10) / 10;
-      Q.sc_hc = Math.round(w.hc * (v.hc / 126) * 10) / 10;
-      Q.sc_mem = Math.round(w.members * (v.members / 100000) * 10) / 10;
-      Q.sc_split = Math.round(w.split * v.splits * 10) / 10;
-      Q.sc_cab = Math.round(w.cabinet * this.cabCount(v.cabinet) * 10) / 10;
-      Q.cab_ever = v.cabinet;
+      var T = this.GRADE_TEXT;
+      Q.gr_total = verdict;
+      Q.gr_total_t = this.GRADE_NAME[verdict];
+      Q.gr_title = T.title[verdict];
+      Q.gr_lead_full = T.lead_full[verdict];
+      //  幕の終わりで降りたときの導入。lead_early は旧い四段（失敗〜成功）の文なので、
+      //  「野党の維持」でも線を越えている盤には、議席を削られたと書く [1] ではなく [2] を出す。
+      //  政権の中にいて「政権の獲得」なら lead_held（[3] は「政権を伺う」と書くため）。
+      var li = verdict === 3 ? 3 : (verdict === 2 ? 2 : (verdict === 1 ? (Q.win_now ? 2 : 1) : 0));
+      Q.gr_lead_early = (verdict === 3 && Q.in_power) ? T.lead_held : T.lead_early[li];
       return Q;
     },
 
-    //  ── 三つの目標と総合を四段で出す ───────────────────────
-    //
-    //  組閣　　　保てたか／閣僚を出せたか／入っただけか／入れなかったか
-    //  体制改革　単独過半を取ったか／届きかけたか／第一党の域か／その下か
-    //  党の統一　割れずに収まったか／一度割れたか／出口の前に派閥がいるか
-    //  点　　　　史実の基準線に対してどれだけ上か下か
-    //  総合　　　目標の側と点の側を半々で見る
-    gradeGoals: function (Q, score, base) {
-      var posts = Q.cabinet_posts_ever || Q.cabinet_posts || 0;
-      var inpow = (Q.ever_in_power || posts > 0) ? 1 : 0;
-      Q.gr_cabinet = ((Q.power_elections || 0) >= 1) ? 3
-        : (posts >= 4 ? 2 : (inpow ? 1 : 0));
+    //  ── 三つの目標の四段の評語 ─────────────────────────────
+    //  組閣（＝政権の段 govLevel）、体制改革（単独過半）、党の統一。
+    //  評価の題は finalScore が出す（以前ここで目標と点を半々に合わせていた総合は外した）。
+    gradeGoals: function (Q) {
+      var G = (Q.gov_level !== undefined && Q.gov_level !== null) ? Q.gov_level : this.govLevel(Q);
+      Q.gr_cabinet = G;
 
       var maj = Math.floor((Q.hr_total || 511) / 2) + 1;
       var peak = this.seatPeak(Q);
@@ -7726,35 +8415,13 @@
         : ((sp === 0 || (sp === 1 && worst < 55)) ? 2
           : ((sp <= 1 && worst < 85) ? 1 : 0));
 
-      var ratio = base > 0 ? score / base : 0;
-      Q.score_ratio = Math.round(ratio * 100);
-      Q.gr_score = ratio >= 1.15 ? 3 : (ratio >= 1.0 ? 2 : (ratio >= 0.85 ? 1 : 0));
-
-      //  目標の側。いちばん高いものと、三つの平均を半々で見る ──
-      //  一つだけ突出していても総合にはしないが、一つも無いのと同じにもしない。
-      var top = Math.max(Q.gr_cabinet, Q.gr_reform, Q.gr_unity);
-      var avg = (Q.gr_cabinet + Q.gr_reform + Q.gr_unity) / 3;
-      Q.gr_goal = Math.round((top + avg) / 2);
-      Q.gr_total = Math.max(0, Math.min(3, Math.round((Q.gr_goal + Q.gr_score) / 2)));
-      //  上の二段は、政権に手が届いたことを条件にする。題と導入が
-      //  「執政の経験」「政権の獲得」と書くので、一度も政権に入って
-      //  いない盤がそこへ来ると、文と盤面が食い違う。
-      if (Q.gr_cabinet === 0) { Q.gr_total = Math.min(Q.gr_total, 1); }
-      if (Q.gr_cabinet === 1 && Q.gr_total > 2) { Q.gr_total = 2; }
-
       var g = this.GRADE_NAME, T = this.GRADE_TEXT;
-      Q.gr_title = T.title[Q.gr_total];
-      Q.gr_lead_full = T.lead_full[Q.gr_total];
-      Q.gr_lead_early = T.lead_early[Q.gr_total];
       Q.gr_cabinet_d = T.cabinet[Q.gr_cabinet];
       Q.gr_reform_d = T.reform[Q.gr_reform];
       Q.gr_unity_d = T.unity[Q.gr_unity];
       Q.gr_cabinet_t = g[Q.gr_cabinet];
       Q.gr_reform_t = g[Q.gr_reform];
       Q.gr_unity_t = g[Q.gr_unity];
-      Q.gr_score_t = g[Q.gr_score];
-      Q.gr_goal_t = g[Q.gr_goal];
-      Q.gr_total_t = g[Q.gr_total];
       return Q;
     },
 
@@ -7986,6 +8653,11 @@
       //  自社は相手がこちらを要るときだけ差し出される
       if (Q.cab_jisha_ok && ji >= maj) { Q.cab_jisha_ok = 0; Q.cab_jisha_show = 0; }
       Q.cab_any = any;
+      //  組閣の頁に出る組み合わせの数（灰色も数える）。0 なら「自民党が組閣する」
+      //  しか無いので、組閣の頁は止まらずにそこへ進む（election.cabinet_form）。
+      var shown = 0;
+      for (i = 0; i < this.CAB_SHAPES.length; i++) { shown += Q['cab_' + this.CAB_SHAPES[i] + '_show'] ? 1 : 0; }
+      Q.cab_any_show = shown;
       return Q;
     },
 
@@ -8767,14 +9439,11 @@
       Q.discard_over = (Q.discard_used > D.discard) ? 1 : 0;
       //  新左翼。窓は一九七二年二月で閉じる。
       Q.nl_near = this.nlNear(Q);
-      //  擁立数。いま立てている数だと、この盤面で最大何議席まで届くか。
+      //  擁立数。いま総選挙をしたら何議席か（seatForecast）。
+      //  以前は丸めた得票率と、事象で積んだ候補（nom_bonus）を含まない人数で
+      //  天井だけを出していた。見込みは開票と同じ算術でなぞる。
       if (Q.kouho === undefined || Q.kouho === null) { Q.kouho = this.NOM_OPEN; }
-      var nc0 = this.nomCeiling(Q, this.pct(this.tally(Q).shakai));
-      Q.nom_kouho = nc0.kouho;
-      Q.nom_ratio = nc0.ratio;
-      Q.nom_win = Math.round(nc0.win * 100);
-      Q.nom_cap = nc0.cap;
-      Q.nom_floor = this.nomFloor(Q);
+      this.fcFields(Q, this.seatForecast(Q));
       //  政治資源の入りは endturn で払うが、脇柱ではいつでも見えていてほしい
       if (this.LEADERS) {
         var L2 = this.LEADERS, fit2 = 0, i2, p2, f2;
@@ -8793,14 +9462,17 @@
       var mul3 = this.diff(Q).income;
       Q.dues_now = Math.round(((this.unionPower(Q).total * this.DUES_RATE +
         this.memberDues(Q)) * mul3 + (Q.dues_urban || 0)) * 100) / 100;
-      Q.upkeep_now = Math.round(((this.memberUpkeep(Q) +
-        this.localCount(Q) * this.UPKEEP_PER_CITY) * this.diff(Q).upkeep) * 100) / 100;
+      Q.upkeep_now = Math.round(this.upkeepCost(Q) * 100) / 100;
+      //  金の線。超えた分は毎手一割流れる（upkeep）。次の維持費を払うと
+      //  金庫が尽きる見込みなら、脇柱に赤字で出す（入りは分担金と党費だけを見る）。
+      Q.budget_soft = this.BUDGET_SOFT;
+      Q.budget_over = ((Q.budget || 0) > this.BUDGET_SOFT) ? 1 : 0;
+      Q.budget_short = ((Q.budget || 0) + (Q.dues_now || 0) < Q.upkeep_now) ? 1 : 0;
       //  総評から出してもらった候補は、通れば議席になる。ならないほうの
       //  代議員票は総評のものである。右へ寄る決議は、その人たちの
       //  反対を越えないと通らない ── 議席は借りられるが、党大会は借りられない。
       Q.sohyo_giin = Q.sohyo_giin || 0;
       Q.route_right_cost = 2 + Math.min(4, Q.sohyo_giin);
-      Q.nom_short = Math.max(0, (Math.floor((Q.hr_total || 511) / 2) + 1) - nc0.cap);
       Q.nl_open = ((Q.act || 1) >= 2 && (Q.year || 0) <= this.NL_WINDOW) ? 1 : 0;
       Q.nl_left = Math.max(0, this.NL_INTAKE_MAX - (Q.nl_intake || 0));
       Q.nl_intake = Q.nl_intake || 0;
@@ -8876,13 +9548,16 @@
       //  札が出るのは、左か右の線に居て、何か一つでも発議できるとき。
       var bd_ = this.bandOf(Q);
       //  一度通しても札は出続ける ── 連ねていけることが国体への唯一の道である。
-      Q.kaiken_can = (anyOk && (bd_ === 1 || bd_ === 4)) ? 1 : 0;
+      //  相手の発議の挿話のあいだと、九条を失ったあとは出さない。
+      Q.kaiken_can = (anyOk && (bd_ === 1 || bd_ === 4) && !Q.kaiken_ep && !Q.kyujo_ushinatta) ? 1 : 0;
       Q.kyogi_power = this.kyogiPower(Q);
       Q.kyogi_ok = Q.kyogi_power > 0 ? 1 : 0;
       Q.has_keizai_post = (Q.has_okura || Q.has_tsusan) ? 1 : 0;
       Q.has_rodo_post   = (Q.has_rodo || Q.has_kosei) ? 1 : 0;
       Q.has_gaikou_post = (Q.has_gaimu || Q.has_souri) ? 1 : 0;
       Q.has_sanmin_post = (Q.has_tsusan || Q.has_rodo) ? 1 : 0;
+      //  幕の目標と、三十四年の評価の見込み（N4）。勝利点も毎回ここで数え直す。
+      this.goalState(Q);
       return Q;
     },
 
