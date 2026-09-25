@@ -550,17 +550,18 @@ body, #content, #qualities, #qualities_right {
 #content h1 + p { text-indent: 1em; }
 #content h1 { letter-spacing: .12em; }
 
-/* 状態欄は等幅寄りで、詰めて読ませる */
+/* 状態欄は等幅寄りで、詰めて読ませる。
+ * N7：状況の面が二画面に収まるよう、行間（1.65 → 1.5）と段・見出しの間を詰めた。字の大きさは変えていない。 */
 #qualities, #qualities_right {
   font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP",
                "Meiryo", sans-serif;
   font-size: .88em;
-  line-height: 1.65;
+  line-height: 1.5;
 }
-#qualities p, #qualities_right p { text-indent: 0; margin: .35em 0; }
+#qualities p, #qualities_right p { text-indent: 0; margin: .25em 0; }
 #qualities h1, #qualities_right h1 {
-  font-size: 1.05em; letter-spacing: .1em; margin: 1.1em 0 .4em;
-  border-bottom: 1px solid rgba(0,0,0,.15); padding-bottom: .2em;
+  font-size: 1.05em; letter-spacing: .1em; margin: .85em 0 .3em;
+  border-bottom: 1px solid rgba(0,0,0,.15); padding-bottom: .15em;
 }
 .tab_button { font-family: inherit; }
 
@@ -861,6 +862,98 @@ img[src$="art/leaders/sakisaka.jpg"] {
   #content li a { display: inline-block; padding: 0.25em 0; }
 }
 
+/* ── 脇柱「この一手の変化」（N5） jsp-td
+ * 行の矢印だけに色を付ける（良くなった青・悪くなった赤・どちらでもない灰）。
+ * いまの一歩で動いた行は太字。色は既にある青 #3E6E8C と赤 #B23A34 から動かさない。
+ */
+.jsp-td { display: block; margin: .4em 0 .8em; padding: .4em .6em; border-left: 3px solid #876; background: rgba(0,0,0,.035); text-indent: 0; }
+.jsp-td-h { display: block; font-weight: bold; margin-bottom: .2em; }
+.jsp-td-r { display: block; font-size: .92em; }
+.jsp-td-r.good b { color: #3E6E8C; }
+.jsp-td-r.bad b { color: #B23A34; }
+.jsp-td-r.neutral b { color: #777; }
+.jsp-td-r.new { font-weight: bold; }
+.jsp-td-q, .jsp-td-more { opacity: .7; font-weight: normal; }
+/* 結果の頁の「長く残ること」（A2 で頁に出す） */
+.jsp-lt { display: block; margin: 1em 0 .5em; padding: .5em .8em; border: 1px solid #c9b9a6; border-radius: 4px; background: rgba(178,58,52,.04); font-size: .92em; text-indent: 0; }
+.jsp-lt-h { display: block; font-weight: bold; color: #B23A34; margin-bottom: .2em; }
+.jsp-lt-r { display: block; }
+
+/* ── 脇柱「この決定の見込み」（N6） jsp-big
+ * 手書きの重大な決定の頁に着いたときだけ、状況の面の頭に出る。数は脇柱にだけ置き、符号は付けない。
+ * 「いまのまま」より多い議席は青、少ない議席は赤（払う議席は逆）。見出しは良し悪しの色だけ。
+ * 色は既にある青 #3E6E8C と赤 #B23A34 から動かさない。
+ * N7：脇柱を二画面に収めるため、余白・行間・脚注の字を詰めた（見出しの数や字は変えていない）。
+ * D1：見出しと行が同じことを言うように、見出しに「いま総選挙なら」と数え方を書き、行は数だけにした。
+ * 選択肢は名前・議席（その先があれば「約 N／M」）の欄の格子（jsp-big-g。p の中に置くので table ではなく span の grid）に一行ずつ、
+ * 見出しは二つまで、票読みと可否は一行。長い脚注は外した。1280 幅の構造改革の頁で 446px → 約 200px。
+ */
+.jsp-big { display: block; margin: .35em 0 .7em; padding: .3em .5em; line-height: 1.3; border: 1px solid #c9b9a6; border-left: 3px solid #3E6E8C; border-radius: 3px; background: rgba(62,110,140,.05); text-indent: 0; }
+.jsp-big-h { display: block; font-weight: bold; margin-bottom: .1em; }
+.jsp-big-vote { display: block; font-size: .85em; }
+.jsp-big-v { display: inline; opacity: .8; }
+.jsp-big-v.good { color: #3E6E8C; opacity: 1; }
+.jsp-big-v.bad { color: #B23A34; opacity: 1; }
+.jsp-big-s { display: block; font-size: .8em; line-height: 1.25; opacity: .7; margin-top: .15em; }
+.jsp-big-g { display: grid; grid-template-columns: 1fr; column-gap: .5em; font-size: .88em; margin-top: .1em; }
+.jsp-big-g2 { grid-template-columns: 1fr auto; }
+.jsp-big-o { font-weight: bold; }
+.jsp-big-n { white-space: nowrap; text-align: right; }
+.jsp-big-n.good { color: #3E6E8C; }
+.jsp-big-n.bad { color: #B23A34; }
+.jsp-big-tags { grid-column: 1 / -1; padding-left: .8em; line-height: 1.25; margin-bottom: .1em; }
+.jsp-big-tag { display: inline; margin-right: .5em; font-size: .86em; opacity: .85; }
+.jsp-big-tag.good { color: #3E6E8C; }
+.jsp-big-tag.bad { color: #B23A34; }
+.jsp-big-f { display: block; font-size: .78em; line-height: 1.25; opacity: .6; margin-top: .2em; }
+
+/* ── 赤字の知らせ（N7） jsp-w
+ * 主画面と脇柱の知らせは <span class="jsp-w1">（赤）か <span class="jsp-w0">（地の色）で出る。
+ * どちらになるかは jsp-core の warnRank が決める。主画面・状況の面・危機の面を合わせて、同時に赤で出すのは三つまで。
+ * 色は既にある赤 #B23A34 から動かさない。
+ */
+.jsp-w1 { color: #B23A34; }
+
+/* ── 脇柱の説明の段（N7） jsp-note
+ * 仕組みを説明する淡い字の段。前は <span style="opacity:.6"> で本文と同じ大きさだった。
+ * 一回り小さくして行間も詰め、脇柱の各面が二画面に収まるようにした（字は変えていない）。
+ */
+#qualities .jsp-note { display: block; opacity: .6; font-size: .9em; line-height: 1.4; }
+/* 指導部の面の「役職の効き方」のような、決まった説明の段（淡くはしない） */
+#qualities .jsp-small { display: block; font-size: .9em; line-height: 1.4; }
+
+/* ── 選挙の履歴の表（N7） jsp-et
+ * 外盤の面の「選挙の履歴」。一回の総選挙を一行に収める（前は <br> で並べ、脇柱の幅で一回が三行に折れていた）。
+ */
+table.jsp-et { border-collapse: collapse; width: 100%; font-size: .92em; line-height: 1.35; margin: .15em 0 .3em; }
+table.jsp-et th { font-weight: normal; opacity: .6; text-align: left; padding: 0 .4em .1em 0; white-space: nowrap; }
+table.jsp-et td { padding: .05em .4em .05em 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.jsp-et td[colspan] { white-space: normal; padding-top: 0; }
+
+/* ── 脇柱の格子（N7） jsp-grid
+ * 指導部の面の党の六役（jsp-pt：役職・人・派閥）、内閣の顔ぶれ（jsp-ct：席・格・人・効き）、労働戦線の統一の四つの門（jsp-rt：印・門・いま・条件）。
+ * 一つの役職・席・門を脇柱の幅（224px）で一行に収める。前は段や <br> で並べていて、六役と門は日中とも、内閣の席は中文で二行に折れていた。
+ * 段（<p>）の中の <span> で組む。<table> は段の中に置けず、段が割れて囲みの jsp-small が外れる。
+ * 字の大きさは囲み（jsp-small）が決める。
+ */
+#qualities .jsp-grid { display: grid; column-gap: .35em; line-height: 1.3; margin: .1em 0 .15em; }
+#qualities .jsp-grid > span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#qualities .jsp-ct { grid-template-columns: max-content max-content minmax(0, 1fr) max-content; }
+#qualities .jsp-pt { grid-template-columns: max-content minmax(0, 1fr) max-content; }
+#qualities .jsp-ct > .jsp-gw, #qualities .jsp-pt > .jsp-gw { white-space: normal; }
+#qualities .jsp-rt { grid-template-columns: max-content max-content max-content max-content; }
+#qualities .jsp-gd, #qualities .jsp-gh { opacity: .6; }
+#qualities .jsp-g2 { grid-column: span 2; }
+/* 国の政策の一覧（一つの政策が一行）。表と同じく行間を詰める */
+#qualities .jsp-small.jsp-list { line-height: 1.3; }
+
+/* ── 脇柱の横のはみ出し（N7）
+ * 欄の区切りに使っている全角の空き（U+3000）は、行末に来ると行の外へぶら下がる。
+ * 日本語版の派閥の面が脇柱の外へ 3px はみ出していたのはこれ（N5 で報告。字は見えない空きだけ）。
+ * 脇柱の中身は横だけ切る（clip はスクロールの箱を作らないので、縦の流れは変わらない）。
+ */
+#qualities { overflow-x: clip; }
+
 
 /* ══════════════════════════════════════════════════════════
    中文版的字体上书き。game.css の末尾に足される。
@@ -887,11 +980,13 @@ body, #content, #qualities, #qualities_right {
 #content h1 + p { text-indent: 2em; }
 #content h1 { letter-spacing: .1em; }
 
-/* 状态栏用黑体，收紧了读 */
+/* 状态栏用黑体，收紧了读。
+ * 行距和段距跟日文版一样（N7：1.65 → 1.5，.35em → .25em）。
+ * 这里写在 game.css 的后面，原来的 1.65 把日文版 N7 收紧的行距又盖了回去，中文侧栏各页因此比日文版长。 */
 #qualities, #qualities_right {
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
                "Source Han Sans SC", "Noto Sans SC", sans-serif;
   font-size: .88em;
-  line-height: 1.65;
+  line-height: 1.5;
 }
-#qualities p, #qualities_right p { text-indent: 0; margin: .35em 0; }
+#qualities p, #qualities_right p { text-indent: 0; margin: .25em 0; }

@@ -406,7 +406,7 @@
 
   //  ── 表示 ────────────────────────────────────────────────
   function sync(Q) {
-    var i, k, m, rows = [], id;
+    var i, k, m, rows = [], side = [], id;
     Q.cab_points = points(Q);
     Q.cab_used = used(Q);
     Q.cab_left = left(Q);
@@ -423,9 +423,17 @@
         rows.push('<b>' + m.name + '</b> <span style="opacity:.6">格' + m.w + '</span>　' +
           (id ? J.LEADERS.FIG[id].name + ' <span style="opacity:.6">×' + power(Q, k) + '</span>'
               : '<span style="color:#B23A34">空席</span>'));
+        side.push('<span>' + m.name + '</span><span class="jsp-gd">格' + m.w + '</span><span class="jsp-gw">'
+          + (id ? J.LEADERS.FIG[id].name + '</span><span class="jsp-gd">×' + power(Q, k) + '</span>'
+                : '空席' + '</span><span></span>'));
       }
     }
     Q.cab_block = rows.length ? rows.join('<br>') : '<span style="opacity:.6">まだ一つも取っていない</span>';
+    //  脇柱（指導部の面）の内閣の顔ぶれ（N7）。中身は cab_block と同じだが、脇柱の幅（224px）で
+    //  一つの席が一行に収まるよう、四つの欄の格子にした（cab_block のままだと中文で一つの席が二行に折れる）。
+    //  空席は知らせの赤にしない。脇柱の赤の知らせは warnRank が三つまでに絞る（組閣の頁の cab_block は前のまま）。
+    Q.cab_side = side.length ? '<span class="jsp-grid jsp-ct">' + side.join('') + '</span>'
+      : '<span style="opacity:.6">まだ一つも取っていない</span>';
     Q.cab_empty_n = ORDER.filter(function (k2) { return Q['has_' + k2] && !Q['who_' + k2]; }).length;
     Q.can_yuzuru = canYield(Q) ? 1 : 0;
     Q.souri_trade = SOURI_TRADE;
