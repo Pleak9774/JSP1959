@@ -572,6 +572,15 @@ body, #content, #qualities, #qualities_right {
 .frontpage .world { font-size: .96em; opacity: .85; border-left: 2px solid rgba(0,0,0,.18); padding-left: .7em; }
 .frontpage .party { font-size: .94em; }
 .frontpage .line  { font-size: .92em; opacity: .9; }
+/* ── 党外の出来事（A5c） news
+ * 主画面の二段目、年の行のすぐ下。fireNews が起こした党外の出来事を新しい順に三つまで、一つを一行（折れれば二行）で。
+ * 年の行より一回り小さく、左の罫は年の行と同じ細さで色だけ青寄せ。「新」はこの手に起きたもの（色は前からある青 #3E6E8C）。
+ * 段頭の字下げ（#content p）は掛けない（中文の二字下げも）。 */
+.frontpage .news { font-size: .9em; line-height: 1.5; margin: 0 0 .45em 0; padding-left: .7em; border-left: 2px solid rgba(62,110,140,.35); }
+#content .frontpage .news p { text-indent: 0; margin: 0 0 .2em 0; }
+.frontpage .news .news-h { font-size: .9em; opacity: .6; letter-spacing: .08em; margin-bottom: .1em; }
+.frontpage .news .news-new { display: inline-block; font-size: .8em; font-weight: bold; color: #3E6E8C; border: 1px solid #3E6E8C; border-radius: 3px; padding: 0 .25em; margin-right: .4em; line-height: 1.3; }
+.frontpage .news .news-y { opacity: .55; margin-right: .5em; font-variant-numeric: tabular-nums; }
 
 
 /* ══════════════════════════════════════════════════════════
@@ -953,3 +962,23 @@ table.jsp-et td[colspan] { white-space: normal; padding-top: 0; }
  * 脇柱の中身は横だけ切る（clip はスクロールの箱を作らないので、縦の流れは変わらない）。
  */
 #qualities { overflow-x: clip; }
+
+/* ── 選択肢の見出し（A2） fxl
+ * 選択肢の下に、選んだら何が起きるかを語で一行（tools/fx-label.mjs が組むときに作る。gen-events・apply-labels が差し込む）。
+ * 副題は斜体だが、中日の字の斜体は読みにくいので見出しは正体にする。人の書いた副題があれば、その下の行に出る。
+ * 項目のあいだの「、」は css で足す（条件節で項目が消えても区切りが余らない）。費用の前の「｜」も同じ。
+ * 「長期」は赤い枠の小札（効果が長く残る）。色は前からある赤 #B23A34。
+ */
+ul.choices li div.subtitle .fxl { display: block; font-style: normal; font-size: .82em; line-height: 1.45; color: #5a4a3a; margin-top: .15em; }
+.fxl .fx { font-style: normal; }
+.fxl .fx + .fx::before { content: "、"; }
+.fxl .fx-lt { display: inline-block; font-size: .85em; font-weight: bold; color: #B23A34; border: 1px solid #B23A34; border-radius: 3px; padding: 0 .3em; margin-right: .4em; line-height: 1.3; }
+.fxl .fx-lt + .fx-lt { display: none; }
+.fxl .fx-tmp, .fxl .fx-more { opacity: .75; }
+.fxl .fx-dep { color: #8A6A1E; }
+.fxl .fx-cost { white-space: nowrap; color: #444; }
+.fxl .fx ~ .fx-cost::before { content: "｜"; opacity: .45; margin: 0 .25em; }
+.fxl .fx-small { opacity: .6; }
+ul.choices li.unavailable div.subtitle .fxl { color: inherit; }
+/* 結果の頁の「長く残ること」（[? if fx_lt_show = 1 : [+ disp_fx_lt +]?]）は、長く残る差が無い頁では空の段になる。選択肢の直前の空の段だけ詰める（ほかの頁の段は変えない） */
+#content p:empty:has(+ ul.choices) { display: none; }
